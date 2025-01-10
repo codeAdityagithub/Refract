@@ -1,7 +1,7 @@
 import { CompletedFiber, Fiber, RefractChildren } from "./types";
 
 function createElement(
-    type: keyof HTMLElementTagNameMap,
+    type: any,
     props: object | null,
     ...children: RefractChildren[]
 ): Fiber {
@@ -35,10 +35,7 @@ function createNode(fiber: Fiber) {
             : document.createElement(fiber.type);
 
     // adding props to node
-    Object.entries(fiber.props).forEach(([prop, value]) => {
-        if (prop === "children") return;
-        node[prop] = value;
-    });
+    updateNode(node, {}, fiber.props);
     return node;
 }
 
@@ -92,17 +89,34 @@ function commitRoot() {
 function commitWork(fiber: CompletedFiber | undefined) {
     if (!fiber) return;
 
-    const parent = fiber.parent?.node;
+    let parentFiber = fiber.parent;
 
-    if (parent && fiber.effectTag === "PLACEMENT" && fiber.node) {
-        parent.appendChild(fiber.node);
+    while (!parentFiber.node) {
+        parentFiber = parentFiber.parent;
+    }
+
+    const parentNode = parentFiber.node;
+
+    if (parentNode && fiber.effectTag === "PLACEMENT" && fiber.node) {
+        parentNode.appendChild(fiber.node);
     } else if (fiber.effectTag === "DELETION" && fiber.node) {
-        parent.removeChild(fiber.node);
+        commitDeletion(fiber, parentNode);
     } else if (fiber.effectTag === "UPDATE" && fiber.node) {
         updateNode(fiber.node, fiber.alternate?.props, fiber.props);
     }
     commitWork(fiber.child);
     commitWork(fiber.sibling);
+}
+
+function commitDeletion(
+    fiber: Fiber | undefined,
+    domParent: HTMLElement | Text
+) {
+    if (fiber && fiber.node) {
+        domParent.removeChild(fiber.node);
+    } else {
+        commitDeletion(fiber?.child, domParent);
+    }
 }
 
 function render(element: Fiber, container: HTMLElement) {
@@ -139,18 +153,15 @@ function workLoop(deadline: IdleDeadline) {
 requestIdleCallback(workLoop);
 
 function performUnitOfWork(fiber: Fiber): Fiber | null {
-    if (!fiber.node) {
-        fiber.node = createNode(fiber);
+    if (fiber.type instanceof Function) {
+        updateFunctionComponent(fiber);
+    } else {
+        updateHostComponent(fiber);
     }
-    // this could lead to inconsistent ui
-    // if (fiber.parent?.node) {
-    //     fiber.parent.node.appendChild(fiber.node);
-    // }
-    const elements = fiber.props.children;
-    reconcileChildren(fiber, elements);
 
-    // returning next unit of work
-    if (fiber.child) return fiber.child;
+    if (fiber.child)
+        // returning next unit of work
+        return fiber.child;
 
     let nextFiber: Fiber | undefined = fiber;
     while (nextFiber) {
@@ -158,6 +169,18 @@ function performUnitOfWork(fiber: Fiber): Fiber | null {
         nextFiber = nextFiber.parent;
     }
     return null;
+}
+
+function updateFunctionComponent(fiber: Fiber) {
+    const children = [fiber.type(fiber.props)];
+
+    reconcileChildren(fiber, children);
+}
+function updateHostComponent(fiber: Fiber) {
+    if (!fiber.node) {
+        fiber.node = createNode(fiber);
+    }
+    reconcileChildren(fiber, fiber.props.children);
 }
 
 function reconcileChildren(fiber: Fiber, elements: Fiber[]) {
@@ -218,10 +241,13 @@ const root = document.getElementById("root")!;
 
 // const heading = createElement("h1", null, "Hello");
 
-// const heading = (
-//     <div>
-//         hi
-//         <h1>Hello</h1>
-//     </div>
-// );
+// const Heading = (props: any) => {
+//     return (
+//         <div>
+//             {props.children}
+//             {props.name}
+//         </div>
+//     );
+// };
+// Heading({ children: "hello", name: "world" });
 // Refract.render(heading, root);

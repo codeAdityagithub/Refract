@@ -3,7 +3,7 @@ export type RefractChildren = string | object;
 export type TEXT_CHILD = "TEXT_CHILD";
 
 export type Fiber = {
-    type: string | TEXT_CHILD;
+    type: any | TEXT_CHILD;
     props:
         | {
               children: Fiber[];
@@ -20,14 +20,14 @@ export type Fiber = {
 };
 
 export type CompletedFiber = {
-    type: string | TEXT_CHILD;
+    type: any | TEXT_CHILD;
     props:
         | {
               children: CompletedFiber[];
               [additionalKey: string]: any;
           }
         | { nodeValue: string; children: [] };
-    node: HTMLElement | Text;
+    node?: HTMLElement | Text;
 
     child?: CompletedFiber;
     parent: CompletedFiber;
