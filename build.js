@@ -1,7 +1,7 @@
 import { build } from "esbuild";
 
 build({
-    entryPoints: ["./index.tsx"], // Your JSX entry file
+    entryPoints: ["./signals.tsx"], // Your JSX entry file
     bundle: true, // Bundle all dependencies into one file
     outfile: "dist/bundle.js", // Output file
     minify: false, // Minify the output
