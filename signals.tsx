@@ -7,21 +7,7 @@ function createElement(type: any, props: object | null, ...children: any[]) {
                 if (typeof child === "object") {
                     return child;
                 } else if (typeof child === "function") {
-                    const sigval = child();
-                    if (sigval instanceof Array) {
-                        const signal = sigval[0];
-                        if (signal instanceof Signal) {
-                            return createSignalChild(signal, sigval[1]);
-                        } else {
-                            throw new Error(
-                                "Other function that returns some array"
-                            );
-                        }
-                    } else {
-                        throw new Error(
-                            `Invalid function return value, return value of type ${typeof sigval} cannot be a dom node`
-                        );
-                    }
+                    return createSignalChild(child);
                 } else {
                     return createTextChildren(child);
                 }
@@ -40,13 +26,9 @@ function createTextChildren(text: string) {
     };
 }
 
-function createSignalChild(
-    signal: Signal,
-    returnFunction: (signalValue: any) => string
-) {
+function createSignalChild(returnFunction: (signalValue: any) => string) {
     return {
         type: "SIGNAL_CHILD",
-        signal,
         renderFunction: returnFunction,
         props: {
             children: [],
@@ -55,6 +37,7 @@ function createSignalChild(
 }
 let scheduled = false;
 const batch = new Set<Function>();
+const functionMap = new Map();
 
 function batchUpdate(cb: Function) {
     batch.add(cb);
@@ -62,51 +45,69 @@ function batchUpdate(cb: Function) {
         scheduled = true;
         queueMicrotask(() => {
             // console.log("Current batch has: ", batch.size, " Functions");
-            batch.forEach((fn) => fn());
+            batch.forEach((fn) => {
+                const dep = fn();
+                if (functionMap.has(dep)) {
+                    functionMap.get(dep)();
+                }
+            });
             batch.clear();
             scheduled = false;
         });
     }
 }
 
+let currentEffect: any = null;
+
+function computed(fn: Function) {
+    currentEffect = fn;
+    fn();
+    currentEffect = null;
+    return fn;
+}
 class Signal {
     private val: any;
     private deps: Set<Function>;
-    private rerenderFunctions: Map<any, any>;
 
     constructor(val: any) {
         this.val = val;
         this.deps = new Set();
-        this.rerenderFunctions = new Map();
     }
 
     get value() {
+        if (currentEffect) {
+            this.deps.add(currentEffect);
+        }
         return this.val;
     }
     set value(val) {
         if (val === this.val) return;
         this.val = val;
-        console.log("updating state");
-        console.log(this.deps.size);
-        this.deps.forEach((dep) => batchUpdate(() => dep(val)));
+        // console.log("updating state");
+        // console.log(this.deps.size);
+        this.deps.forEach((dep) =>
+            batchUpdate(() => {
+                dep(val);
+                return dep;
+            })
+        );
     }
 
-    public subscribe(fn: (value: any) => any) {
-        this.deps.add(fn);
-        // initial call
-        let val = this.val;
-        fn(val);
-    }
-    public rerender(element, container) {}
+    // public subscribe(fn: (value: any) => any) {
+    //     this.deps.add(fn);
+    //     // initial call
+    //     let val = this.val;
+    //     fn(val);
+    // }
     public clearDeps() {
         this.deps.clear();
     }
-    public component(fn: (cur: any) => any) {
-        const component = function () {
-            return [this, fn];
-        };
-        return component.bind(this);
-    }
+    // public component(fn: (cur: any) => any) {
+    //     const component = function () {
+    //         return [this, fn];
+    //     };
+    //     return component.bind(this);
+    // }
 }
 
 function createEffect(fn: () => any) {
@@ -148,38 +149,53 @@ function render(element: any, container: HTMLElement) {
                 dom[name] = element.props[name];
             }
         });
-    const reactiveChild = element.props.children.find(
-        (c) => c.type === "SIGNAL_CHILD"
-    );
 
-    if (!reactiveChild) {
-        element.props.children.forEach((child) => {
-            render(child, dom);
-        });
-    } else {
-        reactiveChild.signal.subscribe((val) => {
-            if (dom) dom.innerHTML = "";
-            element.props.children.forEach((child) => {
-                if (child.type !== "SIGNAL_CHILD") render(child, dom);
-                else render(createTextChildren(child.renderFunction(val)), dom);
-            });
-        });
-        // return;
-    }
+    renderAllChild(element, dom);
     container.appendChild(dom);
+}
+
+function renderAllChild(element: any, dom: any) {
+    element.props.children.forEach((child) => {
+        if (child.type !== "SIGNAL_CHILD") render(child, dom);
+        else {
+            render(createTextChildren(child.renderFunction()), dom);
+            // console.log(typeof appendedChild);
+            functionMap.set(child.renderFunction, () => {
+                dom.innerHTML = "";
+                renderAllChild(element, dom);
+            });
+        }
+    });
 }
 
 const App = (props: any) => {
     const count = createSignal(1);
+    const count2 = createSignal(1);
+
     return (
         <div>
-            <h1>hello {count.component((c) => c)}</h1>
+            <h1>
+                hello
+                {computed(() => count.value)}
+            </h1>
+            <h1>
+                world
+                {computed(() => count2.value)}
+            </h1>
+            <h1>sum {computed(() => count.value + count2.value)}</h1>
             <button
                 onClick={() => {
                     count.value += 1;
                 }}
             >
                 Increment
+            </button>
+            <button
+                onClick={() => {
+                    count2.value -= 1;
+                }}
+            >
+                Increment2
             </button>
         </div>
     );
