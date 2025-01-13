@@ -4,8 +4,10 @@ function createElement(type: any, props: object | null, ...children: any[]) {
         props: {
             ...props,
             children: children.map((child) => {
-                if (typeof child === "object") return child;
-
+                if (typeof child === "object" || typeof child === "function") {
+                    // console.log({ child });
+                    return child;
+                }
                 return createTextChildren(child);
             }),
         },
@@ -40,17 +42,19 @@ function batchUpdate(cb: Function) {
 class Signal {
     private val: any;
     private deps: Set<Function>;
+    private rerenderFunctions: Map<any, any>;
 
     constructor(val: any) {
         this.val = val;
         this.deps = new Set();
+        this.rerenderFunctions = new Map();
     }
 
     get value() {
         return this.val;
     }
     set value(val) {
-        if (val === this.val) return;
+        // if (val === this.val) return;
         this.val = val;
         this.deps.forEach((dep) => batchUpdate(() => dep(val)));
     }
@@ -58,47 +62,107 @@ class Signal {
     public subscribe(fn: (value: any) => any) {
         this.deps.add(fn);
         // initial call
-        let val = this.val;
-        fn(val);
+        console.log(this.deps.size);
+        // let val = this.val;
+        // fn(val);
     }
+    public rerender(element, container) {}
     public clearDeps() {
         this.deps.clear();
     }
+    public component(fn: (cur: any) => any) {
+        const component = function () {
+            return [this, fn];
+        };
+        return component.bind(this);
+    }
 }
 
-function signal(val: any) {
+function createEffect(fn: () => any) {
+    fn();
+    return fn;
+}
+
+function createSignal(val: any) {
+    // console.log(this);
     return new Signal(val);
 }
-for (let i = 0; i < 10; i++) {
-    const count = signal(i);
 
-    count.subscribe((value) => {
-        console.log("Called", value);
+function render(element: any, container: HTMLElement) {
+    if (element instanceof Signal) {
+        throw new Error("Signal cannot be a dom node");
+    }
+
+    if (typeof element.type === "function") {
+        const component = element.type(element.props);
+        render(component, container);
+        return;
+    }
+    const dom =
+        element.type == "TEXT_CHILD"
+            ? document.createTextNode("")
+            : document.createElement(element.type);
+
+    const isProperty = (key) => key !== "children";
+
+    Object.keys(element.props)
+        .filter(isProperty)
+        .forEach((name) => {
+            if (name.startsWith("on")) {
+                dom.addEventListener(
+                    name.slice(2).toLowerCase(),
+                    element.props[name]
+                );
+            } else {
+                dom[name] = element.props[name];
+            }
+        });
+    element.props.children.forEach((child) => {
+        if (typeof child === "function") {
+            // register that function and its container in the signal
+            const sigval = child();
+            if (sigval instanceof Array) {
+                const signal = sigval[0];
+                if (signal instanceof Signal) {
+                    render(createTextChildren(sigval[1](signal.value)), dom);
+                    signal.subscribe((val) => {
+                        console.log("changed", val);
+                        container.removeChild(dom);
+                        // container
+                        render(element, container);
+                    });
+                } else {
+                    console.log("Other function that returns some array");
+                }
+            } else {
+                throw new Error(
+                    `Invalid function return value, return value of type ${typeof sigval} cannot be a dom node`
+                );
+            }
+        } else {
+            render(child, dom);
+        }
     });
-    count.value = i + 1;
+    container.appendChild(dom);
 }
 
-// temp.value = 2;
-// count.value = 2;
+const App = (props: any) => {
+    const name = createSignal("world");
+    return (
+        <div>
+            <h1>hello {name.component((name) => name)}</h1>
+            <button
+                onClick={() => {
+                    name.value = "hello";
+                }}
+            >
+                Increment
+            </button>
+        </div>
+    );
+};
 
-// const App = (props: any, signal: any) => {
-//     // const [count, setCount] = signal.New(0);
-//     const name = "world";
-//     return (
-//         <div>
-//             <h1>hello {name}</h1>
-//             <button
-//                 onClick={() => {
-//                     console.log("first");
-//                 }}
-//             >
-//                 Increment
-//             </button>
-//         </div>
-//     );
-// };
-
-// App({}, {});
+render(<App />, document.getElementById("root")!);
 /*
  Ideal implementation:
                     this signal is like either a default or can be a parent signal

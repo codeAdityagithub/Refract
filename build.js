@@ -1,5 +1,26 @@
 import { build } from "esbuild";
 
+// function addSignalsPlugin() {
+//     return {
+//         name: "add-signals",
+//         setup(build) {
+//             build.onLoad({ filter: /\.jsx?$/ }, async (args) => {
+//                 const fs = require("fs").promises;
+//                 const source = await fs.readFile(args.path, "utf8");
+
+//                 const transformed = source.replace(
+//                     /function (\w+)\(props\) \{/g, // Matches functional components
+//                     (match, componentName) => `
+//             import { withSignals } from './signalSystem';
+//             const ${componentName} = withSignals(function ${componentName}(props) {`
+//                 );
+
+//                 return { contents: transformed, loader: "jsx" };
+//             });
+//         },
+//     };
+// }
+
 build({
     entryPoints: ["./signals.tsx"], // Your JSX entry file
     bundle: true, // Bundle all dependencies into one file
