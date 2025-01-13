@@ -4,11 +4,27 @@ function createElement(type: any, props: object | null, ...children: any[]) {
         props: {
             ...props,
             children: children.map((child) => {
-                if (typeof child === "object" || typeof child === "function") {
-                    // console.log({ child });
+                if (typeof child === "object") {
                     return child;
+                } else if (typeof child === "function") {
+                    const sigval = child();
+                    if (sigval instanceof Array) {
+                        const signal = sigval[0];
+                        if (signal instanceof Signal) {
+                            return createSignalChild(signal, sigval[1]);
+                        } else {
+                            throw new Error(
+                                "Other function that returns some array"
+                            );
+                        }
+                    } else {
+                        throw new Error(
+                            `Invalid function return value, return value of type ${typeof sigval} cannot be a dom node`
+                        );
+                    }
+                } else {
+                    return createTextChildren(child);
                 }
-                return createTextChildren(child);
             }),
         },
     };
@@ -19,6 +35,20 @@ function createTextChildren(text: string) {
         type: "TEXT_CHILD",
         props: {
             nodeValue: text,
+            children: [],
+        },
+    };
+}
+
+function createSignalChild(
+    signal: Signal,
+    returnFunction: (signalValue: any) => string
+) {
+    return {
+        type: "SIGNAL_CHILD",
+        signal,
+        renderFunction: returnFunction,
+        props: {
             children: [],
         },
     };
@@ -54,17 +84,18 @@ class Signal {
         return this.val;
     }
     set value(val) {
-        // if (val === this.val) return;
+        if (val === this.val) return;
         this.val = val;
+        console.log("updating state");
+        console.log(this.deps.size);
         this.deps.forEach((dep) => batchUpdate(() => dep(val)));
     }
 
     public subscribe(fn: (value: any) => any) {
         this.deps.add(fn);
         // initial call
-        console.log(this.deps.size);
-        // let val = this.val;
-        // fn(val);
+        let val = this.val;
+        fn(val);
     }
     public rerender(element, container) {}
     public clearDeps() {
@@ -117,43 +148,35 @@ function render(element: any, container: HTMLElement) {
                 dom[name] = element.props[name];
             }
         });
-    element.props.children.forEach((child) => {
-        if (typeof child === "function") {
-            // register that function and its container in the signal
-            const sigval = child();
-            if (sigval instanceof Array) {
-                const signal = sigval[0];
-                if (signal instanceof Signal) {
-                    render(createTextChildren(sigval[1](signal.value)), dom);
-                    signal.subscribe((val) => {
-                        console.log("changed", val);
-                        container.removeChild(dom);
-                        // container
-                        render(element, container);
-                    });
-                } else {
-                    console.log("Other function that returns some array");
-                }
-            } else {
-                throw new Error(
-                    `Invalid function return value, return value of type ${typeof sigval} cannot be a dom node`
-                );
-            }
-        } else {
+    const reactiveChild = element.props.children.find(
+        (c) => c.type === "SIGNAL_CHILD"
+    );
+
+    if (!reactiveChild) {
+        element.props.children.forEach((child) => {
             render(child, dom);
-        }
-    });
+        });
+    } else {
+        reactiveChild.signal.subscribe((val) => {
+            if (dom) dom.innerHTML = "";
+            element.props.children.forEach((child) => {
+                if (child.type !== "SIGNAL_CHILD") render(child, dom);
+                else render(createTextChildren(child.renderFunction(val)), dom);
+            });
+        });
+        // return;
+    }
     container.appendChild(dom);
 }
 
 const App = (props: any) => {
-    const name = createSignal("world");
+    const count = createSignal(1);
     return (
         <div>
-            <h1>hello {name.component((name) => name)}</h1>
+            <h1>hello {count.component((c) => c)}</h1>
             <button
                 onClick={() => {
-                    name.value = "hello";
+                    count.value += 1;
                 }}
             >
                 Increment
