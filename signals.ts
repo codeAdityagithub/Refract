@@ -71,9 +71,13 @@ function batchUpdate(cb: Function) {
 
 let currentEffect: any = null;
 
-function computed(fn: Function) {
+function reactive(fn: Function) {
     currentEffect = fn;
-    fn();
+    const retVal = fn();
+    if (!isPrimitive(retVal))
+        throw new Error(
+            "Reactive value must be primitive, got: " + typeof retVal
+        );
     currentEffect = null;
     return fn;
 }
@@ -278,7 +282,6 @@ function render(element: any, container: HTMLElement, toReturn?: boolean) {
     if (element instanceof Signal) {
         throw new Error("Signal cannot be a dom node");
     }
-    // console.log(element.type === "SIGNAL_CHILD");
     if (typeof element.type === "function") {
         const component = element.type(element.props);
 
@@ -321,9 +324,15 @@ function renderAllChild(element: any, dom: HTMLElement) {
         if (child.type !== "SIGNAL_CHILD") render(child, dom);
         else {
             let value = child.renderFunction();
-            // console.log(value);
+            if (!value) {
+                value = String(value);
+            }
             if (typeof value === "object" && typeof value.type !== "function") {
+                if (!value.type || !value.props || !value.props?.children)
+                    throw new Error("Object cannot be used as dom nodes.");
+
                 let insertedNode = render(value, dom, true);
+
                 functionMap.set(child.renderFunction, () => {
                     const newValue = child.renderFunction();
                     if (newValue.type !== value.type) {
@@ -401,22 +410,4 @@ function updateNode(
     });
 }
 
-export { computed, createEffect, createSignal, render };
-
-/*
- Ideal implementation:
-                    this signal is like either a default or can be a parent signal
-                        |
-                        v
- const App = (props, signal)=>{
-
-    const [count, setCount] = signal.New(0);
-
-    return (
-        <div>
-            <h1>{count}</h1>
-            <button onClick={()=>setCount(count+1)}>Increment</button>
-        </div>
-    )
- }
-*/
+export { createEffect, createSignal, reactive, render };

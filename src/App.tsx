@@ -1,4 +1,4 @@
-import { computed, createSignal } from "../signals";
+import { reactive, createSignal } from "../signals";
 import Test from "./Test";
 
 const App = (props: any) => {
@@ -9,9 +9,9 @@ const App = (props: any) => {
             <Test />
             <h1>
                 world
-                {computed(() => count2.value)}
+                {reactive(() => count2.value)}
             </h1>
-            <h1>sum {computed(() => count.value + count2.value)}</h1>
+            <h1>sum {reactive(() => count.value + count2.value)}</h1>
             <button
                 onClick={() => {
                     count.value += 1;

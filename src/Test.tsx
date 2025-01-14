@@ -1,12 +1,10 @@
-import { createEffect, createSignal } from "../signals";
+import { createSignal, reactive } from "../signals";
 
 const Test = () => {
-    let i = 0;
-    const age = { age: i };
     const list = createSignal({ name: "Adi" });
-    createEffect(() => {
-        console.log("Effect Called", list.value.age);
-    });
+    // createEffect(() => {
+    //     console.log("Effect Called", list.value.age);
+    // });
 
     return (
         <>
@@ -15,7 +13,7 @@ const Test = () => {
                     list.value = { name: "Sidd" };
                 }}
             >
-                List
+                {reactive(() => list.value.name + list.value.age)}
             </h3>
             <ul className="">
                 {/* {list.value.map((i) => (
@@ -23,7 +21,7 @@ const Test = () => {
                 ))} */}
                 <li
                     onClick={() => {
-                        list.value.age = age;
+                        list.value.age = 40;
                     }}
                 >
                     Test
