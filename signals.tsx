@@ -158,11 +158,11 @@ function renderAllChild(element: any, dom: any) {
     element.props.children.forEach((child) => {
         if (child.type !== "SIGNAL_CHILD") render(child, dom);
         else {
-            render(createTextChildren(child.renderFunction()), dom);
-            // console.log(typeof appendedChild);
+            // render(createTextChildren(child.renderFunction()), dom);
+            const prevNode = document.createTextNode(child.renderFunction());
+            dom.appendChild(prevNode);
             functionMap.set(child.renderFunction, () => {
-                dom.innerHTML = "";
-                renderAllChild(element, dom);
+                prevNode.nodeValue = child.renderFunction();
             });
         }
     });
@@ -195,7 +195,7 @@ const App = (props: any) => {
                     count2.value -= 1;
                 }}
             >
-                Increment2
+                decrement
             </button>
         </div>
     );
