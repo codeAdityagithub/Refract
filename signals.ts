@@ -114,11 +114,6 @@ class Signal {
     // }
 }
 
-function createEffect(fn: () => any) {
-    fn();
-    return fn;
-}
-
 function createSignal(val: any) {
     // console.log(this);
     return new Signal(val);
@@ -128,14 +123,17 @@ function render(element: any, container: HTMLElement, toReturn?: boolean) {
     if (element instanceof Signal) {
         throw new Error("Signal cannot be a dom node");
     }
-
+    // console.log(element.type === "SIGNAL_CHILD");
     if (typeof element.type === "function") {
         const component = element.type(element.props);
+
+        if (toReturn) return render(component, container, true);
+
         render(component, container);
         return;
     }
     const dom =
-        element.type == "TEXT_CHILD"
+        element.type === "TEXT_CHILD"
             ? document.createTextNode("")
             : document.createElement(element.type);
 
@@ -164,7 +162,8 @@ function renderAllChild(element: any, dom: HTMLElement) {
         if (child.type !== "SIGNAL_CHILD") render(child, dom);
         else {
             let value = child.renderFunction();
-            if (typeof value === "object") {
+            // console.log(value);
+            if (typeof value === "object" && typeof value.type !== "function") {
                 let insertedNode = render(value, dom, true);
                 functionMap.set(child.renderFunction, () => {
                     const newValue = child.renderFunction();
@@ -177,8 +176,16 @@ function renderAllChild(element: any, dom: HTMLElement) {
                     }
                     value = newValue;
                 });
-            } else if (typeof child === "function") {
-                console.log("Functional component");
+            } else if (typeof value.type === "function") {
+                console.log("Computed Functional component");
+                let insertedNode = render(value, dom, true);
+
+                functionMap.set(child.renderFunction, () => {
+                    const newValue = child.renderFunction();
+                    dom.removeChild(insertedNode);
+                    insertedNode = render(newValue, dom, true);
+                    value = newValue;
+                });
             } else {
                 const prevNode = document.createTextNode(
                     child.renderFunction()

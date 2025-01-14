@@ -12,6 +12,7 @@ const App = (props: any) => {
                 {computed(() => (
                     <Test count={count.value} />
                 ))}
+                {/* <Test count={count.value} /> */}
             </h1>
             <h1>
                 world
