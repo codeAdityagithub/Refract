@@ -3,6 +3,14 @@ export function createElement(
     props: object | null,
     ...children: any[]
 ) {
+    if (type === "Fragment") {
+        return {
+            type: "FRAGMENT",
+            props: {
+                children,
+            },
+        };
+    }
     return {
         type,
         props: {
@@ -69,6 +77,11 @@ function computed(fn: Function) {
     currentEffect = null;
     return fn;
 }
+function createEffect(fn: Function) {
+    currentEffect = fn;
+    fn();
+    currentEffect = null;
+}
 class Signal {
     private val: any;
     private deps: Set<Function>;
@@ -84,10 +97,11 @@ class Signal {
         }
         return this.val;
     }
+
     set value(val) {
+        console.log("updating state");
         if (val === this.val) return;
         this.val = val;
-        // console.log("updating state");
         // console.log(this.deps.size);
         this.deps.forEach((dep) =>
             batchUpdate(() => {
@@ -130,6 +144,10 @@ function render(element: any, container: HTMLElement, toReturn?: boolean) {
         if (toReturn) return render(component, container, true);
 
         render(component, container);
+        return;
+    }
+    if (element.type === "FRAGMENT") {
+        renderAllChild(element, container);
         return;
     }
     const dom =
@@ -177,7 +195,6 @@ function renderAllChild(element: any, dom: HTMLElement) {
                     value = newValue;
                 });
             } else if (typeof value.type === "function") {
-                console.log("Computed Functional component");
                 let insertedNode = render(value, dom, true);
 
                 functionMap.set(child.renderFunction, () => {
@@ -243,7 +260,7 @@ function updateNode(
     });
 }
 
-export { computed, createSignal, render };
+export { computed, createEffect, createSignal, render };
 
 /*
  Ideal implementation:

@@ -9,6 +9,7 @@ build({
     format: "esm", // Output as ES module
     jsx: "transform", // Convert JSX to JavaScript
     jsxFactory: "createElement", // Use your custom createElement function,
+    jsxFragment: '"Fragment"',
     inject: [path.join(import.meta.dirname, "./signals.ts")],
 })
     .then(() => {
