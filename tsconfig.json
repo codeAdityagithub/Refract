@@ -1,0 +1,6 @@
+{
+    "compilerOptions": {
+        "jsxFactory": "createElement",
+        "target": "esnext"
+    }
+}

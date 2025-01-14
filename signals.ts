@@ -1,4 +1,8 @@
-function createElement(type: any, props: object | null, ...children: any[]) {
+export function createElement(
+    type: any,
+    props: object | null,
+    ...children: any[]
+) {
     return {
         type,
         props: {
@@ -120,7 +124,7 @@ function createSignal(val: any) {
     return new Signal(val);
 }
 
-function render(element: any, container: HTMLElement) {
+function render(element: any, container: HTMLElement, toReturn?: boolean) {
     if (element instanceof Signal) {
         throw new Error("Signal cannot be a dom node");
     }
@@ -152,56 +156,88 @@ function render(element: any, container: HTMLElement) {
 
     renderAllChild(element, dom);
     container.appendChild(dom);
+    if (toReturn) return dom;
 }
 
-function renderAllChild(element: any, dom: any) {
+function renderAllChild(element: any, dom: HTMLElement) {
     element.props.children.forEach((child) => {
         if (child.type !== "SIGNAL_CHILD") render(child, dom);
         else {
-            // render(createTextChildren(child.renderFunction()), dom);
-            const prevNode = document.createTextNode(child.renderFunction());
-            dom.appendChild(prevNode);
-            functionMap.set(child.renderFunction, () => {
-                prevNode.nodeValue = child.renderFunction();
-            });
+            let value = child.renderFunction();
+            if (typeof value === "object") {
+                let insertedNode = render(value, dom, true);
+                functionMap.set(child.renderFunction, () => {
+                    const newValue = child.renderFunction();
+                    if (newValue.type !== value.type) {
+                        dom.removeChild(insertedNode);
+                        console.log("tag removed");
+                        insertedNode = render(newValue, dom, true);
+                    } else {
+                        updateNode(insertedNode, value.props, newValue.props);
+                    }
+                    value = newValue;
+                });
+            } else if (typeof child === "function") {
+                console.log("Functional component");
+            } else {
+                const prevNode = document.createTextNode(
+                    child.renderFunction()
+                );
+                dom.appendChild(prevNode);
+                functionMap.set(child.renderFunction, () => {
+                    prevNode.nodeValue = child.renderFunction();
+                });
+            }
         }
     });
 }
 
-const App = (props: any) => {
-    const count = createSignal(1);
-    const count2 = createSignal(1);
+const isEvent = (key: string) => key.startsWith("on");
+const isProperty = (key: string) => key !== "children" && !isEvent(key);
+const isNew = (prev: any, next: any, key: string) => prev[key] !== next[key];
+const isGone = (prev: any, next: any, key: string) => !(key in next);
 
-    return (
-        <div>
-            <h1>
-                hello
-                {computed(() => count.value)}
-            </h1>
-            <h1>
-                world
-                {computed(() => count2.value)}
-            </h1>
-            <h1>sum {computed(() => count.value + count2.value)}</h1>
-            <button
-                onClick={() => {
-                    count.value += 1;
-                }}
-            >
-                Increment
-            </button>
-            <button
-                onClick={() => {
-                    count2.value -= 1;
-                }}
-            >
-                decrement
-            </button>
-        </div>
-    );
-};
+function updateNode(
+    node: HTMLElement | Text | ChildNode,
+    prevProps: any,
+    nextProps: any
+) {
+    // remove old properties and event listeners
+    for (const prop of Object.keys(prevProps)) {
+        if (isProperty(prop) && isGone(prevProps, nextProps, prop)) {
+            node[prop] = "";
+        } else if (
+            isEvent(prop) &&
+            (!(prop in nextProps) || isNew(prevProps, nextProps, prop))
+        ) {
+            const eventName = prop.toLowerCase().substring(2);
 
-render(<App />, document.getElementById("root")!);
+            node.removeEventListener(eventName, prevProps[prop]);
+        }
+    }
+    // add new properties
+
+    for (const prop of Object.keys(nextProps)) {
+        if (isProperty(prop) && isNew(prevProps, nextProps, prop)) {
+            node[prop] = nextProps[prop];
+        } else if (isEvent(prop) && isNew(prevProps, nextProps, prop)) {
+            const eventName = prop.toLowerCase().substring(2);
+
+            node.addEventListener(eventName, nextProps[prop]);
+        }
+    }
+    node.childNodes.forEach((child, i) => {
+        // updateNode(child, );
+        updateNode(
+            child,
+            prevProps.children[i].props,
+            nextProps.children[i].props
+        );
+    });
+}
+
+export { computed, createSignal, render };
+
 /*
  Ideal implementation:
                     this signal is like either a default or can be a parent signal
