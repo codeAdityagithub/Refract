@@ -79,12 +79,13 @@ function computed(fn: Function) {
 }
 function createEffect(fn: Function) {
     currentEffect = fn;
+
     fn();
     currentEffect = null;
 }
 class Signal {
-    private val: any;
-    private deps: Set<Function>;
+    protected val: any;
+    protected deps: Set<Function>;
 
     constructor(val: any) {
         this.val = val;
@@ -99,38 +100,178 @@ class Signal {
     }
 
     set value(val) {
-        console.log("updating state");
+        if (!isPrimitive(val)) return;
+
         if (val === this.val) return;
         this.val = val;
-        // console.log(this.deps.size);
+
+        this.notify();
+    }
+    private notify() {
         this.deps.forEach((dep) =>
             batchUpdate(() => {
-                dep(val);
+                dep();
                 return dep;
             })
         );
     }
 
-    // public subscribe(fn: (value: any) => any) {
-    //     this.deps.add(fn);
-    //     // initial call
-    //     let val = this.val;
-    //     fn(val);
-    // }
     public clearDeps() {
         this.deps.clear();
     }
-    // public component(fn: (cur: any) => any) {
-    //     const component = function () {
-    //         return [this, fn];
-    //     };
-    //     return component.bind(this);
-    // }
+}
+
+class ArraySignal {
+    private _val: any;
+    private deps: Set<Function>;
+
+    private notify() {
+        this.deps.forEach((dep) =>
+            batchUpdate(() => {
+                dep();
+                return dep;
+            })
+        );
+    }
+    constructor(val: any) {
+        if (typeof val !== "object")
+            throw new Error(
+                "Invalid type for Reference Signal; can be array or object only"
+            );
+
+        this.deps = new Set();
+
+        if (Array.isArray(val)) {
+            this.createNewProxy(val);
+        } else {
+            throw new Error(
+                "Invalid type for Reference Signal; can be array only"
+            );
+        }
+    }
+    get value() {
+        if (currentEffect) {
+            this.deps.add(currentEffect);
+        }
+        return this._val;
+    }
+    set value(val) {
+        if (val === this._val) return;
+        if (Array.isArray(val)) {
+            this.createNewProxy(val);
+            this.notify();
+        } else {
+            throw new Error(
+                "Invalid type for Reference Signal; can be array only"
+            );
+        }
+    }
+    private createNewProxy(val: any) {
+        this._val = new Proxy(val, {
+            get: (target, prop) => {
+                const val = target[prop];
+                // Return the method wrapped with notify logic
+                if (typeof val === "function") {
+                    return (...args: any[]) => {
+                        const result = val.apply(target, args);
+                        this.notify();
+                        return result;
+                    };
+                }
+                return val;
+            },
+            set: (target, prop, value) => {
+                // console.log(target, prop, value);
+                target[prop as any] = value; // Update the array
+                this.notify(); // Notify changes
+                return true;
+            },
+        });
+    }
+}
+class ObjectSignal {
+    private _val: any;
+    private deps: Set<Function>;
+
+    private notify() {
+        this.deps.forEach((dep) =>
+            batchUpdate(() => {
+                dep();
+                return dep;
+            })
+        );
+    }
+    constructor(val: any) {
+        if (!isPlainObject(val))
+            throw new Error(
+                "Invalid type for Reference Signal; can be object only"
+            );
+
+        this.deps = new Set();
+
+        this.createNewProxy(val);
+    }
+    get value() {
+        if (currentEffect) {
+            this.deps.add(currentEffect);
+        }
+        return this._val;
+    }
+    set value(val) {
+        if (!isPlainObject(val))
+            throw new Error(
+                "Invalid type for Reference Signal; can be object only"
+            );
+        if (val === this._val) return;
+
+        this.createNewProxy(val);
+        this.notify();
+    }
+    private createNewProxy(val: any) {
+        this._val = new Proxy(val, {
+            set: (target, prop, value) => {
+                target[prop] = value; // Update the object
+                this.notify(); // Notify changes
+                return true;
+            },
+        });
+    }
 }
 
 function createSignal(val: any) {
-    // console.log(this);
-    return new Signal(val);
+    if (typeof val === "function")
+        throw new Error("Functions cannot be used as signal value");
+
+    if (typeof val === "object" && val !== null) {
+        if (Array.isArray(val)) return new ArraySignal(val);
+        else if (Object.prototype.toString.call(val) === "[object Object]") {
+            return new ObjectSignal(val);
+        } else {
+            throw new Error(
+                "Invalid type for signal initialization: " + typeof val
+            );
+        }
+    } else if (isPrimitive(val)) {
+        return new Signal(val);
+    } else {
+        throw new Error(
+            "Invalid type for signal initialization: " + typeof val
+        );
+    }
+}
+function isPlainObject(variable: any) {
+    return (
+        typeof variable === "object" && // Must be an object
+        variable !== null && // Cannot be null
+        !Array.isArray(variable) && // Cannot be an array
+        Object.prototype.toString.call(variable) === "[object Object]" // Must be a plain object
+    );
+}
+function isPrimitive(val: any) {
+    return (
+        ["boolean", "string", "number", "undefined"].includes(typeof val) ||
+        val === null
+    );
 }
 
 function render(element: any, container: HTMLElement, toReturn?: boolean) {
@@ -187,7 +328,7 @@ function renderAllChild(element: any, dom: HTMLElement) {
                     const newValue = child.renderFunction();
                     if (newValue.type !== value.type) {
                         dom.removeChild(insertedNode);
-                        console.log("tag removed");
+                        // console.log("tag removed");
                         insertedNode = render(newValue, dom, true);
                     } else {
                         updateNode(insertedNode, value.props, newValue.props);

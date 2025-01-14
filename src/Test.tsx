@@ -1,15 +1,18 @@
 import { createEffect, createSignal } from "../signals";
 
 const Test = () => {
-    const list = createSignal({ name: "Aditya", age: 20 });
+    let i = 0;
+    const age = { age: i };
+    const list = createSignal({ name: "Adi" });
     createEffect(() => {
-        console.log(list.value);
+        console.log("Effect Called", list.value.age);
     });
+
     return (
         <>
             <h3
                 onClick={() => {
-                    list.value.age = 40;
+                    list.value = { name: "Sidd" };
                 }}
             >
                 List
@@ -18,6 +21,13 @@ const Test = () => {
                 {/* {list.value.map((i) => (
                 <li>{i}</li>
                 ))} */}
+                <li
+                    onClick={() => {
+                        list.value.age = age;
+                    }}
+                >
+                    Test
+                </li>
             </ul>
         </>
     );
