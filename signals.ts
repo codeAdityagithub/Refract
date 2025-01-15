@@ -86,9 +86,17 @@ function reactive(fn: Function) {
 
     currentEffect = fn;
     const retVal = fn();
-    if (!isPrimitive(retVal) && !Array.isArray(retVal))
+
+    if (
+        !isPrimitive(retVal) &&
+        !Array.isArray(retVal) &&
+        typeof retVal !== "object" &&
+        retVal &&
+        typeof retVal.type !== "function"
+    )
         throw new Error(
-            "Reactive value must be primitive, got: " + typeof retVal
+            "Reactive value must be primitive or functional component, got: " +
+                typeof retVal
         );
     currentEffect = null;
     return fn;
@@ -301,16 +309,21 @@ function isPrimitive(val: any) {
     );
 }
 
-function render(element: any, container: HTMLElement, toReturn?: boolean) {
+function render(
+    element: any,
+    container: HTMLElement,
+    append: boolean,
+    toReturn?: boolean
+) {
     if (element instanceof Signal) {
         throw new Error("Signal cannot be a dom node");
     }
     if (typeof element.type === "function") {
         const component = element.type(element.props);
 
-        if (toReturn) return render(component, container, true);
+        if (toReturn) return render(component, container, true, true);
 
-        render(component, container);
+        render(component, container, true);
         return;
     }
     if (element.type === "FRAGMENT") {
@@ -338,13 +351,13 @@ function render(element: any, container: HTMLElement, toReturn?: boolean) {
         });
 
     renderAllChild(element, dom);
-    container.appendChild(dom);
+    if (append) container.appendChild(dom);
     if (toReturn) return dom;
 }
 
 function renderAllChild(element: any, dom: HTMLElement) {
     element.props.children.forEach((child) => {
-        if (child.type !== "SIGNAL_CHILD") render(child, dom);
+        if (child.type !== "SIGNAL_CHILD") render(child, dom, true);
         else {
             let value = child.renderFunction();
             if (!value) {
@@ -360,16 +373,18 @@ function renderAllChild(element: any, dom: HTMLElement) {
                     throw new Error("Object cannot be used as dom nodes.");
 
                 // this is for rendering other tags inside reactive state
-                let insertedNode = render(value, dom, true);
+                let insertedNode = render(value, dom, true, true);
 
                 functionMap.set(child.renderFunction, () => {
                     const newValue = child.renderFunction();
+
                     if (newValue.type !== value.type) {
-                        dom.removeChild(insertedNode);
-                        // console.log("tag removed");
-                        insertedNode = render(newValue, dom, true);
+                        // dom.replaceChild(newNode, insertedNode);
+                        const newNode = render(newValue, dom, false, true);
+                        dom.replaceChild(newNode, insertedNode);
+                        insertedNode = newNode;
                     } else {
-                        updateNode(insertedNode, value.props, newValue.props);
+                        updateNode(insertedNode, value, newValue);
                     }
                     value = newValue;
                 });
@@ -378,7 +393,7 @@ function renderAllChild(element: any, dom: HTMLElement) {
                 const prevInsertedNodes: any[] = [];
 
                 value.forEach((el) => {
-                    prevInsertedNodes.push(render(el, dom, true));
+                    prevInsertedNodes.push(render(el, dom, true, true));
                 });
                 functionMap.set(child.renderFunction, () => {
                     const newArray = child.renderFunction();
@@ -401,13 +416,23 @@ function renderAllChild(element: any, dom: HTMLElement) {
             } else if (typeof value.type === "function") {
                 // This is for reactive functional components
                 // TODO:this need to be checked for optimization
-                let insertedNode = render(value, dom, true);
-                functionMap.set(child.renderFunction, () => {
-                    const newValue = child.renderFunction();
-                    dom.removeChild(insertedNode);
-                    insertedNode = render(newValue, dom, true);
-                    value = newValue;
-                });
+                // let insertedNode = render(value, dom, true);
+
+                // functionMap.set(child.renderFunction, () => {
+                //     const newValue = child.renderFunction();
+                //     console.log(newValue.props, value.props);
+                //     if (newValue.props !== value.props) {
+                //         const newNode = render(newValue, dom, true);
+                //         dom.replaceChild(newNode, insertedNode);
+                //         insertedNode = newNode;
+                //         console.log("different props");
+                //     } else {
+                //         console.log("same props");
+                //         // updateNode(insertedNode, value.props, newValue.props);
+                //     }
+                //     value = newValue;
+                // });
+                console.log("Functional component found");
             } else {
                 // simple reactive text nodes
                 const prevNode = document.createTextNode(
@@ -430,9 +455,13 @@ const isGone = (prev: any, next: any, key: string) => !(key in next);
 
 function updateNode(
     node: HTMLElement | Text | ChildNode,
-    prevProps: any,
-    nextProps: any
+    prev: any,
+    next: any
 ) {
+    // console.log(prev, next);
+    const prevProps = prev.props;
+    const nextProps = next.props;
+
     // remove old properties and event listeners
     for (const prop of Object.keys(prevProps)) {
         if (isProperty(prop) && isGone(prevProps, nextProps, prop)) {
@@ -446,25 +475,31 @@ function updateNode(
             node.removeEventListener(eventName, prevProps[prop]);
         }
     }
-    // add new properties
 
-    for (const prop of Object.keys(nextProps)) {
-        if (isProperty(prop) && isNew(prevProps, nextProps, prop)) {
-            node[prop] = nextProps[prop];
-        } else if (isEvent(prop) && isNew(prevProps, nextProps, prop)) {
-            const eventName = prop.toLowerCase().substring(2);
-
-            node.addEventListener(eventName, nextProps[prop]);
+    if (prev.type !== next.type) {
+        const parent = node.parentElement;
+        if (parent) {
+            const newNode = render(next, parent, false, true);
+            parent.replaceChild(newNode, node);
+            console.log("replacing the whole node", newNode, node);
         }
+    } else {
+        // add new properties
+        console.log("updating just props", node);
+        for (const prop of Object.keys(nextProps)) {
+            if (isProperty(prop) && isNew(prevProps, nextProps, prop)) {
+                node[prop] = nextProps[prop];
+            } else if (isEvent(prop) && isNew(prevProps, nextProps, prop)) {
+                const eventName = prop.toLowerCase().substring(2);
+
+                node.addEventListener(eventName, nextProps[prop]);
+            }
+        }
+        node.childNodes.forEach((child, i) => {
+            // updateNode(child, );
+            updateNode(child, prevProps.children[i], nextProps.children[i]);
+        });
     }
-    node.childNodes.forEach((child, i) => {
-        // updateNode(child, );
-        updateNode(
-            child,
-            prevProps.children[i].props,
-            nextProps.children[i].props
-        );
-    });
 }
 
 export { createEffect, createSignal, reactive, render };
