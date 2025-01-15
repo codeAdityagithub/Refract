@@ -1,31 +1,37 @@
-import { createSignal, reactive } from "../signals";
+import { createEffect, createSignal, reactive } from "../signals";
 
 const Test = () => {
-    const list = createSignal({ name: "Adi" });
-    // createEffect(() => {
-    //     console.log("Effect Called", list.value.age);
-    // });
+    const list = createSignal([1, 2, 3]);
+    const val = createSignal(1);
+    const obj = createSignal({ a: 1, b: 2 });
+
+    createEffect(() => {
+        console.log("Effect Called", list.value, val.value, obj.value);
+    });
 
     return (
         <>
             <h3
                 onClick={() => {
-                    list.value = { name: "Sidd" };
+                    list.value.forEach((_, i) => {
+                        list.value[i]++;
+                    });
+                    val.value++;
+                    obj.value.a++;
                 }}
             >
-                {reactive(() => list.value.name + list.value.age)}
+                List rendering push
             </h3>
             <ul className="">
-                {/* {list.value.map((i) => (
-                <li>{i}</li>
-                ))} */}
-                <li
-                    onClick={() => {
-                        list.value.age = 40;
-                    }}
-                >
-                    Test
-                </li>
+                {reactive(() =>
+                    list.value.map((i) => (
+                        <li>
+                            {i}
+                            {val.value}
+                            {obj.value.a}
+                        </li>
+                    ))
+                )}
             </ul>
         </>
     );

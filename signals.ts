@@ -50,6 +50,7 @@ function createSignalChild(returnFunction: (signalValue: any) => string) {
 let scheduled = false;
 const batch = new Set<Function>();
 const functionMap = new Map();
+const depset = new Set();
 
 function batchUpdate(cb: Function) {
     batch.add(cb);
@@ -59,10 +60,18 @@ function batchUpdate(cb: Function) {
             // console.log("Current batch has: ", batch.size, " Functions");
             batch.forEach((fn) => {
                 const dep = fn();
+                if (depset.has(dep)) {
+                    // console.log("already called");
+                    return;
+                }
+                depset.add(dep);
+                dep();
                 if (functionMap.has(dep)) {
+                    // for rerendering
                     functionMap.get(dep)();
                 }
             });
+            depset.clear();
             batch.clear();
             scheduled = false;
         });
@@ -72,9 +81,12 @@ function batchUpdate(cb: Function) {
 let currentEffect: any = null;
 
 function reactive(fn: Function) {
+    if (typeof fn !== "function")
+        throw new Error("reactive takes a render function as the argument");
+
     currentEffect = fn;
     const retVal = fn();
-    if (!isPrimitive(retVal))
+    if (!isPrimitive(retVal) && !Array.isArray(retVal))
         throw new Error(
             "Reactive value must be primitive, got: " + typeof retVal
         );
@@ -83,13 +95,13 @@ function reactive(fn: Function) {
 }
 function createEffect(fn: Function) {
     currentEffect = fn;
-
     fn();
     currentEffect = null;
 }
 class Signal {
-    protected val: any;
-    protected deps: Set<Function>;
+    private val: any;
+    private deps: Set<Function>;
+    private isNotified: boolean = false;
 
     constructor(val: any) {
         this.val = val;
@@ -112,9 +124,11 @@ class Signal {
         this.notify();
     }
     private notify() {
+        if (this.isNotified) return;
+        this.isNotified = true;
         this.deps.forEach((dep) =>
             batchUpdate(() => {
-                dep();
+                this.isNotified = false;
                 return dep;
             })
         );
@@ -128,11 +142,15 @@ class Signal {
 class ArraySignal {
     private _val: any;
     private deps: Set<Function>;
+    private isNotified: boolean = false;
 
     private notify() {
+        if (this.isNotified) return;
+        this.isNotified = true;
+
         this.deps.forEach((dep) =>
             batchUpdate(() => {
-                dep();
+                this.isNotified = false;
                 return dep;
             })
         );
@@ -157,6 +175,7 @@ class ArraySignal {
         if (currentEffect) {
             this.deps.add(currentEffect);
         }
+
         return this._val;
     }
     set value(val) {
@@ -178,14 +197,14 @@ class ArraySignal {
                 if (typeof val === "function") {
                     return (...args: any[]) => {
                         const result = val.apply(target, args);
-                        this.notify();
+
+                        if (prop !== "map") this.notify();
                         return result;
                     };
                 }
                 return val;
             },
             set: (target, prop, value) => {
-                // console.log(target, prop, value);
                 target[prop as any] = value; // Update the array
                 this.notify(); // Notify changes
                 return true;
@@ -196,11 +215,15 @@ class ArraySignal {
 class ObjectSignal {
     private _val: any;
     private deps: Set<Function>;
+    private isNotified: boolean = false;
 
     private notify() {
+        if (this.isNotified) return;
+        this.isNotified = true;
+
         this.deps.forEach((dep) =>
             batchUpdate(() => {
-                dep();
+                this.isNotified = false;
                 return dep;
             })
         );
@@ -327,10 +350,16 @@ function renderAllChild(element: any, dom: HTMLElement) {
             if (!value) {
                 value = String(value);
             }
-            if (typeof value === "object" && typeof value.type !== "function") {
+            const isArray = Array.isArray(value);
+            if (
+                typeof value === "object" &&
+                typeof value.type !== "function" &&
+                !isArray
+            ) {
                 if (!value.type || !value.props || !value.props?.children)
                     throw new Error("Object cannot be used as dom nodes.");
 
+                // this is for rendering other tags inside reactive state
                 let insertedNode = render(value, dom, true);
 
                 functionMap.set(child.renderFunction, () => {
@@ -344,9 +373,35 @@ function renderAllChild(element: any, dom: HTMLElement) {
                     }
                     value = newValue;
                 });
-            } else if (typeof value.type === "function") {
-                let insertedNode = render(value, dom, true);
+            } else if (isArray) {
+                // console.log("Array found", element);
+                const prevInsertedNodes: any[] = [];
 
+                value.forEach((el) => {
+                    prevInsertedNodes.push(render(el, dom, true));
+                });
+                functionMap.set(child.renderFunction, () => {
+                    const newArray = child.renderFunction();
+
+                    console.log("rerender list");
+                    if (newArray.length === prevInsertedNodes.length) {
+                        newArray.forEach((el, i) => {
+                            updateNode(
+                                prevInsertedNodes[i],
+                                value[i].props,
+                                el.props
+                            );
+                        });
+                        value = newArray;
+                    } else {
+                        console.log("to handle different length array");
+                    }
+                });
+                return;
+            } else if (typeof value.type === "function") {
+                // This is for reactive functional components
+                // TODO:this need to be checked for optimization
+                let insertedNode = render(value, dom, true);
                 functionMap.set(child.renderFunction, () => {
                     const newValue = child.renderFunction();
                     dom.removeChild(insertedNode);
@@ -354,10 +409,12 @@ function renderAllChild(element: any, dom: HTMLElement) {
                     value = newValue;
                 });
             } else {
+                // simple reactive text nodes
                 const prevNode = document.createTextNode(
                     child.renderFunction()
                 );
                 dom.appendChild(prevNode);
+
                 functionMap.set(child.renderFunction, () => {
                     prevNode.nodeValue = child.renderFunction();
                 });
