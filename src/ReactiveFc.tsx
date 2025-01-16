@@ -1,12 +1,11 @@
-const ReactiveFc = ({ count }) => {
+const ReactiveFc = () => {
     return (
-        <div>
-            {count % 2 == 0 ? (
-                <span className="even">even</span>
-            ) : (
-                <span className="odd">odd</span>
-            )}
-        </div>
+        <>
+            <h1>
+                <p>odd</p>
+            </h1>
+            <h2>odd</h2>
+        </>
     );
 };
 export default ReactiveFc;

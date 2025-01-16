@@ -6,8 +6,17 @@ export function createElement(
     if (type === "Fragment") {
         return {
             type: "FRAGMENT",
+            fragmentLength: children.length,
             props: {
-                children,
+                children: children.map((child) => {
+                    if (typeof child === "object") {
+                        return child;
+                    } else if (typeof child === "function") {
+                        return createSignalChild(child);
+                    } else {
+                        return createTextChildren(child);
+                    }
+                }),
             },
         };
     }
@@ -320,14 +329,19 @@ function render(
     }
     if (typeof element.type === "function") {
         const component = element.type(element.props);
-
         if (toReturn) return render(component, container, true, true);
 
         render(component, container, true);
         return;
     }
     if (element.type === "FRAGMENT") {
+        // console.log(toReturn);
+        // element.props.children.forEach((child) => {
+        //     console.log(child);
+        //     render(child, container, true);
+        // });
         renderAllChild(element, container);
+        if (toReturn) return container;
         return;
     }
     const dom =
@@ -373,17 +387,17 @@ function renderAllChild(element: any, dom: HTMLElement) {
                     throw new Error("Object cannot be used as dom nodes.");
 
                 // this is for rendering other tags inside reactive state
+                console.log(value);
                 let insertedNode = render(value, dom, true, true);
-
                 functionMap.set(child.renderFunction, () => {
                     const newValue = child.renderFunction();
 
                     if (newValue.type !== value.type) {
-                        // dom.replaceChild(newNode, insertedNode);
                         const newNode = render(newValue, dom, false, true);
                         dom.replaceChild(newNode, insertedNode);
                         insertedNode = newNode;
                     } else {
+                        console.log(newValue);
                         updateNode(insertedNode, value, newValue);
                     }
                     value = newValue;
@@ -415,23 +429,33 @@ function renderAllChild(element: any, dom: HTMLElement) {
                 return;
             } else if (typeof value.type === "function") {
                 // This is for reactive functional components
-                // TODO:this need to be checked for optimization
-                // let insertedNode = render(value, dom, true);
+                // this can be parent for fragment returning fc
+                let insertedNode = render(value, dom, true, true);
 
-                // functionMap.set(child.renderFunction, () => {
-                //     const newValue = child.renderFunction();
-                //     console.log(newValue.props, value.props);
-                //     if (newValue.props !== value.props) {
-                //         const newNode = render(newValue, dom, true);
-                //         dom.replaceChild(newNode, insertedNode);
-                //         insertedNode = newNode;
-                //         console.log("different props");
-                //     } else {
-                //         console.log("same props");
-                //         // updateNode(insertedNode, value.props, newValue.props);
-                //     }
-                //     value = newValue;
-                // });
+                functionMap.set(child.renderFunction, () => {
+                    const newValue = child.renderFunction();
+                    if (newValue.type !== value.type) {
+                        // dom.replaceChild(newNode, insertedNode);
+                        const newNode = render(newValue, dom, false, true);
+                        if (dom === insertedNode) {
+                            console.log("Fragment");
+                            dom.innerHTML = "";
+                            console.log(newNode);
+                        } else {
+                            dom.replaceChild(newNode, insertedNode);
+                            insertedNode = newNode;
+                        }
+                    } else {
+                        console.log("Fc changed");
+                        console.log(insertedNode);
+                        updateNode(
+                            insertedNode,
+                            value.type(value.props),
+                            newValue.type(newValue.props)
+                        );
+                    }
+                    value = newValue;
+                });
                 console.log("Functional component found");
             } else {
                 // simple reactive text nodes
@@ -439,7 +463,6 @@ function renderAllChild(element: any, dom: HTMLElement) {
                     child.renderFunction()
                 );
                 dom.appendChild(prevNode);
-
                 functionMap.set(child.renderFunction, () => {
                     prevNode.nodeValue = child.renderFunction();
                 });
@@ -458,7 +481,6 @@ function updateNode(
     prev: any,
     next: any
 ) {
-    // console.log(prev, next);
     const prevProps = prev.props;
     const nextProps = next.props;
 
@@ -481,11 +503,10 @@ function updateNode(
         if (parent) {
             const newNode = render(next, parent, false, true);
             parent.replaceChild(newNode, node);
-            console.log("replacing the whole node", newNode, node);
         }
     } else {
         // add new properties
-        console.log("updating just props", node);
+
         for (const prop of Object.keys(nextProps)) {
             if (isProperty(prop) && isNew(prevProps, nextProps, prop)) {
                 node[prop] = nextProps[prop];
@@ -496,8 +517,9 @@ function updateNode(
             }
         }
         node.childNodes.forEach((child, i) => {
-            // updateNode(child, );
-            updateNode(child, prevProps.children[i], nextProps.children[i]);
+            const prevChild = prevProps.children[i];
+            const nextChild = nextProps.children[i];
+            if (prevChild && nextChild) updateNode(child, prevChild, nextChild);
         });
     }
 }
