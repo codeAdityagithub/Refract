@@ -20,25 +20,26 @@ const App = (props: any) => {
                     <span>Another Inside Fragment</span>
                 </>
             </div> */}
-            <>
-                {reactive(() =>
-                    count.value % 2 == 0 ? (
-                        <>
-                            <h2>even</h2>
-                            <h2>even</h2>
-                            <h2>even</h2>
-                        </>
-                    ) : (
-                        <>odd</>
-                    )
-                )}
-            </>
-            {/* <h1>
-                world
-                {reactive(() => count2.value)}
-            </h1>
-            <h1>sum {reactive(() => count.value + count2.value)}</h1>
-            } */}
+
+            {reactive(() =>
+                count.value % 2 != 0 ? (
+                    <div>
+                        <h2>even</h2>
+                        <h2>even</h2>
+                        <h2>even</h2>
+                    </div>
+                ) : (
+                    <>
+                        <h2>odd</h2>
+                        <h3>odd</h3>
+                        <h2>odd</h2>
+                        <h2>odd</h2>
+                    </>
+                )
+            )}
+            {/* {reactive(() =>
+                count.value % 2 == 0 ? <h1>even</h1> : <ReactiveFc />
+            )} */}
             <button
                 onClick={() => {
                     count.value += 1;
@@ -47,6 +48,12 @@ const App = (props: any) => {
             >
                 Increment
             </button>
+            {/* <h1>
+                world
+                {reactive(() => count2.value)}
+            </h1>
+            <h1>sum {reactive(() => count.value + count2.value)}</h1>
+            } */}
             {/*
             <button
                 onClick={() => {

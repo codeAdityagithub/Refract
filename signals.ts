@@ -4,37 +4,47 @@ export function createElement(
     ...children: any[]
 ) {
     if (type === "Fragment") {
-        return {
-            type: "FRAGMENT",
-            fragmentLength: children.length,
-            props: {
-                children: children.map((child) => {
-                    if (typeof child === "object") {
-                        return child;
-                    } else if (typeof child === "function") {
-                        return createSignalChild(child);
-                    } else {
-                        return createTextChildren(child);
-                    }
-                }),
-            },
-        };
+        // return {
+        //     type: "FRAGMENT",
+        //     fragmentLength: children.length,
+        //     props: {
+        //         children: children.map((child) => {
+        //             if (typeof child === "object") {
+        //                 return child;
+        //             } else if (typeof child === "function") {
+        //                 return createSignalChild(child);
+        //             } else {
+        //                 return createTextChildren(child);
+        //             }
+        //         }),
+        //     },
+        // };
+        return createChildren(children);
     }
     return {
         type,
         props: {
             ...props,
-            children: children.map((child) => {
-                if (typeof child === "object") {
-                    return child;
-                } else if (typeof child === "function") {
-                    return createSignalChild(child);
-                } else {
-                    return createTextChildren(child);
-                }
-            }),
+            children: createChildren(children),
         },
     };
+}
+
+function createChildren(children: any[]) {
+    return children
+        .map((child) => {
+            if (typeof child === "object") {
+                if (Array.isArray(child)) {
+                    return createChildren(child);
+                }
+                return child;
+            } else if (typeof child === "function") {
+                return createSignalChild(child);
+            } else {
+                return createTextChildren(child);
+            }
+        })
+        .flat();
 }
 
 function createTextChildren(text: string) {
@@ -320,7 +330,7 @@ function isPrimitive(val: any) {
 
 function render(
     element: any,
-    container: HTMLElement,
+    container: HTMLElement | DocumentFragment,
     append: boolean,
     toReturn?: boolean
 ) {
@@ -329,28 +339,30 @@ function render(
     }
     if (typeof element.type === "function") {
         const component = element.type(element.props);
-        if (toReturn) return render(component, container, true, true);
+        if (Array.isArray(component)) {
+            const fragment = document.createDocumentFragment();
 
-        render(component, container, true);
-        return;
+            component.forEach((el) => {
+                render(el, fragment, true);
+            });
+
+            container.appendChild(fragment);
+
+            if (toReturn) return container;
+        } else {
+            if (toReturn) return render(component, container, true, true);
+
+            render(component, container, true);
+            return;
+        }
     }
-    if (element.type === "FRAGMENT") {
-        // console.log(toReturn);
-        // element.props.children.forEach((child) => {
-        //     console.log(child);
-        //     render(child, container, true);
-        // });
-        renderAllChild(element, container);
-        if (toReturn) return container;
-        return;
-    }
+
     const dom =
         element.type === "TEXT_CHILD"
             ? document.createTextNode("")
             : document.createElement(element.type);
 
     const isProperty = (key) => key !== "children";
-
     Object.keys(element.props)
         .filter(isProperty)
         .forEach((name) => {
@@ -363,14 +375,13 @@ function render(
                 dom[name] = element.props[name];
             }
         });
-
     renderAllChild(element, dom);
     if (append) container.appendChild(dom);
     if (toReturn) return dom;
 }
 
 function renderAllChild(element: any, dom: HTMLElement) {
-    element.props.children.forEach((child) => {
+    element.props.children.forEach((child, childIndex) => {
         if (child.type !== "SIGNAL_CHILD") render(child, dom, true);
         else {
             let value = child.renderFunction();
@@ -387,11 +398,11 @@ function renderAllChild(element: any, dom: HTMLElement) {
                     throw new Error("Object cannot be used as dom nodes.");
 
                 // this is for rendering other tags inside reactive state
-                console.log(value);
                 let insertedNode = render(value, dom, true, true);
+
                 functionMap.set(child.renderFunction, () => {
                     const newValue = child.renderFunction();
-
+                    console.log(newValue);
                     if (newValue.type !== value.type) {
                         const newNode = render(newValue, dom, false, true);
                         dom.replaceChild(newNode, insertedNode);
@@ -403,60 +414,74 @@ function renderAllChild(element: any, dom: HTMLElement) {
                     value = newValue;
                 });
             } else if (isArray) {
-                // console.log("Array found", element);
-                const prevInsertedNodes: any[] = [];
+                const fragment = document.createDocumentFragment();
 
                 value.forEach((el) => {
-                    prevInsertedNodes.push(render(el, dom, true, true));
+                    render(el, fragment, true);
                 });
+
+                dom.appendChild(fragment);
                 functionMap.set(child.renderFunction, () => {
                     const newArray = child.renderFunction();
 
-                    console.log("rerender list");
-                    if (newArray.length === prevInsertedNodes.length) {
+                    if (newArray.length === value.length) {
                         newArray.forEach((el, i) => {
-                            updateNode(
-                                prevInsertedNodes[i],
-                                value[i].props,
-                                el.props
-                            );
+                            updateNode(dom.children[i], value[i], el);
                         });
-                        value = newArray;
                     } else {
-                        console.log("to handle different length array");
+                        const max = Math.max(newArray.length, value.length);
+                        for (let i = 0; i < max; i++) {
+                            updateNode(
+                                dom.children[i + childIndex],
+                                value[i],
+                                newArray[i],
+                                dom
+                            );
+                        }
                     }
+                    value = newArray;
                 });
                 return;
             } else if (typeof value.type === "function") {
                 // This is for reactive functional components
-                // this can be parent for fragment returning fc
-                let insertedNode = render(value, dom, true, true);
 
-                functionMap.set(child.renderFunction, () => {
-                    const newValue = child.renderFunction();
-                    if (newValue.type !== value.type) {
-                        // dom.replaceChild(newNode, insertedNode);
-                        const newNode = render(newValue, dom, false, true);
-                        if (dom === insertedNode) {
-                            console.log("Fragment");
-                            dom.innerHTML = "";
-                            console.log(newNode);
+                // this can be parent for fragment returning fc
+                const component = value.type(value.props);
+                if (Array.isArray(component)) {
+                    const fragment = document.createDocumentFragment();
+
+                    component.forEach((el) => {
+                        render(el, fragment, true);
+                    });
+                    dom.appendChild(fragment);
+                } else {
+                    let insertedNode = render(value, dom, true, true);
+
+                    functionMap.set(child.renderFunction, () => {
+                        const newValue = child.renderFunction();
+                        if (newValue.type !== value.type) {
+                            // dom.replaceChild(newNode, insertedNode);
+                            const newNode = render(newValue, dom, false, true);
+                            if (dom === insertedNode) {
+                                console.log("Fragment");
+                                // dom.innerHTML = "";
+                                console.log(newNode);
+                            } else {
+                                dom.replaceChild(newNode, insertedNode);
+                                insertedNode = newNode;
+                            }
                         } else {
-                            dom.replaceChild(newNode, insertedNode);
-                            insertedNode = newNode;
+                            console.log("Fc changed");
+                            console.log(insertedNode);
+                            updateNode(
+                                insertedNode,
+                                value.type(value.props),
+                                newValue.type(newValue.props)
+                            );
                         }
-                    } else {
-                        console.log("Fc changed");
-                        console.log(insertedNode);
-                        updateNode(
-                            insertedNode,
-                            value.type(value.props),
-                            newValue.type(newValue.props)
-                        );
-                    }
-                    value = newValue;
-                });
-                console.log("Functional component found");
+                        value = newValue;
+                    });
+                }
             } else {
                 // simple reactive text nodes
                 const prevNode = document.createTextNode(
@@ -479,10 +504,31 @@ const isGone = (prev: any, next: any, key: string) => !(key in next);
 function updateNode(
     node: HTMLElement | Text | ChildNode,
     prev: any,
-    next: any
+    next: any,
+    parent?: HTMLElement
 ) {
-    const prevProps = prev.props;
-    const nextProps = next.props;
+    const prevProps = prev?.props;
+    const nextProps = next?.props;
+
+    if (!prevProps) {
+        if (node && node.parentElement) {
+            // node.insertBefore(
+            //     render(next, node.parentElement, false, true),
+            //     node
+            // );
+            const toInsert = render(next, node.parentElement, false, true);
+            node.parentElement.insertBefore(toInsert, node);
+        } else if (parent) {
+            render(next, parent, true);
+
+            return;
+        }
+        return;
+    } else if (node && !nextProps) {
+        // console.log("extra node removed", node);
+        node.remove();
+        return;
+    }
 
     // remove old properties and event listeners
     for (const prop of Object.keys(prevProps)) {
