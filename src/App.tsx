@@ -14,6 +14,7 @@ const App = (props: any) => {
                     <div>Nested Fragment 2</div>
                 </>
             </>
+            
             <div>
                 <>
                     <span>Inside Fragment</span>
