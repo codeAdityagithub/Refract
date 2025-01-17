@@ -1,6 +1,0 @@
-{
-    "watch": ["src", "signals.ts"],
-    "ext": "js,ts,jsx,tsx",
-    "exec": "node build.js",
-    "ignore": ["build.js"]
-}

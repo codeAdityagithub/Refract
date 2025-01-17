@@ -1,4 +1,4 @@
-import { createSignal, reactive } from "../signals";
+import { createSignal, reactive } from "../../signals";
 
 const App = (props: any) => {
     const count = createSignal(1);

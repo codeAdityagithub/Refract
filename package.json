@@ -13,8 +13,11 @@
     "author": "",
     "license": "ISC",
     "devDependencies": {
+        "@testing-library/dom": "^10.4.0",
         "chokidar": "^4.0.3",
         "esbuild": "^0.24.2",
+        "jsdom": "^26.0.0",
+        "vitest": "^3.0.1",
         "ws": "^8.18.0"
     }
 }
