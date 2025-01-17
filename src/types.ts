@@ -1,37 +1,23 @@
-export type RefractChildren = string | object;
+export type RenderFunction = () => any;
+export type Type = string | "TEXT_CHILD" | "SIGNAL_CHILD" | "FRAGMENT";
 
-export type TEXT_CHILD = "TEXT_CHILD";
-
-export type Fiber = {
-    type: any | TEXT_CHILD;
-    props:
-        | {
-              children: Fiber[];
-              [additionalKey: string]: any;
-          }
-        | { nodeValue: string; children: [] };
-    node?: HTMLElement | Text;
-
-    child?: Fiber;
-    parent?: Fiber;
-    sibling?: Fiber;
-    alternate?: Fiber;
-    effectTag?: "UPDATE" | "DELETION" | "PLACEMENT";
-};
-
-export type CompletedFiber = {
-    type: any | TEXT_CHILD;
-    props:
-        | {
-              children: CompletedFiber[];
-              [additionalKey: string]: any;
-          }
-        | { nodeValue: string; children: [] };
-    node?: HTMLElement | Text;
-
-    child?: CompletedFiber;
-    parent: CompletedFiber;
-    sibling?: CompletedFiber;
-    alternate?: CompletedFiber;
-    effectTag?: "UPDATE" | "DELETION" | "PLACEMENT";
+export type Children = Element[];
+export type Props =
+    | {
+          children: Element[];
+          [key: string]: any;
+      }
+    | {
+          children: Element[];
+          nodeValue: string;
+          [key: string]: any;
+      }
+    | {
+          children: Element[];
+          [key: string]: any;
+      };
+export type Element = {
+    type: Type;
+    props: Props;
+    renderFunction?: RenderFunction;
 };

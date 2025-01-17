@@ -11,20 +11,22 @@ const isProd =
         (arg) => arg.startsWith("--build") && arg.endsWith("true")
     );
 const buildOptions = {
-    entryPoints: ["./src/Main.tsx"], // Your JSX entry file
+    entryPoints: ["./src/components/Main.tsx"], // Your JSX entry file
     bundle: true, // Bundle all dependencies into one file
     outfile: "dist/bundle.js", // Output file
     minify: false, // Minify the output
     format: "esm", // Output as ES module
     jsx: "transform", // Convert JSX to JavaScript
     jsxFactory: "createElement", // Use your custom createElement function,
-    jsxFragment: '"Fragment"',
-    inject: [path.join(import.meta.dirname, "./signals.ts")],
+    jsxFragment: '"FRAGMENT"',
+    inject: [
+        path.join(import.meta.dirname, "./src/rendering/createElements.ts"),
+    ],
 };
 const injectHtml = async () => {
     try {
         const index = await fs.readFile(
-            path.join(import.meta.dirname, "./index.html"),
+            path.join(import.meta.dirname, "./public/index.html"),
             "utf-8"
         );
         const injectWSScript = index.replace(
@@ -43,7 +45,8 @@ const injectHtml = async () => {
         );
         await fs.writeFile(
             path.join(import.meta.dirname, "./dist/index.html"),
-            injectWSScript
+            injectWSScript,
+            "utf-8"
         );
     } catch (err) {
         console.error("Error updating index.html:", err);

@@ -1,4 +1,4 @@
-import { createEffect, createSignal, reactive } from "../../signals";
+import { createEffect, createSignal, reactive } from "../signals/signal";
 
 const Test = () => {
     const list = createSignal([1, 2, 3]);
