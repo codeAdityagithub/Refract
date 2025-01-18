@@ -1,3 +1,4 @@
+import { isPlainObject, isPrimitive } from "../utils/general";
 import { batchUpdate } from "./batch";
 
 let currentEffect: any = null;
@@ -8,14 +9,19 @@ export function reactive(fn: Function) {
 
     currentEffect = fn;
     const retVal = fn();
-
-    if (!isPrimitive(retVal) && isPlainObject(retVal))
+    if (
+        !isPrimitive(retVal) &&
+        isPlainObject(retVal) &&
+        !retVal.type &&
+        !retVal.props &&
+        !retVal.props.children
+    )
         throw new Error(
             "Reactive value must be primitive or functional component, got: " +
                 typeof retVal
         );
     currentEffect = null;
-    return fn;
+    return retVal;
 }
 export function createEffect(fn: Function) {
     if (typeof fn !== "function")
@@ -236,20 +242,6 @@ function createSignal<T extends NormalSignal | any[] | Record<any, any>>(
             "Invalid type for signal initialization: " + typeof val
         );
     }
-}
-function isPlainObject(variable: any) {
-    return (
-        typeof variable === "object" && // Must be an object
-        variable !== null && // Cannot be null
-        !Array.isArray(variable) && // Cannot be an array
-        Object.prototype.toString.call(variable) === "[object Object]" // Must be a plain object
-    );
-}
-function isPrimitive(val: any) {
-    return (
-        ["boolean", "string", "number", "undefined"].includes(typeof val) ||
-        val === null
-    );
 }
 
 export { createSignal };

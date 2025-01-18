@@ -17,11 +17,11 @@ export function batchUpdate(cb: Function) {
                 depset.add(dep);
 
                 // effects and reactive nodes
-                dep();
+                const val = dep();
 
                 if (reactiveFunctionsMap.has(dep)) {
                     // for updating reactive nodes
-                    reactiveFunctionsMap.get(dep)();
+                    reactiveFunctionsMap.get(dep)(val);
                 }
             });
             depset.clear();
@@ -32,7 +32,7 @@ export function batchUpdate(cb: Function) {
 }
 
 export function setReactiveFunction(fn: Function, dep: Function) {
-    reactiveFunctionsMap.set(dep, fn);
+    reactiveFunctionsMap.set(fn, dep);
 }
 
 export function clearReactiveFunction(fn: Function) {

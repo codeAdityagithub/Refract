@@ -1,12 +1,65 @@
-import { setReactiveFunction } from "../signals/batch";
 import { ArraySignal, ObjectSignal, Signal } from "../signals/signal";
+import { Element, ReactiveElement } from "../types";
 
-export function render(
-    element: any,
+type UnitOfWork = {
+    element: Element | Element[];
+    container: HTMLElement | DocumentFragment;
+};
+export function render(element: Element, container: HTMLElement) {
+    // deletions = [];
+    const fragment = document.createDocumentFragment();
+    rootElement = container;
+    rootFragment = fragment;
+    nextUnitOfWork = { element, container: fragment };
+}
+
+let nextUnitOfWork: UnitOfWork | null = null;
+let rootFragment: DocumentFragment | null = null;
+let rootElement: HTMLElement | null = null;
+// let currentFiberRoot: CompletedFiber | undefined = undefined;
+
+// let deletions: Fiber[] | null = null;
+
+function workLoop(deadline: IdleDeadline) {
+    let shouldYield = false;
+    while (nextUnitOfWork && !shouldYield) {
+        let next: UnitOfWork | null = null;
+
+        if (
+            nextUnitOfWork.element instanceof Array &&
+            nextUnitOfWork.element.length > 0
+        ) {
+            const val = performUnitOfWork(
+                nextUnitOfWork.element.pop()!,
+                nextUnitOfWork.container,
+                false
+            );
+            if (val) next = val;
+        } else {
+            const val = performUnitOfWork(
+                // @ts-expect-error
+                nextUnitOfWork.element,
+                nextUnitOfWork.container
+            );
+            if (val) next = val;
+        }
+        if (next) nextUnitOfWork = next;
+        shouldYield = deadline.timeRemaining() < 1;
+    }
+
+    if (!nextUnitOfWork && rootElement && rootFragment) {
+        rootElement.appendChild(rootFragment);
+        console.log("Done");
+    }
+    requestIdleCallback(workLoop);
+}
+requestIdleCallback(workLoop);
+
+function performUnitOfWork(
+    element: Element,
     container: HTMLElement | DocumentFragment,
-    append: boolean,
     toReturn?: boolean
-) {
+): UnitOfWork | undefined {
     if (
         element instanceof Signal ||
         element instanceof ArraySignal ||
@@ -15,25 +68,13 @@ export function render(
         throw new Error("Signal cannot be a dom node");
     }
     if (typeof element.type === "function") {
-        const component = element.type(element.props);
-        if (Array.isArray(component)) {
-            const fragment = document.createDocumentFragment();
+        const children = [element.type(element.props)] as Element[];
 
-            component.forEach((el) => {
-                render(el, fragment, true);
-            });
-
-            container.appendChild(fragment);
-
-            if (toReturn) return container;
-        } else {
-            if (toReturn) return render(component, container, true, true);
-
-            render(component, container, true);
-            return;
-        }
+        return {
+            element: children,
+            container,
+        };
     }
-
     const dom =
         element.type === "TEXT_CHILD"
             ? document.createTextNode("")
@@ -52,125 +93,79 @@ export function render(
                 dom[name] = element.props[name];
             }
         });
-    renderAllChild(element, dom);
-    if (append) container.appendChild(dom);
-    if (toReturn) return dom;
+
+    container.appendChild(dom);
+    if (element.type === "TEXT_CHILD") {
+        return;
+    }
+    if (element.props.children) {
+        return {
+            element: element.props.children.reverse(),
+            // @ts-expect-error
+            container: dom,
+        };
+    }
 }
 
-function renderAllChild(element: any, dom: HTMLElement) {
-    element.props.children.forEach((child, childIndex) => {
-        if (child.type !== "SIGNAL_CHILD") render(child, dom, true);
-        else {
-            let value = child.renderFunction();
-            if (!value) {
-                value = String(value);
-            }
-            const isArray = Array.isArray(value);
-            if (
-                typeof value === "object" &&
-                typeof value.type !== "function" &&
-                !isArray
-            ) {
-                if (!value.type || !value.props || !value.props?.children)
-                    throw new Error("Object cannot be used as dom nodes.");
+function updateFunctionComponent(fiber: Fiber) {
+    const children = [fiber.type(fiber.props)];
 
-                // this is for rendering other tags inside reactive state
-                let insertedNode = render(value, dom, true, true);
+    reconcileChildren(fiber, children);
+}
+function updateHostComponent(fiber: Fiber) {
+    if (!fiber.node) {
+        fiber.node = createNode(fiber);
+    }
+    reconcileChildren(fiber, fiber.props.children);
+}
 
-                setReactiveFunction(child.renderFunction, () => {
-                    const newValue = child.renderFunction();
-                    console.log(newValue);
-                    if (newValue.type !== value.type) {
-                        const newNode = render(newValue, dom, false, true);
-                        dom.replaceChild(newNode, insertedNode);
-                        insertedNode = newNode;
-                    } else {
-                        console.log(newValue);
-                        updateNode(insertedNode, value, newValue);
-                    }
-                    value = newValue;
-                });
-            } else if (isArray) {
-                const fragment = document.createDocumentFragment();
+function reconcileChildren(fiber: Fiber, elements: Fiber[]) {
+    let index = 0;
 
-                value.forEach((el) => {
-                    render(el, fragment, true);
-                });
+    // corresponds to elements[0]
+    let oldFiber = fiber.alternate?.child;
 
-                dom.appendChild(fragment);
-                setReactiveFunction(child.renderFunction, () => {
-                    const newArray = child.renderFunction();
+    let prevSibling: Fiber | undefined = undefined;
 
-                    if (newArray.length === value.length) {
-                        newArray.forEach((el, i) => {
-                            updateNode(dom.children[i], value[i], el);
-                        });
-                    } else {
-                        const max = Math.max(newArray.length, value.length);
-                        for (let i = 0; i < max; i++) {
-                            updateNode(
-                                dom.children[i + childIndex],
-                                value[i],
-                                newArray[i],
-                                dom
-                            );
-                        }
-                    }
-                    value = newArray;
-                });
-                return;
-            } else if (typeof value.type === "function") {
-                // This is for reactive functional components
+    while (index < elements.length || oldFiber != undefined) {
+        const element = elements[index];
+        let newFiber: Fiber | undefined = undefined;
 
-                // this can be parent for fragment returning fc
-                const component = value.type(value.props);
-                if (Array.isArray(component)) {
-                    const fragment = document.createDocumentFragment();
+        const sameType = oldFiber && element && element.type === oldFiber.type;
 
-                    component.forEach((el) => {
-                        render(el, fragment, true);
-                    });
-                    dom.appendChild(fragment);
-                } else {
-                    let insertedNode = render(value, dom, true, true);
-
-                    setReactiveFunction(child.renderFunction, () => {
-                        const newValue = child.renderFunction();
-                        if (newValue.type !== value.type) {
-                            // dom.replaceChild(newNode, insertedNode);
-                            const newNode = render(newValue, dom, false, true);
-                            if (dom === insertedNode) {
-                                console.log("Fragment");
-                                // dom.innerHTML = "";
-                                console.log(newNode);
-                            } else {
-                                dom.replaceChild(newNode, insertedNode);
-                                insertedNode = newNode;
-                            }
-                        } else {
-                            console.log("Fc changed");
-                            console.log(insertedNode);
-                            updateNode(
-                                insertedNode,
-                                value.type(value.props),
-                                newValue.type(newValue.props)
-                            );
-                        }
-                        value = newValue;
-                    });
-                }
-            } else {
-                // simple reactive text nodes
-                const prevNode = document.createTextNode(
-                    child.renderFunction()
-                );
-                dom.appendChild(prevNode);
-                setReactiveFunction(child.renderFunction, () => {
-                    prevNode.nodeValue = child.renderFunction();
-                });
+        if (sameType) {
+            newFiber = {
+                ...oldFiber,
+                parent: fiber,
+                props: element.props,
+                alternate: oldFiber,
+                effectTag: "UPDATE",
+            };
+        } else if (element !== undefined) {
+            // not same type so replace
+            newFiber = {
+                type: element.type,
+                props: element.props,
+                parent: fiber,
+                effectTag: "PLACEMENT",
+            };
+            // mark old fiber for deletion
+            if (oldFiber) {
+                oldFiber.effectTag = "DELETION";
+                deletions?.push(oldFiber);
             }
         }
-    });
+
+        if (index === 0) {
+            fiber.child = newFiber;
+        } else {
+            // @ts-expect-error
+            prevSibling.sibling = newFiber;
+        }
+
+        prevSibling = newFiber;
+        index++;
+    }
 }
 
 const isEvent = (key: string) => key.startsWith("on");
@@ -180,32 +175,27 @@ const isGone = (prev: any, next: any, key: string) => !(key in next);
 
 function updateNode(
     node: HTMLElement | Text | ChildNode,
-    prev: any,
-    next: any,
-    parent?: HTMLElement
+    prev: ReactiveElement,
+    next: ReactiveElement
 ) {
     const prevProps = prev?.props;
     const nextProps = next?.props;
 
-    if (!prevProps) {
-        if (node && node.parentElement) {
-            // node.insertBefore(
-            //     render(next, node.parentElement, false, true),
-            //     node
-            // );
-            const toInsert = render(next, node.parentElement, false, true);
-            node.parentElement.insertBefore(toInsert, node);
-        } else if (parent) {
-            render(next, parent, true);
+    // if (!prevProps) {
+    //     if (node && node.parentElement) {
+    //         const toInsert = render(next, node.parentElement, false, true);
+    //         node.parentElement.insertBefore(toInsert, node);
+    //     } else if (parent) {
+    //         render(next, parent, true);
 
-            return;
-        }
-        return;
-    } else if (node && !nextProps) {
-        // console.log("extra node removed", node);
-        node.remove();
-        return;
-    }
+    //         return;
+    //     }
+    //     return;
+    // } else if (node && !nextProps) {
+    //     // console.log("extra node removed", node);
+    //     node.remove();
+    //     return;
+    // }
 
     // remove old properties and event listeners
     for (const prop of Object.keys(prevProps)) {
@@ -233,6 +223,7 @@ function updateNode(
         for (const prop of Object.keys(nextProps)) {
             if (isProperty(prop) && isNew(prevProps, nextProps, prop)) {
                 node[prop] = nextProps[prop];
+                // console.log(prop);
             } else if (isEvent(prop) && isNew(prevProps, nextProps, prop)) {
                 const eventName = prop.toLowerCase().substring(2);
 

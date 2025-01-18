@@ -1,4 +1,4 @@
-import { createSignal, reactive } from "../signals/signal";
+import { createSignal } from "../index.ts";
 
 const App = (props: any) => {
     const count = createSignal(1);
@@ -22,7 +22,7 @@ const App = (props: any) => {
                 </>
             </div> */}
 
-            {reactive(() =>
+            {/* {reactive(() =>
                 count.value % 2 != 0 ? (
                     <div>
                         <h2>even</h2>
@@ -37,7 +37,16 @@ const App = (props: any) => {
                         <h2>odd</h2>
                     </>
                 )
-            )}
+            )} */}
+            <h1>
+                {() => {
+                    return (
+                        <p>
+                            {count.value % 2 === 0 ? "even" : <span>odd</span>}
+                        </p>
+                    );
+                }}
+            </h1>
             {/* {reactive(() =>
                 count.value % 2 == 0 ? <h1>even</h1> : <ReactiveFc />
             )} */}

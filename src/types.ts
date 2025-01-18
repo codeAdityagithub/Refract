@@ -1,5 +1,10 @@
 export type RenderFunction = () => any;
-export type Type = string | "TEXT_CHILD" | "SIGNAL_CHILD" | "FRAGMENT";
+export type Type =
+    | string
+    | "TEXT_CHILD"
+    | "SIGNAL_CHILD"
+    | "FRAGMENT"
+    | Function;
 
 export type Children = Element[];
 export type Props =
@@ -20,4 +25,10 @@ export type Element = {
     type: Type;
     props: Props;
     renderFunction?: RenderFunction;
+};
+export type ReactiveElement = {
+    type: Type;
+    props: Props & { children: ReactiveElement[] };
+    dom: HTMLElement | Text;
+    parent?: ReactiveElement;
 };

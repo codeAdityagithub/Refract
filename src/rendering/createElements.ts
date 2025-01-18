@@ -1,4 +1,6 @@
-import { Children, Element, RenderFunction, Type } from "../types";
+import { reactive } from "../signals/signal";
+import { Children, Element, Props, RenderFunction, Type } from "../types";
+import { isPrimitive } from "../utils/general";
 
 export function createElement(
     type: Type,
@@ -26,7 +28,9 @@ function createChildren(children: any[]): Children {
                 }
                 return child;
             } else if (typeof child === "function") {
-                return createSignalChild(child);
+                const val = reactive(child);
+                if (isPrimitive(val)) return createTextChildren(String(val));
+                return createSignalChild(val.type, val.props, child);
             } else {
                 return createTextChildren(child);
             }
@@ -44,12 +48,14 @@ function createTextChildren(text: string): Element {
     };
 }
 
-function createSignalChild(returnFunction: RenderFunction): Element {
+function createSignalChild(
+    type: Type,
+    props: Props,
+    renderFunction: RenderFunction
+): Element {
     return {
-        type: "SIGNAL_CHILD",
-        renderFunction: returnFunction,
-        props: {
-            children: [],
-        },
+        type,
+        renderFunction,
+        props,
     };
 }
