@@ -1,4 +1,5 @@
 const ReactiveFc = () => {
+    // console.log("ReactiveFc rendered");
     return (
         <>
             <h1>

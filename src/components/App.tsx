@@ -14,7 +14,7 @@ const App = (props: any) => {
                     <div>Nested Fragment 2</div>
                 </>
             </>
-            
+
             <div>
                 <>
                     <span>Inside Fragment</span>
@@ -38,18 +38,31 @@ const App = (props: any) => {
                     </>
                 )
             )} */}
-            <h1>
-                {() => {
-                    return (
-                        <p>
-                            {count.value % 2 === 0 ? "even" : <span>odd</span>}
-                        </p>
-                    );
-                }}
-            </h1>
-            {/* {reactive(() =>
-                count.value % 2 == 0 ? <h1>even</h1> : <ReactiveFc />
-            )} */}
+            {/* <>
+                <ReactiveFc />
+            </> */}
+            {/* <h1> */}
+            {/* {() => {
+                return (
+                    <p>
+                        {count.value % 2 === 0 ? (
+                            <span>even</span>
+                        ) : (
+                            <span>odd</span>
+                        )}
+                    </p>
+                );
+            }} */}
+            {/* </h1> */}
+            {() =>
+                count.value % 2 == 0 ? (
+                    <h1>
+                        <h2>even</h2>even
+                    </h1>
+                ) : (
+                    <h1>odd</h1>
+                )
+            }
             <button
                 onClick={() => {
                     count.value += 1;

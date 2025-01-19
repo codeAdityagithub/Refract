@@ -1,12 +1,19 @@
 import { reactive } from "../signals/signal";
-import { Children, Element, Props, RenderFunction, Type } from "../types";
+import {
+    Element,
+    Fiber,
+    FiberChildren,
+    NodeType,
+    Props,
+    RenderFunction,
+} from "../types";
 import { isPrimitive } from "../utils/general";
 
 export function createElement(
-    type: Type,
+    type: any,
     props: object | null,
-    ...children: any[]
-): Element | Element[] {
+    ...children: Element[]
+): Fiber | FiberChildren {
     if (type === "FRAGMENT") {
         return createChildren(children);
     }
@@ -19,7 +26,7 @@ export function createElement(
     };
 }
 
-function createChildren(children: any[]): Children {
+function createChildren(children: FiberChildren): FiberChildren {
     return children
         .map((child) => {
             if (typeof child === "object") {
@@ -29,7 +36,12 @@ function createChildren(children: any[]): Children {
                 return child;
             } else if (typeof child === "function") {
                 const val = reactive(child);
-                if (isPrimitive(val)) return createTextChildren(String(val));
+                if (isPrimitive(val))
+                    return createSignalChild(
+                        "TEXT_CHILD",
+                        { nodeValue: String(val), children: [] },
+                        child
+                    );
                 return createSignalChild(val.type, val.props, child);
             } else {
                 return createTextChildren(child);
@@ -38,7 +50,7 @@ function createChildren(children: any[]): Children {
         .flat();
 }
 
-function createTextChildren(text: string): Element {
+export function createTextChildren(text: string): Element {
     return {
         type: "TEXT_CHILD",
         props: {
@@ -49,13 +61,38 @@ function createTextChildren(text: string): Element {
 }
 
 function createSignalChild(
-    type: Type,
+    type: NodeType,
     props: Props,
     renderFunction: RenderFunction
-): Element {
+) {
     return {
         type,
         renderFunction,
         props,
     };
+}
+
+function isProperty(key: string) {
+    return key !== "children";
+}
+export function createNode(element: Fiber) {
+    const dom =
+        element.type === "TEXT_CHILD"
+            ? document.createTextNode("")
+            : // @ts-expect-error
+              document.createElement(element.type);
+    if (!element.props) return dom;
+    Object.keys(element.props)
+        .filter(isProperty)
+        .forEach((name) => {
+            if (name.startsWith("on")) {
+                dom.addEventListener(
+                    name.slice(2).toLowerCase(),
+                    element.props[name]
+                );
+            } else {
+                dom[name] = element.props[name];
+            }
+        });
+    return dom;
 }

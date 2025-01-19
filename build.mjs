@@ -89,7 +89,7 @@ async function dev() {
     console.log("Watching for changes...");
 }
 if (isProd) {
-    buildOptions.minify = true;
+    // buildOptions.minify = true;
     injectHtml()
         .then(() => {
             esbuild.build(buildOptions).catch((err) => {
