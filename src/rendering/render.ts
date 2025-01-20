@@ -1,4 +1,4 @@
-import { setReactiveFunction } from "../signals/batch";
+import { clearReactiveFunction, setReactiveFunction } from "../signals/batch";
 import { Element, Fiber, FunctionFiber, NodeFiber } from "../types";
 import { isPrimitive } from "../utils/general";
 import { createNode, createTextChildren } from "./createElements";
@@ -37,32 +37,27 @@ function commitWork(fiber: Fiber | undefined) {
     const parentNode = parentFiber?.dom;
     if (parentNode && fiber.dom) {
         // console.log(fiber);
-        parentNode.appendChild(fiber.dom);
-        if (fiber.renderFunction) {
-            setReactiveFunction(fiber.renderFunction, (newValue) => {
-                console.log(fiber);
-                if (isPrimitive(newValue)) {
-                    updateNode(fiber, createTextChildren(String(newValue)));
-                } else {
-                    updateNode(fiber, newValue);
-                }
-                console.log(fiber);
-            });
-        }
-    } else if (parentNode && fiber.renderFunction) {
-        setReactiveFunction(fiber.renderFunction, (newValue) => {
-            // console.log(fiber, newValue);
-            if (isPrimitive(newValue)) {
-                updateNode(fiber, createTextChildren(String(newValue)));
-            } else {
-                updateNode(fiber, newValue);
-            }
-        });
+        if (fiber.dom) parentNode.appendChild(fiber.dom);
+        setRenderFunction(fiber);
     }
     commitWork(fiber.child);
     commitWork(fiber.sibling);
 }
 
+function setRenderFunction(fiber: Fiber) {
+    if (!fiber.renderFunction) return;
+
+    setReactiveFunction(fiber.renderFunction, (newValue) => {
+        console.log(newValue, "New Value");
+        if (isPrimitive(newValue)) {
+            console.log(fiber, newValue);
+            updateNode(fiber, createTextChildren(String(newValue)));
+        } else {
+            console.log("update non primitive", fiber, newValue);
+            updateNode(fiber, newValue);
+        }
+    });
+}
 let nextUnitOfWork: Fiber | null = null;
 let fiberRoot: Fiber | null = null;
 // let currentFiberRoot: CompletedFiber | undefined = undefined;
@@ -153,31 +148,29 @@ function reconcileChildren(fiber: Fiber, elements: Fiber[]) {
         index++;
     }
 }
+
+function reconcileNewFiber(fiber: Fiber) {
+    let curFiber: Fiber | null = fiber;
+    while (curFiber) {
+        curFiber = performUnitOfWork(curFiber);
+    }
+}
 export const isEvent = (key: string) => key.startsWith("on");
 export const isProperty = (key: string) => key !== "children" && !isEvent(key);
 const isNew = (prev: any, next: any, key: string) => prev[key] !== next[key];
 const isGone = (prev: any, next: any, key: string) => !(key in next);
 
-function updateNode(prev: Fiber | undefined, next: Element) {
-    if (!prev) {
-        if (!next) return;
-        console.log("new node", next);
-
-        return;
-    }
+function updateNode(prev: Fiber | undefined, next: Element | undefined) {
+    if (!prev || !next) return;
     if (!prev.dom) {
-        updateNode(prev?.child, next);
+        // updateNode(prev?.child, next);
+        console.log("no dom on ", prev);
         return;
     }
+    console.log("updating", prev, next);
     const prevProps = prev?.props;
     const nextProps = next?.props;
     const node = prev.dom;
-
-    if (node && !nextProps) {
-        console.log("extra node removed", node);
-        node.remove();
-        return;
-    }
 
     // remove old properties and event listeners from NODE
     for (const prop of Object.keys(prevProps)) {
@@ -195,31 +188,47 @@ function updateNode(prev: Fiber | undefined, next: Element) {
         }
     }
     if (prev.type !== next.type) {
-        console.log("different type nodes", prev, next);
         // prev.dom = undefined;
         let newFiber: Fiber | undefined = {
             type: next.type,
             props: next.props,
             parent: prev.parent,
-            sibling: prev.sibling,
         };
+        if (prev.renderFunction) {
+            newFiber.renderFunction = prev.renderFunction;
+            clearReactiveFunction(prev.renderFunction);
+
+            prev.renderFunction = undefined;
+            console.log("resetting render function");
+            setRenderFunction(newFiber);
+        }
         if (prev.parent) {
-            performUnitOfWork(newFiber);
-            prev.parent.child = newFiber;
-            console.log(newFiber, "new fiber");
+            // console.log(newFiber, "new fiber", prev);
+            reconcileNewFiber(newFiber);
+            console.log("different fiber", prev, newFiber);
+            // console.log("first child");
+            commitWork(newFiber);
             while (newFiber && !newFiber.dom) {
                 newFiber = newFiber.child;
             }
-            if (newFiber && newFiber.dom) {
+            if (newFiber?.dom)
                 prev.parent.dom?.replaceChild(newFiber.dom, prev.dom);
-                // console.log("replaced", newFiber.dom);
+            // console.log(prev.renderFunction);
+            if (prev.parent.child === prev) {
+                prev.parent.child = newFiber;
+            } else {
+                let prevSibling: Fiber | undefined = prev.parent.child;
+                while (prevSibling && prevSibling.sibling !== prev) {
+                    prevSibling = prevSibling.sibling;
+                }
+                if (prevSibling) {
+                    prevSibling.sibling = newFiber;
+                }
             }
         }
-        // prev.type = next.type;
-        // prev.props = next.props;
-        // prev.parent?.dom?.replaceChild(,prev.dom)
     } else {
         // add new properties
+        console.log("same type");
         for (const prop of Object.keys(nextProps)) {
             if (isProperty(prop) && isNew(prevProps, nextProps, prop)) {
                 node[prop] = nextProps[prop];
@@ -232,12 +241,25 @@ function updateNode(prev: Fiber | undefined, next: Element) {
                 prevProps[prop] = nextProps[prop];
             }
         }
-    }
-    let nextFiber = prev.child;
-    const len = Math.max(prev.props.children.length, nextProps.children.length);
+        let nextFiber = prev.child;
+        let prevFiber: Fiber | undefined = undefined;
+        const len = Math.max(
+            prevProps.children.length,
+            nextProps.children.length
+        );
 
-    for (let i = 0; i < len; i++) {
-        updateNode(nextFiber, nextProps.children[i]);
-        nextFiber = nextFiber?.sibling;
+        for (let i = 0; i < len; i++) {
+            // console.log(nextFiber, nextProps.children[i]);
+            const nextEl = nextProps.children[i];
+            if (!nextFiber && nextEl) {
+                console.log("to add fiber", nextEl);
+            } else if (!nextEl && nextFiber) {
+                console.log("to remove fiber", nextFiber);
+            } else {
+                updateNode(nextFiber, nextEl);
+                prevFiber = nextFiber;
+                nextFiber = nextFiber?.sibling;
+            }
+        }
     }
 }

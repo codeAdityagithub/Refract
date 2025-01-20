@@ -43,24 +43,38 @@ const App = (props: any) => {
             </> */}
             {/* <h1> */}
             {/* {() => {
-                return (
-                    <p>
-                        {count.value % 2 === 0 ? (
-                            <span>even</span>
-                        ) : (
-                            <span>odd</span>
-                        )}
-                    </p>
-                );
+                return <p>{count.value % 2 === 0 ? "even" : "odd"}</p>;
             }} */}
+            {/* <p>
+                {() => {
+                    return count.value % 2 === 0 ? "even" : "odd";
+                }}
+            </p> */}
             {/* </h1> */}
-            {() =>
+            {/* <button
+                onClick={() => {
+                    count.value += 1;
+                    // count.value -= 1;
+                }}
+            >
+                Increment
+            </button> */}
+            {/* {() =>
                 count.value % 2 == 0 ? (
                     <h1>
-                        <h2>even</h2>even
+                        <p>even</p>even
                     </h1>
                 ) : (
-                    <h1>odd</h1>
+                    <h2>odd</h2>
+                )
+            } */}
+            {() =>
+                count.value % 2 == 0 ? (
+                    <h2>
+                        <p>even</p>even
+                    </h2>
+                ) : (
+                    <h2>odd</h2>
                 )
             }
             <button
