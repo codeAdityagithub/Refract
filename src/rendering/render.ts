@@ -195,6 +195,10 @@ function updateNode(
         updateChildren(prev, next);
         return;
     }
+    if (prev.props.key && next.props.key && prev.props.key === next.props.key) {
+        console.log("skipping");
+        return;
+    }
     console.log("updating", prev, next);
     const prevProps = prev?.props;
     const nextProps = next?.props;

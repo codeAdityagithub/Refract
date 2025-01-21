@@ -61,7 +61,7 @@ export default function ReactiveComponent() {
             <ul>
                 {() =>
                     itemsSignal.value.map((item, index) => (
-                        <li key={index}>{item}</li>
+                        <li key={item}>{item}</li>
                     ))
                 }
             </ul>
@@ -70,15 +70,15 @@ export default function ReactiveComponent() {
             <form
                 onSubmit={(e) => {
                     e.preventDefault();
+                    const [index, value] = e.target[0].value
+                        .split(" ")
+                        .splice(0, 2);
+                    const ind = Number(index);
+                    if (!isNaN(ind)) itemsSignal.value[ind] = value;
+                    e.currentTarget.reset();
                 }}
             >
-                <input
-                    type="text"
-                    value={textSignal.value}
-                    onInput={(e) => {
-                        textSignal.value = e.target.value;
-                    }}
-                />
+                <input type="text" />
             </form>
         </div>
     );

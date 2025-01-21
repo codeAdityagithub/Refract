@@ -98,11 +98,11 @@ export function createNode(element: Fiber) {
                 name.startsWith("on") &&
                 typeof element.props[name] === "function"
             ) {
-                console.log(
-                    "adding event listener to",
-                    dom,
-                    element.props[name]
-                );
+                // console.log(
+                //     "adding event listener to",
+                //     dom,
+                //     element.props[name]
+                // );
                 dom.addEventListener(
                     name.slice(2).toLowerCase(),
                     element.props[name]
