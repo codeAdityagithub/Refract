@@ -14,6 +14,7 @@ export function createElement(
     props: object | null,
     ...children: Element[]
 ): Fiber | FiberChildren {
+    // console.log(type);
     if (type === "FRAGMENT") {
         return createChildren(children);
     }
@@ -26,7 +27,7 @@ export function createElement(
     };
 }
 
-function createChildren(children: FiberChildren): FiberChildren {
+export function createChildren(children: FiberChildren): FiberChildren {
     return children
         .map((child) => {
             if (typeof child === "object") {
@@ -42,6 +43,14 @@ function createChildren(children: FiberChildren): FiberChildren {
                         { nodeValue: String(val), children: [] },
                         child
                     );
+                else if (Array.isArray(val)) {
+                    console.log(createChildren(val));
+                    return createSignalChild(
+                        "FRAGMENT",
+                        { children: createChildren(val) },
+                        child
+                    );
+                }
                 return createSignalChild(val.type, val.props, child);
             } else {
                 return createTextChildren(child);
@@ -85,7 +94,15 @@ export function createNode(element: Fiber) {
     Object.keys(element.props)
         .filter(isProperty)
         .forEach((name) => {
-            if (name.startsWith("on")) {
+            if (
+                name.startsWith("on") &&
+                typeof element.props[name] === "function"
+            ) {
+                console.log(
+                    "adding event listener to",
+                    dom,
+                    element.props[name]
+                );
                 dom.addEventListener(
                     name.slice(2).toLowerCase(),
                     element.props[name]
