@@ -11,13 +11,25 @@ export default function ReactiveComponent() {
             <h1>{() => <span>{textSignal.value}</span>}</h1>
 
             {/* Conditional rendering with reactivity */}
-            {() =>
+            {/* {() =>
                 showTextSignal.value ? (
-                    <p>{() => <span>{textSignal.value}</span>}</p>
+                    <>
+                        <p>
+                            <span>{textSignal.value}</span>
+                            <span>extra</span>
+                        </p>
+                        <h2>{textSignal.value}</h2>
+                    </>
                 ) : (
-                    ""
+                    <>
+                        <p>
+                            <span>Hidden Text</span>
+                        </p>
+                        <h2>Hello!!</h2>
+                    </>
                 )
-            }
+            } */}
+
             <button
                 onClick={() => (showTextSignal.value = !showTextSignal.value)}
             >
@@ -60,9 +72,15 @@ export default function ReactiveComponent() {
             {/* Lists with reactivity */}
             <ul>
                 {() =>
-                    itemsSignal.value.map((item, index) => (
-                        <li key={item}>{item}</li>
-                    ))
+                    showTextSignal.value ? (
+                        <>
+                            <p>Hidden Text</p>
+                        </>
+                    ) : (
+                        itemsSignal.value.map((item, index) => (
+                            <li key={item}>{item}</li>
+                        ))
+                    )
                 }
             </ul>
 

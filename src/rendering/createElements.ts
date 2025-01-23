@@ -44,7 +44,7 @@ export function createChildren(children: FiberChildren): FiberChildren {
                         child
                     );
                 else if (Array.isArray(val)) {
-                    console.log(createChildren(val));
+                    // console.log(createChildren(val));
                     return createSignalChild(
                         "FRAGMENT",
                         { children: createChildren(val) },

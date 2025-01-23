@@ -49,14 +49,29 @@ function commitWork(fiber: Fiber | undefined) {
     commitWork(fiber.child);
     commitWork(fiber.sibling);
 }
+function commitUpdate(fiber: Fiber | undefined) {
+    if (!fiber) return;
+    let parentFiber = fiber.parent;
+    // console.log(fiber);
+    const parentNode = parentFiber?.dom;
+    if (parentNode) {
+        // console.log(fiber);
+        if (fiber.dom) parentNode.appendChild(fiber.dom);
+        // if (fiber.renderFunction) console.log(fiber.renderFunction);
+    }
+    setRenderFunction(fiber);
+    commitUpdate(fiber.child);
+    commitUpdate(fiber.sibling);
+}
 function removeAllRenderFunctions(fiber: Fiber | undefined) {
     if (!fiber) return;
 
     if (fiber.renderFunction) {
         clearReactiveFunction(fiber.renderFunction);
+        fiber.renderFunction = undefined;
     }
-    commitWork(fiber.child);
-    commitWork(fiber.sibling);
+    removeAllRenderFunctions(fiber.child);
+    removeAllRenderFunctions(fiber.sibling);
 }
 
 function setRenderFunction(fiber: Fiber) {
@@ -228,36 +243,33 @@ function updateNode(
         };
         if (prev.renderFunction) {
             newFiber.renderFunction = prev.renderFunction;
-            clearReactiveFunction(prev.renderFunction);
+            removeAllRenderFunctions(prev);
 
-            prev.renderFunction = undefined;
             console.log("resetting render function");
             setRenderFunction(newFiber);
         }
+
         if (prev.parent) {
-            // console.log(newFiber, "new fiber", prev);
+            const parent = prev.parent;
+
             reconcileNewFiber(newFiber);
             console.log("different fiber", prev, newFiber);
-            // console.log("first child");
-            commitWork(newFiber);
-            while (newFiber && !newFiber.dom) {
-                newFiber = newFiber.child;
-            }
-            if (newFiber?.dom)
-                prev.parent.dom?.replaceChild(newFiber.dom, prev.dom);
-            // console.log(prev.renderFunction);
-            if (prev.parent.child === prev) {
-                prev.parent.child = newFiber;
+            commitUpdate(newFiber);
+
+            if (newFiber.dom) parent.dom?.replaceChild(newFiber.dom, prev.dom);
+
+            if (parent.child === prev) {
+                parent.child = newFiber;
             } else {
-                let prevSibling: Fiber | undefined = prev.parent.child;
+                let prevSibling: Fiber | undefined = parent.child;
                 while (prevSibling && prevSibling.sibling !== prev) {
                     prevSibling = prevSibling.sibling;
                 }
                 if (prevSibling) {
-                    console.log("different node prevSibling", prevSibling);
                     prevSibling.sibling = newFiber;
                 }
             }
+            console.log("updated fiber parent ", parent);
             return newFiber;
         }
     } else {
@@ -266,7 +278,7 @@ function updateNode(
         for (const prop of Object.keys(nextProps)) {
             if (isProperty(prop) && isNew(prevProps, nextProps, prop)) {
                 node[prop] = nextProps[prop];
-                console.log("property added", prop);
+                console.log("property added", prop, nextProps[prop]);
                 prevProps[prop] = nextProps[prop];
             } else if (isEvent(prop) && isNew(prevProps, nextProps, prop)) {
                 const eventName = prop.toLowerCase().substring(2);
@@ -278,59 +290,152 @@ function updateNode(
         updateChildren(prev, next);
     }
 }
+// function updateNode(
+//     prev: Fiber | undefined,
+//     next: Element | undefined
+// ): Fiber | undefined {
+//     if (!prev || !next) return;
+//     if (!prev.dom) {
+//         // This happens when updating a fragment or a FC
+//         updateChildren(prev, next);
+//         return;
+//     }
+//     if (prev.props.key && next.props.key && prev.props.key === next.props.key) {
+//         console.log("skipping");
+//         return;
+//     }
+//     console.log("updating", prev, next);
+//     const prevProps = prev?.props;
+//     const nextProps = next?.props;
+//     const node = prev.dom;
 
-function updateChildren(prev: Fiber, next: Element) {
-    const prevProps = prev.props;
-    const nextProps = next.props;
-    let nextFiber = prev.child;
-    let prevFiber: Fiber | undefined = undefined;
+//     // remove old properties and event listeners from NODE
+//     for (const prop of Object.keys(prevProps)) {
+//         if (isProperty(prop) && isGone(prevProps, nextProps, prop)) {
+//             node[prop] = "";
+//             console.log("property removed", prop);
+//         } else if (
+//             isEvent(prop) &&
+//             (!(prop in nextProps) || isNew(prevProps, nextProps, prop))
+//         ) {
+//             const eventName = prop.toLowerCase().substring(2);
 
-    const len = Math.max(prevProps.children.length, nextProps.children.length);
-    for (let i = 0; i < len; i++) {
-        // console.log(nextFiber, nextProps.children[i]);
-        const nextEl = nextProps.children[i];
-        if (!nextFiber && nextEl) {
-            const newFiber: Fiber = {
-                type: nextEl.type,
-                props: nextEl.props,
-                parent: prev,
-            };
-            reconcileNewFiber(newFiber);
-            console.log("To add", newFiber);
-            commitWork(newFiber);
-            if (prevFiber) {
-                prevFiber.sibling = newFiber;
-            } else if (prev.child === undefined) {
-                prev.child = newFiber;
-            }
-            prev.props.children.push(nextEl);
-            prevFiber = newFiber;
-        } else if (!nextEl && nextFiber) {
-            console.log("to remove fiber", nextFiber);
-            removeAllRenderFunctions(nextFiber);
-            if (prevFiber?.sibling === nextFiber) {
-                prevFiber.sibling = undefined;
-            } else if (prev.child === nextFiber) {
-                prev.child = undefined;
-            }
-            while (nextFiber && !nextFiber.dom) {
-                nextFiber = nextFiber.child;
-            }
-            let parent: Fiber | undefined = prev;
-            while (parent && !parent.dom) {
-                parent = parent.parent;
-            }
-            if (nextFiber?.dom && parent?.dom)
-                parent.dom.removeChild(nextFiber.dom);
-            prev.props.children.splice(i, 1);
-            nextFiber = nextFiber?.sibling;
-        } else {
-            // which means that a newFiber was created that was different from nextFiber;
-            const newFiber = updateNode(nextFiber, nextEl);
-            if (newFiber) prevFiber = newFiber;
-            else prevFiber = nextFiber;
-            nextFiber = nextFiber?.sibling;
-        }
-        console.log("Fiber after update", prev);
-    }
-}
+//             node.removeEventListener(eventName, prevProps[prop]);
+//             console.log("event listener removed", prop);
+//         }
+//     }
+//     if (prev.type !== next.type) {
+//         // prev.dom = undefined;
+//         let newFiber: Fiber | undefined = {
+//             type: next.type,
+//             props: next.props,
+//             parent: prev.parent,
+//         };
+//         if (prev.renderFunction) {
+//             newFiber.renderFunction = prev.renderFunction;
+//             removeAllRenderFunctions(prev);
+
+//             console.log("resetting render function");
+//             setRenderFunction(newFiber);
+//         }
+
+//         if (prev.parent) {
+//             const parent = prev.parent;
+
+//             reconcileNewFiber(newFiber);
+//             console.log("different fiber", prev, newFiber);
+//             commitUpdate(newFiber);
+
+//             if (newFiber.type === "FRAGMENT") {
+//                 throw new Error("Fragments cannot be used as a reactive node");
+//             }
+//             if (newFiber.dom) parent.dom?.replaceChild(newFiber.dom, prev.dom);
+
+//             if (parent.child === prev) {
+//                 parent.child = newFiber;
+//             } else {
+//                 let prevSibling: Fiber | undefined = parent.child;
+//                 while (prevSibling && prevSibling.sibling !== prev) {
+//                     prevSibling = prevSibling.sibling;
+//                 }
+//                 if (prevSibling) {
+//                     prevSibling.sibling = newFiber;
+//                 }
+//             }
+//             console.log("updated fiber parent ", parent);
+//             return newFiber;
+//         }
+//     } else {
+//         // add new properties
+//         console.log("same type");
+//         for (const prop of Object.keys(nextProps)) {
+//             if (isProperty(prop) && isNew(prevProps, nextProps, prop)) {
+//                 node[prop] = nextProps[prop];
+//                 console.log("property added", prop, nextProps[prop]);
+//                 prevProps[prop] = nextProps[prop];
+//             } else if (isEvent(prop) && isNew(prevProps, nextProps, prop)) {
+//                 const eventName = prop.toLowerCase().substring(2);
+//                 console.log("event listener added", prop);
+//                 node.addEventListener(eventName, nextProps[prop]);
+//                 prevProps[prop] = nextProps[prop];
+//             }
+//         }
+//         updateChildren(prev, next);
+//     }
+// }
+
+// function updateChildren(prev: Fiber, next: Element) {
+//     const prevProps = prev.props;
+//     const nextProps = next.props;
+//     let nextFiber = prev.child;
+//     let prevFiber: Fiber | undefined = undefined;
+//     console.log(prev, next, "Updating children");
+//     const len = Math.max(prevProps.children.length, nextProps.children.length);
+//     for (let i = 0; i < len; i++) {
+//         // console.log(nextFiber, nextProps.children[i]);
+//         const nextEl = nextProps.children[i];
+//         if (!nextFiber && nextEl) {
+//             const newFiber: Fiber = {
+//                 type: nextEl.type,
+//                 props: nextEl.props,
+//                 parent: prev,
+//             };
+//             reconcileNewFiber(newFiber);
+//             console.log("To add", newFiber);
+//             commitUpdate(newFiber);
+//             if (prevFiber) {
+//                 prevFiber.sibling = newFiber;
+//             } else if (prev.child === undefined) {
+//                 prev.child = newFiber;
+//             }
+//             prev.props.children.push(nextEl);
+//             prevFiber = newFiber;
+//         } else if (!nextEl && nextFiber) {
+//             console.log("to remove fiber", nextFiber);
+//             removeAllRenderFunctions(nextFiber);
+//             if (prevFiber?.sibling === nextFiber) {
+//                 prevFiber.sibling = undefined;
+//             } else if (prev.child === nextFiber) {
+//                 prev.child = undefined;
+//             }
+//             while (nextFiber && !nextFiber.dom) {
+//                 nextFiber = nextFiber.child;
+//             }
+//             let parent: Fiber | undefined = prev;
+//             while (parent && !parent.dom) {
+//                 parent = parent.parent;
+//             }
+//             if (nextFiber?.dom && parent?.dom)
+//                 parent.dom.removeChild(nextFiber.dom);
+//             prev.props.children.splice(i, 1);
+//             nextFiber = nextFiber?.sibling;
+//         } else {
+//             // which means that a newFiber was created that was different from nextFiber;
+//             const newFiber = updateNode(nextFiber, nextEl);
+//             if (newFiber) prevFiber = newFiber;
+//             else prevFiber = nextFiber;
+//             nextFiber = nextFiber?.sibling;
+//         }
+//         // console.log("Fiber after update", prev);
+//     }
+// }
