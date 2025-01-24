@@ -11,7 +11,7 @@ export default function ReactiveComponent() {
             <h1>{() => <span>{textSignal.value}</span>}</h1>
 
             {/* Conditional rendering with reactivity */}
-            {/* {() =>
+            {() =>
                 showTextSignal.value ? (
                     <>
                         <p>
@@ -28,7 +28,7 @@ export default function ReactiveComponent() {
                         <h2>Hello!!</h2>
                     </>
                 )
-            } */}
+            }
 
             <button
                 onClick={() => (showTextSignal.value = !showTextSignal.value)}
@@ -52,7 +52,7 @@ export default function ReactiveComponent() {
             {/* Nested elements */}
             <div>
                 <h2>Nested Elements</h2>
-                <p>{() => <span>{textSignal.value}</span>}</p>
+                <p>{() => <h3>{textSignal.value}</h3>}</p>
             </div>
 
             {/* TODO: Attributes with reactivity */}
@@ -72,7 +72,7 @@ export default function ReactiveComponent() {
             {/* Lists with reactivity */}
             <ul>
                 {() =>
-                    showTextSignal.value ? (
+                    !showTextSignal.value ? (
                         <>
                             <p>Hidden Text</p>
                         </>

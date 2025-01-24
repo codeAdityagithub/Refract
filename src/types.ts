@@ -45,8 +45,6 @@ export type Fiber = {
     props: Props & { children: FiberChildren };
     dom?: HTMLElement | Text;
     parent?: Fiber;
-    sibling?: Fiber;
-    child?: Fiber;
     renderFunction?: RenderFunction;
 };
 export type NodeFiber = {
@@ -54,8 +52,6 @@ export type NodeFiber = {
     props: Props & { children: FiberChildren };
     dom?: HTMLElement | Text;
     parent?: Fiber;
-    sibling?: Fiber;
-    child?: Fiber;
     renderFunction?: RenderFunction;
 };
 export type FunctionFiber = {
@@ -63,7 +59,5 @@ export type FunctionFiber = {
     props: Props & { children: FiberChildren };
     dom?: HTMLElement | Text;
     parent?: Fiber;
-    sibling?: Fiber;
-    child?: Fiber;
     renderFunction?: RenderFunction;
 };
