@@ -31,7 +31,7 @@ export type ElementProps =
 
 export type Element = {
     type: Type;
-    props: ElementProps;
+    props: Props;
     renderFunction?: RenderFunction;
 };
 export type NodeElement = {
@@ -44,20 +44,20 @@ export type Fiber = {
     type: Type;
     props: Props & { children: FiberChildren };
     dom?: HTMLElement | Text;
-    parent?: Fiber;
+    parent: Fiber;
     renderFunction?: RenderFunction;
 };
 export type NodeFiber = {
     type: NodeType;
     props: Props & { children: FiberChildren };
     dom?: HTMLElement | Text;
-    parent?: Fiber;
+    parent: Fiber;
     renderFunction?: RenderFunction;
 };
 export type FunctionFiber = {
     type: Function;
     props: Props & { children: FiberChildren };
     dom?: HTMLElement | Text;
-    parent?: Fiber;
+    parent: Fiber;
     renderFunction?: RenderFunction;
 };

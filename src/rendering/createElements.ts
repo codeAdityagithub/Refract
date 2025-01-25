@@ -12,12 +12,13 @@ import { isPrimitive } from "../utils/general";
 export function createElement(
     type: any,
     props: object | null,
-    ...children: Element[]
+    ...children: Fiber[]
 ): Fiber | FiberChildren {
     // console.log(type);
     if (type === "FRAGMENT") {
         return createChildren(children);
     }
+    // @ts-expect-error
     return {
         type,
         props: {
@@ -28,6 +29,7 @@ export function createElement(
 }
 
 export function createChildren(children: FiberChildren): FiberChildren {
+    // @ts-expect-error
     return children
         .map((child) => {
             if (typeof child === "object") {

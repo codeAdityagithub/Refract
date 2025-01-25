@@ -26,6 +26,7 @@ export default function ReactiveComponent() {
                             <span>Hidden Text</span>
                         </p>
                         <h2>Hello!!</h2>
+                        <h3>Hi</h3>
                     </>
                 )
             }
