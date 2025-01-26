@@ -10,11 +10,11 @@ export function reactive(fn: Function) {
     currentEffect = fn;
     const retVal = fn();
     if (
-        !isPrimitive(retVal) &&
-        isPlainObject(retVal) &&
-        !retVal.type &&
-        !retVal.props &&
-        !retVal.props.children
+        !isPrimitive(retVal) ||
+        (isPlainObject(retVal) &&
+            !retVal.type &&
+            !retVal.props &&
+            !retVal.props.children)
     )
         throw new Error(
             "Reactive value must be primitive or functional component, got: " +
@@ -206,11 +206,26 @@ export class ObjectSignal<T extends Record<any, any>> {
         this.notify();
     }
     private createNewProxy(val: any) {
-        this._val = new Proxy(val, {
+        this._val = this.newProxy(val);
+    }
+    private newProxy(val: any) {
+        return new Proxy(val, {
             set: (target, prop, value) => {
+                if (typeof value === "function") return false;
+                if (typeof value === "object" && value !== null) {
+                    value = this.newProxy(value);
+                }
+                if (value === target[prop]) return true;
                 target[prop] = value; // Update the object
                 this.notify(); // Notify changes
                 return true;
+            },
+            deleteProperty: (target, key) => {
+                // Handle deletion
+                const result = delete target[key];
+                // Trigger reactivity
+                this.notify();
+                return result;
             },
         });
     }
