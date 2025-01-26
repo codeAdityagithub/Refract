@@ -1,5 +1,6 @@
 import { createSignal } from "../signals/signal";
 import FC1 from "./FC1";
+import FC2 from "./FC2";
 
 const Test = () => {
     const textSignal = createSignal<string>("Initial Text");
@@ -27,9 +28,28 @@ const Test = () => {
                         </p>
                         <h2>Hello!!</h2>
                         <h3>Hi</h3>
+                        <h3>Hi</h3>
+                        <h3>Hi</h3>
                     </>
                 )
             } */}
+            {/* FC - Fragment */}
+            {/* {() =>
+                showTextSignal.value ? (
+                    <FC1 />
+                ) : (
+                    <>
+                        <p>
+                            <span>{textSignal.value}</span>
+                        </p>
+                        <h2>{textSignal.value}</h2>
+                        <h2>Hello!!</h2>
+                        <h3>Hi</h3>
+                    </>
+                )
+            } */}
+            {/* FC - FC */}
+            {() => (showTextSignal.value ? <FC2 /> : <FC1 />)}
 
             {/* Fragment - Node */}
             {/* {() =>
@@ -64,6 +84,7 @@ const Test = () => {
                     <div>
                         hidden
                         <span>hidden</span>
+                        hidden
                     </div>
                 )
             } */}
@@ -75,19 +96,6 @@ const Test = () => {
                         <span>Extra</span>
                         {textSignal.value}
                     </p>
-                ) : (
-                    <FC1 />
-                )
-            } */}
-            {/* FC - Fragment */}
-            {/* {() =>
-                showTextSignal.value ? (
-                    <>
-                        <p>
-                            <span>{textSignal.value}</span>
-                        </p>
-                        <h2>{textSignal.value}</h2>
-                    </>
                 ) : (
                     <FC1 />
                 )
@@ -105,8 +113,6 @@ const Test = () => {
             </button>
 
             {/* TODO: Attributes with reactivity */}
-
-            <br />
         </div>
     );
 };
