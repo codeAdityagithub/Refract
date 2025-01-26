@@ -7,6 +7,7 @@ const App = (props: any) => {
     // return <ReactiveComponent />;
     // return <NonReactiveComponent />;
     return <Test />;
+    // return <ListsTest />;
 };
 
 export default App;

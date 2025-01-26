@@ -1,16 +1,14 @@
 import { createSignal } from "../signals/signal";
-import FC1 from "./FC1";
-import FC2 from "./FC2";
 
 const Test = () => {
     const textSignal = createSignal<string>("Initial Text");
-    const itemsSignal = createSignal(["Item 1", "Item 2", "Item 3"]);
     const showTextSignal = createSignal<boolean>(true);
 
     return (
         <div>
             {/* Static content with reactivity */}
-            <h1>{() => <span>{textSignal.value}</span>}</h1>
+            <h1>{() => textSignal.value}</h1>
+            {/* Array rendering */}
 
             {/* Fragment - Fragment with reactivity */}
             {/* {() =>
@@ -36,20 +34,23 @@ const Test = () => {
             {/* FC - Fragment */}
             {/* {() =>
                 showTextSignal.value ? (
-                    <FC1 />
+                    <>
+                        <FC1 />
+                        <FC2 />
+                    </>
                 ) : (
                     <>
                         <p>
-                            <span>{textSignal.value}</span>
+                            <span>{() => textSignal.value}</span>
                         </p>
-                        <h2>{textSignal.value}</h2>
+                        <h2>{() => textSignal.value}</h2>
                         <h2>Hello!!</h2>
                         <h3>Hi</h3>
                     </>
                 )
             } */}
             {/* FC - FC */}
-            {() => (showTextSignal.value ? <FC2 /> : <FC1 />)}
+            {/* {() => (showTextSignal.value ? <FC2 /> : <FC1 />)} */}
 
             {/* Fragment - Node */}
             {/* {() =>
@@ -67,7 +68,7 @@ const Test = () => {
                         <h3>hi</h3>
                         <>
                             <p>hi</p>
-                            <p>hello</p>
+                            <p>{()=>textSignal.value}</p>
                         </>
                     </div>
                 )
@@ -98,6 +99,20 @@ const Test = () => {
                     </p>
                 ) : (
                     <FC1 />
+                )
+            } */}
+            {/* {() =>
+                showTextSignal.value ? (
+                    <>
+                        <div>hidden</div>
+                        <FC1 />
+                    </>
+                ) : (
+                    <>
+                        <span>{() => textSignal.value}</span>
+                        <span>Extra</span>
+                        <span>Extra</span>
+                    </>
                 )
             } */}
 

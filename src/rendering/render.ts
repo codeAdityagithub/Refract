@@ -144,7 +144,7 @@ function setRenderFunction(fiber: Fiber) {
     if (!fiber.renderFunction) return;
 
     setReactiveFunction(fiber.renderFunction, (newValue) => {
-        console.log(newValue, "New Value");
+        console.log("Prev value", fiber);
         if (isPrimitive(newValue)) {
             // console.log(fiber, newValue);
             const newFragment: Fiber = {
@@ -152,6 +152,8 @@ function setRenderFunction(fiber: Fiber) {
                 parent: fiber.parent,
             };
             createFiber(newFragment);
+            console.log("New Text Fiber", newFragment);
+
             updateNode(fiber, newFragment);
         } else if (Array.isArray(newValue)) {
             const newFragment: Fiber = {
@@ -162,11 +164,12 @@ function setRenderFunction(fiber: Fiber) {
                 parent: fiber.parent,
             };
             createFiber(newFragment);
+            console.log("New Fragment Fiber", newValue);
             updateNode(fiber, newFragment);
         } else {
             const newFragment = { ...newValue, parent: fiber.parent };
             createFiber(newFragment);
-            console.log("New Fragment", newFragment);
+            console.log("New Node Fiber", newFragment);
             updateNode(fiber, newFragment);
         }
     });
@@ -204,44 +207,62 @@ function updateNode(prev: Fiber | undefined, next: Fiber | undefined) {
     } else if (prev && next) {
         const prevProps = prev.props;
         const nextProps = next.props;
-
         if (prev.type === "FRAGMENT") {
             // PREV IS FRAGMENT
             if (next.type === "FRAGMENT") {
                 console.log("Fragment-Fragment");
                 updateChildren(prev, next);
+                // replaceChildFromParent(prev, next);
             } else {
-                console.log("Fragment-Node");
+                // console.log("Fragment-Node", prev, next);
+                next.parent = prev.parent;
+                let firstChild: Fiber | undefined = prev.props.children[0];
+                while (firstChild && !firstChild.dom)
+                    firstChild = firstChild.props.children[0];
                 replaceRenderFunction(prev, next);
-                commitFiber(next, prev.props.children[0].dom);
+                commitFiber(next, firstChild?.dom);
 
                 // removing all nodes of previous fragment
-                for (const child of prev.props.children) {
-                    if (child.dom) child.dom.remove();
-                }
+                commitDeletion(prev);
                 replaceChildFromParent(prev, next);
-                console.log(prev.parent);
             }
         } else if (typeof prev.type === "function") {
             // PREV IS FC
             console.error("How is prev fragment");
         } else {
             // PREV IS NODE
-            const node = prev.dom!;
-
+            if (
+                prev.props.key === next.props.key &&
+                prev.type === next.type &&
+                prev.props.key
+            ) {
+                console.log("Same key", prev.props.key);
+                return;
+            }
+            const node = prev.dom;
+            if (
+                prev.type === "TEXT_CHILD" &&
+                next.type === "TEXT_CHILD" &&
+                !next.dom
+            )
+                next.dom = prev.dom;
+            if (!node) {
+                console.log("no node found", prev, next);
+                return;
+            }
+            // console.log(prev);
             if (next.type === "FRAGMENT") {
-                console.log("Node-Fragment");
+                // console.log("Node-Fragment");
+                next.parent = prev.parent;
                 replaceRenderFunction(prev, next);
 
                 commitFiber(next, node);
                 node.remove();
                 replaceChildFromParent(prev, next);
-
-                console.log(prev.parent);
             } else if (typeof next.type === "function") {
                 console.error("How is next fragment");
             } else {
-                console.log("Node-Node");
+                // console.log("Node-Node");
                 // remove old properties and event listeners from NODE
                 for (const prop of Object.keys(prevProps)) {
                     if (
@@ -262,7 +283,7 @@ function updateNode(prev: Fiber | undefined, next: Fiber | undefined) {
                     }
                 }
                 if (prev.type !== next.type) {
-                    console.log("Different type", prev, next);
+                    // console.log("Different type", prev, next);
                     next.parent = prev.parent;
 
                     replaceRenderFunction(prev, next);
@@ -270,10 +291,10 @@ function updateNode(prev: Fiber | undefined, next: Fiber | undefined) {
                     commitFiber(next, node, true);
                     replaceChildFromParent(prev, next);
 
-                    console.log(prev.parent);
+                    // console.log(prev.parent);
                 } else {
                     // add new properties
-                    console.log("same type", prev, next);
+                    // console.log("same type", prev, next);
 
                     for (const prop of Object.keys(nextProps)) {
                         if (
@@ -306,13 +327,18 @@ function updateNode(prev: Fiber | undefined, next: Fiber | undefined) {
 
 function updateChildren(prev: Fiber, next: Fiber) {
     let len = Math.max(prev.props.children.length, next.props.children.length);
+
     for (let i = 0; i < len; i++) {
         const prevChild = prev.props.children[i];
         const nextChild = next.props.children[i];
 
-        if (!prevChild) {
-            nextChild.parent = prev;
-            console.log("To insert new ", nextChild);
+        if (nextChild) nextChild.parent = prev;
+        if (!prevChild && nextChild) {
+            // console.log(
+            //     "To insert new ",
+            //     nextChild,
+            //     // prev.props.children.at(-1)?.dom?.nextSibling
+            // );
 
             commitFiber(
                 nextChild,
@@ -321,6 +347,14 @@ function updateChildren(prev: Fiber, next: Fiber) {
             );
             prev.props.children.push(nextChild);
         } else {
+            console.log(
+                "Updating child",
+                prevChild,
+                "with",
+                nextChild,
+                "of",
+                prev
+            );
             updateNode(prevChild, nextChild);
             const newLen = Math.max(
                 prev.props.children.length,
