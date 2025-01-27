@@ -31,6 +31,15 @@ export function createEffect(fn: Function) {
     currentEffect = null;
 }
 
+// export function computed<T>(fn: () => T) {
+//     if (typeof fn !== "function")
+//         throw new Error("createEffect takes a effect function as the argument");
+//     currentEffect = fn;
+//     const val = fn();
+//     currentEffect = null;
+//     return val as T;
+// }
+
 type NormalSignal = boolean | string | number | undefined | null;
 export class Signal<T extends NormalSignal> {
     private val: T;
@@ -79,7 +88,26 @@ export class Signal<T extends NormalSignal> {
         this.deps.clear();
     }
 }
-
+const NonMutatingArrayMethods = [
+    "concat",
+    "every",
+    "filter",
+    "find",
+    "findIndex",
+    "flat",
+    "flatMap",
+    "forEach",
+    "includes",
+    "indexOf",
+    "join",
+    "map",
+    "reduce",
+    "reduceRight",
+    "slice",
+    "some",
+    "toLocaleString",
+    "toString",
+];
 export class ArraySignal<T extends any[]> {
     private _val: T;
     private deps: Set<Function>;
@@ -147,20 +175,7 @@ export class ArraySignal<T extends any[]> {
                     return (...args: any[]) => {
                         const result = val.apply(target, args);
 
-                        if (
-                            prop !== "map" &&
-                            prop !== "filter" &&
-                            prop !== "reduce" &&
-                            prop !== "forEach" &&
-                            prop !== "find" &&
-                            prop !== "findIndex" &&
-                            prop !== "some" &&
-                            prop !== "every" &&
-                            prop !== "includes" &&
-                            prop !== "indexOf" &&
-                            prop !== "lastIndexOf" &&
-                            prop !== "slice"
-                        )
+                        if (!NonMutatingArrayMethods.includes(String(prop)))
                             this.notify();
                         return result;
                     };

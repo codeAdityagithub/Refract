@@ -337,4 +337,14 @@ describe("Signal", () => {
 
         expect(count).toBe(1); // No reactivity trigger
     });
+    // it("Should support computed value from signals", async () => {
+    //     const numSignal = createSignal(0);
+    //     const doubleSignal = computed(() => numSignal.value * 2);
+    //     let count = 0;
+    //     const func = () => {
+    //         count++;
+    //         doubleSignal.value;
+    //         return 1;
+    //     };
+    // });
 });
