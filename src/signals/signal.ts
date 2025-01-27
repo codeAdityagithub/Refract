@@ -44,6 +44,7 @@ export class Signal<T extends NormalSignal> {
 
     get value() {
         if (currentEffect) {
+            currentEffect.__signal = this;
             this.deps.add(currentEffect);
         }
         return this.val;
@@ -71,6 +72,9 @@ export class Signal<T extends NormalSignal> {
         );
     }
 
+    public removeDep(fn: Function) {
+        this.deps.delete(fn);
+    }
     public clearDeps() {
         this.deps.clear();
     }
@@ -110,6 +114,8 @@ export class ArraySignal<T extends any[]> {
     }
     get value() {
         if (currentEffect) {
+            currentEffect.__signal = this;
+
             this.deps.add(currentEffect);
         }
 
@@ -125,6 +131,12 @@ export class ArraySignal<T extends any[]> {
                 "Invalid type for Reference Signal; can be array only"
             );
         }
+    }
+    public removeDep(fn: Function) {
+        this.deps.delete(fn);
+    }
+    public clearDeps() {
+        this.deps.clear();
     }
     private createNewProxy(val: T) {
         this._val = new Proxy(val, {
@@ -191,6 +203,8 @@ export class ObjectSignal<T extends Record<any, any>> {
     }
     get value() {
         if (currentEffect) {
+            currentEffect.__signal = this;
+
             this.deps.add(currentEffect);
         }
         return this._val;
@@ -204,6 +218,13 @@ export class ObjectSignal<T extends Record<any, any>> {
 
         this.createNewProxy(val);
         this.notify();
+    }
+    public removeDep(fn: Function) {
+        this.deps.delete(fn);
+    }
+
+    public clearDeps() {
+        this.deps.clear();
     }
     private createNewProxy(val: any) {
         this._val = this.newProxy(val);
@@ -251,6 +272,7 @@ function createSignal<T extends NormalSignal | any[] | Record<any, any>>(
             );
         }
     } else if (isPrimitive(val)) {
+        // @ts-expect-error
         return new Signal(val);
     } else {
         throw new Error(

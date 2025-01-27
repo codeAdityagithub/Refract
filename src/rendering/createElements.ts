@@ -115,3 +115,5 @@ export function createNode(element: Fiber) {
         });
     return dom;
 }
+
+export const FRAGMENT = "FRAGMENT";

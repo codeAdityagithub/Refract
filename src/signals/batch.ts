@@ -38,5 +38,12 @@ export function setReactiveFunction(fn: Function, dep: Function) {
 
 export function clearReactiveFunction(fn: Function) {
     reactiveFunctionsMap.delete(fn);
+    // @ts-expect-error
+    const signal = fn.__signal;
+    if (signal && signal.removeDep) {
+        signal.removeDep(fn);
+        // @ts-expect-error
+        fn.__signal = null;
+    }
     // console.log("clearing reactive function", fn, reactiveFunctionsMap.size);
 }
