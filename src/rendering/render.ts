@@ -9,6 +9,7 @@ import {
 
 export function render(element: Fiber, container: HTMLElement) {
     // const fragment = document.createDocumentFragment();
+    // @ts-expect-error
     const rootFiber: Fiber = {
         type: "div",
         props: {
