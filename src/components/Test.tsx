@@ -1,4 +1,5 @@
 import { createSignal } from "../signals/signal";
+import FC1 from "./FC1";
 
 const Test = () => {
     const textSignal = createSignal<string>("Initial Text");
@@ -101,10 +102,10 @@ const Test = () => {
                     <FC1 />
                 )
             } */}
-            {/* {() =>
+            {() =>
                 showTextSignal.value ? (
                     <>
-                        <div>hidden</div>
+                        <div>{() => textSignal.value + "Hello"}</div>
                         <FC1 />
                     </>
                 ) : (
@@ -114,7 +115,7 @@ const Test = () => {
                         <span>Extra</span>
                     </>
                 )
-            } */}
+            }
 
             <button
                 onClick={() => (showTextSignal.value = !showTextSignal.value)}

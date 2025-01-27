@@ -33,8 +33,10 @@ export function batchUpdate(cb: Function) {
 
 export function setReactiveFunction(fn: Function, dep: Function) {
     reactiveFunctionsMap.set(fn, dep);
+    // console.log(reactiveFunctionsMap.size, "MAp size");
 }
 
 export function clearReactiveFunction(fn: Function) {
     reactiveFunctionsMap.delete(fn);
+    // console.log("clearing reactive function", fn, reactiveFunctionsMap.size);
 }

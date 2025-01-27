@@ -1,4 +1,4 @@
-import { setReactiveFunction } from "../signals/batch";
+import { clearReactiveFunction, setReactiveFunction } from "../signals/batch";
 import { Fiber } from "../types";
 import { isPrimitive } from "../utils/general";
 import {
@@ -134,15 +134,16 @@ function commitFiber(fiber: Fiber, referenceNode?: Node, replace?: boolean) {
 }
 
 function commitDeletion(fiber: Fiber) {
+    if (!fiber) return;
+    if (fiber.renderFunction) clearReactiveFunction(fiber.renderFunction);
     if (fiber.dom) fiber.dom.remove();
-    else {
-        fiber.props.children.forEach((child) => commitDeletion(child));
-    }
+
+    fiber.props.children.forEach((child) => commitDeletion(child));
 }
 
 function setRenderFunction(fiber: Fiber) {
     if (!fiber.renderFunction) return;
-
+    console.log("Setting render function", fiber);
     setReactiveFunction(fiber.renderFunction, (newValue) => {
         console.log("Prev value", fiber);
         if (isPrimitive(newValue)) {
@@ -177,7 +178,9 @@ function setRenderFunction(fiber: Fiber) {
 
 function replaceRenderFunction(prev: Fiber, next: Fiber) {
     if (prev.renderFunction) {
+        console.log("Replacing");
         next.renderFunction = prev.renderFunction;
+        clearReactiveFunction(prev.renderFunction);
         setRenderFunction(next);
     }
 }
@@ -247,7 +250,7 @@ function updateNode(prev: Fiber | undefined, next: Fiber | undefined) {
             )
                 next.dom = prev.dom;
             if (!node) {
-                console.log("no node found", prev, next);
+                console.error("no node found", prev, next);
                 return;
             }
             // console.log(prev);
@@ -283,12 +286,13 @@ function updateNode(prev: Fiber | undefined, next: Fiber | undefined) {
                     }
                 }
                 if (prev.type !== next.type) {
-                    // console.log("Different type", prev, next);
+                    console.log("Different type", prev, next);
                     next.parent = prev.parent;
 
                     replaceRenderFunction(prev, next);
 
                     commitFiber(next, node, true);
+                    commitDeletion(prev);
                     replaceChildFromParent(prev, next);
 
                     // console.log(prev.parent);
@@ -347,14 +351,14 @@ function updateChildren(prev: Fiber, next: Fiber) {
             );
             prev.props.children.push(nextChild);
         } else {
-            console.log(
-                "Updating child",
-                prevChild,
-                "with",
-                nextChild,
-                "of",
-                prev
-            );
+            // console.log(
+            //     "Updating child",
+            //     prevChild,
+            //     "with",
+            //     nextChild,
+            //     "of",
+            //     prev
+            // );
             updateNode(prevChild, nextChild);
             const newLen = Math.max(
                 prev.props.children.length,

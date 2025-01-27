@@ -10,11 +10,11 @@ export function reactive(fn: Function) {
     currentEffect = fn;
     const retVal = fn();
     if (
-        !isPrimitive(retVal) ||
-        (isPlainObject(retVal) &&
-            !retVal.type &&
-            !retVal.props &&
-            !retVal.props.children)
+        !isPrimitive(retVal) &&
+        isPlainObject(retVal) &&
+        !retVal.type &&
+        !retVal.props &&
+        !retVal.props?.children
     )
         throw new Error(
             "Reactive value must be primitive or functional component, got: " +
