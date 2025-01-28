@@ -1,3 +1,4 @@
+import { isValidStyle, preprocessStyle, styleObjectToString } from "../lib";
 import { setReactiveAttributes } from "../signals/batch";
 import { reactive, reactiveAttribute } from "../signals/signal";
 import {
@@ -113,17 +114,63 @@ export function createNode(element: Fiber) {
                 func.__propName = name;
                 // registers the function in corresponding signal
                 const val = reactiveAttribute(func);
+
+                if (
+                    name === "style" &&
+                    typeof val !== "string" &&
+                    dom instanceof HTMLElement
+                ) {
+                    if (!isValidStyle(val))
+                        throw new Error(
+                            "Style attribute must be a plain object or a string"
+                        );
+                    const processedStyle = preprocessStyle(val);
+                    dom.setAttribute(
+                        "style",
+                        styleObjectToString(processedStyle)
+                    );
+                } else {
+                    dom[name] = val;
+                }
                 setReactiveAttributes(func, dom);
-                dom[name] = val;
             } else {
-                dom[name] = element.props[name];
+                if (
+                    name === "style" &&
+                    typeof element.props[name] !== "string" &&
+                    dom instanceof HTMLElement
+                ) {
+                    const style = element.props[name];
+                    if (!isValidStyle(style))
+                        throw new Error(
+                            "Style attribute must be a plain object or a string"
+                        );
+                    const processedStyle = preprocessStyle(style);
+                    dom.setAttribute(
+                        "style",
+                        styleObjectToString(processedStyle)
+                    );
+                } else {
+                    dom[name] = element.props[name];
+                }
             }
         });
     return dom;
 }
 
 export function updateDomProp(prop: string, dom: HTMLElement | Text, value) {
-    if (dom) {
+    if (
+        prop === "style" &&
+        typeof value !== "string" &&
+        dom instanceof HTMLElement
+    ) {
+        if (!isValidStyle(value))
+            throw new Error(
+                "Style attribute must be a plain object or a string"
+            );
+
+        const processedStyle = preprocessStyle(value);
+        dom.setAttribute("style", styleObjectToString(processedStyle));
+    } else {
         dom[prop] = value;
     }
 }

@@ -137,6 +137,16 @@ const Test = () => {
                 type="checkbox"
                 checked={() => showTextSignal.value}
             /> */}
+
+            {/* <div
+                style={() => ({
+                    color: showTextSignal.value ? "red" : "blue",
+                    backgroundColor: "lightgray",
+                    fontSize: "40px",
+                })}
+            >
+                Styled Text
+            </div> */}
         </div>
     );
 };
