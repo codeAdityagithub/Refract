@@ -1,7 +1,12 @@
+import { updateDomProp } from "../rendering/createElements";
+import { updateFiber } from "../rendering/render";
+import { Fiber } from "../types";
+
 let scheduled = false;
 const batch = new Set<Function>();
 const depset = new Set();
-const reactiveFunctionsMap = new Map();
+const reactiveFiberMap = new WeakMap();
+const domAttributeMap = new WeakMap<Function, HTMLElement | Text>();
 const effectCleanup: any[] = [];
 
 export function addEffectCleanup(fn: Function) {
@@ -27,9 +32,19 @@ export function batchUpdate(cb: Function) {
                 if (typeof val === "function") {
                     effectCleanup.push(val);
                 }
-                if (reactiveFunctionsMap.has(dep)) {
+                if (reactiveFiberMap.has(dep)) {
                     // for updating reactive nodes
-                    reactiveFunctionsMap.get(dep)(val);
+                    const fiber = reactiveFiberMap.get(dep);
+                    if (fiber) {
+                        updateFiber(fiber, val);
+                    }
+                }
+                if (domAttributeMap.has(dep)) {
+                    // for updating reactive nodes
+                    const dom = domAttributeMap.get(dep);
+                    if (dom && dep.__propName) {
+                        updateDomProp(dep.__propName, dom, val);
+                    }
                 }
             });
             depset.clear();
@@ -39,13 +54,19 @@ export function batchUpdate(cb: Function) {
     }
 }
 
-export function setReactiveFunction(fn: Function, dep: Function) {
-    reactiveFunctionsMap.set(fn, dep);
-    // console.log(reactiveFunctionsMap.size, "MAp size");
+export function setReactiveFunction(fn: Function, fiber: Fiber) {
+    reactiveFiberMap.set(fn, fiber);
+}
+export function setReactiveAttributes(fn: Function, dom: HTMLElement | Text) {
+    domAttributeMap.set(fn, dom);
+}
+export function clearReactiveAttributes(fn: Function) {
+    const deleted = domAttributeMap.delete(fn);
+    // console.log("deleted", deleted);
 }
 
 export function clearReactiveFunction(fn: Function) {
-    reactiveFunctionsMap.delete(fn);
+    reactiveFiberMap.delete(fn);
     // @ts-expect-error
     const signal = fn.__signal;
     if (signal && signal.removeDep) {
@@ -53,5 +74,4 @@ export function clearReactiveFunction(fn: Function) {
         // @ts-expect-error
         fn.__signal = null;
     }
-    // console.log("clearing reactive function", fn, reactiveFunctionsMap.size);
 }

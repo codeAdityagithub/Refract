@@ -105,7 +105,13 @@ const Test = () => {
             {() =>
                 showTextSignal.value ? (
                     <>
-                        <div>{() => textSignal.value + "Hello"}</div>
+                        <div
+                            className={() =>
+                                showTextSignal.value ? "visible" : "hidden"
+                            }
+                        >
+                            {() => textSignal.value + "Hello"}
+                        </div>
                         <FC1 />
                     </>
                 ) : (
@@ -127,8 +133,10 @@ const Test = () => {
             <button onClick={() => (textSignal.value = "Updated Text")}>
                 Update Text
             </button>
-
-            {/* TODO: Attributes with reactivity */}
+            {/* <input
+                type="checkbox"
+                checked={() => showTextSignal.value}
+            /> */}
         </div>
     );
 };

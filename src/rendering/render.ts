@@ -1,4 +1,8 @@
-import { clearReactiveFunction, setReactiveFunction } from "../signals/batch";
+import {
+    clearReactiveAttributes,
+    clearReactiveFunction,
+    setReactiveFunction,
+} from "../signals/batch";
 import { Fiber } from "../types";
 import { isPrimitive } from "../utils/general";
 import { clearCurrentFC, setCurrentFC } from "./cleanup";
@@ -153,6 +157,8 @@ function commitDeletion(fiber: Fiber) {
 
                 fiber.dom.removeEventListener(eventName, fiber.props[prop]);
                 delete fiber.props[prop];
+            } else if (typeof fiber.props[prop] === "function") {
+                clearReactiveAttributes(fiber.props[prop]);
             }
         }
 
@@ -170,36 +176,38 @@ function commitDeletion(fiber: Fiber) {
 
 function setRenderFunction(fiber: Fiber) {
     if (!fiber.renderFunction) return;
-    setReactiveFunction(fiber.renderFunction, (newValue) => {
-        console.log("Prev value", fiber);
-        if (isPrimitive(newValue)) {
-            // console.log(fiber, newValue);
-            const newFragment: Fiber = {
-                ...createTextChildren(String(newValue)),
-                parent: fiber.parent,
-            };
-            createFiber(newFragment);
-            // console.log("New Text Fiber", newFragment);
+    setReactiveFunction(fiber.renderFunction, fiber);
+}
 
-            updateNode(fiber, newFragment);
-        } else if (Array.isArray(newValue)) {
-            const newFragment: Fiber = {
-                type: "FRAGMENT",
-                props: {
-                    children: createChildren(newValue),
-                },
-                parent: fiber.parent,
-            };
-            createFiber(newFragment);
-            // console.log("New Fragment Fiber", newValue);
-            updateNode(fiber, newFragment);
-        } else {
-            const newFragment = { ...newValue, parent: fiber.parent };
-            createFiber(newFragment);
-            // console.log("New Node Fiber", newFragment);
-            updateNode(fiber, newFragment);
-        }
-    });
+export function updateFiber(prevFiber: Fiber, newValue) {
+    console.log("Prev value", prevFiber);
+    if (isPrimitive(newValue)) {
+        // console.log(fiber, newValue);
+        const newFragment: Fiber = {
+            ...createTextChildren(String(newValue)),
+            parent: prevFiber.parent,
+        };
+        createFiber(newFragment);
+        // console.log("New Text Fiber", newFragment);
+
+        updateNode(prevFiber, newFragment);
+    } else if (Array.isArray(newValue)) {
+        const newFragment: Fiber = {
+            type: "FRAGMENT",
+            props: {
+                children: createChildren(newValue),
+            },
+            parent: prevFiber.parent,
+        };
+        createFiber(newFragment);
+        // console.log("New Fragment Fiber", newValue);
+        updateNode(prevFiber, newFragment);
+    } else {
+        const newFragment = { ...newValue, parent: prevFiber.parent };
+        createFiber(newFragment);
+        // console.log("New Node Fiber", newFragment);
+        updateNode(prevFiber, newFragment);
+    }
 }
 
 function replaceRenderFunction(prev: Fiber, next: Fiber) {

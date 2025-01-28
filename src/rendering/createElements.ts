@@ -1,4 +1,5 @@
-import { reactive } from "../signals/signal";
+import { setReactiveAttributes } from "../signals/batch";
+import { reactive, reactiveAttribute } from "../signals/signal";
 import {
     Element,
     Fiber,
@@ -104,11 +105,27 @@ export function createNode(element: Fiber) {
                     name.slice(2).toLowerCase(),
                     element.props[name]
                 );
+            } else if (
+                typeof element.props[name] === "function" &&
+                !name.startsWith("on")
+            ) {
+                const func = element.props[name];
+                func.__propName = name;
+                // registers the function in corresponding signal
+                const val = reactiveAttribute(func);
+                setReactiveAttributes(func, dom);
+                dom[name] = val;
             } else {
                 dom[name] = element.props[name];
             }
         });
     return dom;
+}
+
+export function updateDomProp(prop: string, dom: HTMLElement | Text, value) {
+    if (dom) {
+        dom[prop] = value;
+    }
 }
 
 export const FRAGMENT = "FRAGMENT";

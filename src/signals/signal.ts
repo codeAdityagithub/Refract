@@ -24,6 +24,16 @@ export function reactive(fn: Function) {
         );
     return retVal;
 }
+export function reactiveAttribute(fn: Function) {
+    if (typeof fn !== "function")
+        throw new Error("reactive takes a render function as the argument");
+
+    currentEffect = fn;
+    const retVal = fn();
+    currentEffect = null;
+
+    return retVal;
+}
 export function createEffect(fn: Function) {
     if (typeof fn !== "function")
         throw new Error("createEffect takes a effect function as the argument");
