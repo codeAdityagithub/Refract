@@ -1,5 +1,5 @@
 import { isPlainObject, isPrimitive } from "../utils/general";
-import { batchUpdate } from "./batch";
+import { addEffectCleanup, batchUpdate } from "./batch";
 
 let currentReactiveFunction: any = null;
 let currentEffect: any = null;
@@ -28,7 +28,8 @@ export function createEffect(fn: Function) {
     if (typeof fn !== "function")
         throw new Error("createEffect takes a effect function as the argument");
     currentEffect = fn;
-    fn();
+    const effectCleanup = fn();
+    if (typeof effectCleanup === "function") addEffectCleanup(effectCleanup);
     currentEffect = null;
 }
 

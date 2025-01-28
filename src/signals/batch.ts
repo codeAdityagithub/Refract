@@ -2,6 +2,11 @@ let scheduled = false;
 const batch = new Set<Function>();
 const depset = new Set();
 const reactiveFunctionsMap = new Map();
+const effectCleanup: any[] = [];
+
+export function addEffectCleanup(fn: Function) {
+    effectCleanup.push(fn);
+}
 
 export function batchUpdate(cb: Function) {
     batch.add(cb);
@@ -9,6 +14,8 @@ export function batchUpdate(cb: Function) {
         scheduled = true;
         queueMicrotask(() => {
             // console.log("Current batch has: ", batch.size, " Functions");
+            effectCleanup.forEach((fn) => fn());
+            effectCleanup.length = 0;
             batch.forEach((fn) => {
                 const dep = fn();
                 if (depset.has(dep)) {
@@ -17,7 +24,9 @@ export function batchUpdate(cb: Function) {
                 depset.add(dep);
                 // effects and reactive nodes
                 const val = dep();
-
+                if (typeof val === "function") {
+                    effectCleanup.push(val);
+                }
                 if (reactiveFunctionsMap.has(dep)) {
                     // for updating reactive nodes
                     reactiveFunctionsMap.get(dep)(val);

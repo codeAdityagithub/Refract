@@ -1,17 +1,17 @@
-import { cleanUp, createEffect, createSignal } from "../index";
+import { createEffect, createSignal } from "../index";
 
 const FC1 = () => {
     const str = createSignal<string>("FC1");
     const clicked = createSignal<boolean>(false);
-    const interval = setInterval(() => {
-        console.log("Interval");
-    }, 1000);
-
-    cleanUp(() => {
-        clearInterval(interval);
-    });
+    let value = 0;
     createEffect(() => {
-        console.log(str.value, "Effect");
+        console.log("Effect", value);
+
+        str.value;
+        return () => {
+            console.log("Cleanup", value);
+            value++;
+        };
     });
     return (
         <>
