@@ -12,7 +12,7 @@ import { isPrimitive } from "../utils/general";
 export function createElement(
     type: any,
     props: object | null,
-    ...children: Fiber[]
+    ...children: any[]
 ): Fiber | FiberChildren {
     // console.log(type);
     if (type === "FRAGMENT") {
@@ -100,11 +100,6 @@ export function createNode(element: Fiber) {
                 name.startsWith("on") &&
                 typeof element.props[name] === "function"
             ) {
-                // console.log(
-                //     "adding event listener to",
-                //     dom,
-                //     element.props[name]
-                // );
                 dom.addEventListener(
                     name.slice(2).toLowerCase(),
                     element.props[name]
