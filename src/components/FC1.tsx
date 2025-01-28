@@ -1,4 +1,4 @@
-import { cleanUp, createSignal } from "../index";
+import { cleanUp, createEffect, createSignal } from "../index";
 
 const FC1 = () => {
     const str = createSignal<string>("FC1");
@@ -9,6 +9,9 @@ const FC1 = () => {
 
     cleanUp(() => {
         clearInterval(interval);
+    });
+    createEffect(() => {
+        console.log(str.value, "Effect");
     });
     return (
         <>

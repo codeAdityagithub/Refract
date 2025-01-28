@@ -146,10 +146,23 @@ function commitDeletion(fiber: Fiber) {
         clearReactiveFunction(fiber.renderFunction);
         delete fiber.renderFunction;
     }
-    if (fiber.dom) fiber.dom.remove();
+    if (fiber.dom) {
+        for (const prop of Object.keys(fiber.props)) {
+            if (isEvent(prop)) {
+                const eventName = prop.toLowerCase().substring(2);
+
+                fiber.dom.removeEventListener(eventName, fiber.props[prop]);
+                delete fiber.props[prop];
+            }
+        }
+
+        fiber.dom.remove();
+    }
     if (typeof fiber.type === "function") {
         // @ts-expect-error
         if (fiber.type.__cleanup) fiber.type.__cleanup();
+        // @ts-expect-error
+        fiber.type.__cleanup = null;
         delete fiber.type;
     }
     fiber.props.children.forEach((child) => commitDeletion(child));

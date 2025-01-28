@@ -1,14 +1,16 @@
 import { isPlainObject, isPrimitive } from "../utils/general";
 import { batchUpdate } from "./batch";
 
+let currentReactiveFunction: any = null;
 let currentEffect: any = null;
 
 export function reactive(fn: Function) {
     if (typeof fn !== "function")
         throw new Error("reactive takes a render function as the argument");
 
-    currentEffect = fn;
+    currentReactiveFunction = fn;
     const retVal = fn();
+    currentReactiveFunction = null;
     if (
         !isPrimitive(retVal) &&
         isPlainObject(retVal) &&
@@ -20,7 +22,6 @@ export function reactive(fn: Function) {
             "Reactive value must be primitive or functional component, got: " +
                 typeof retVal
         );
-    currentEffect = null;
     return retVal;
 }
 export function createEffect(fn: Function) {
@@ -53,9 +54,13 @@ export class Signal<T extends NormalSignal> {
 
     get value() {
         if (currentEffect) {
-            currentEffect.__signal = this;
             this.deps.add(currentEffect);
         }
+        if (currentReactiveFunction) {
+            currentReactiveFunction.__signal = this;
+            this.deps.add(currentReactiveFunction);
+        }
+        // console.log(this.deps);
         return this.val;
     }
 
@@ -142,9 +147,11 @@ export class ArraySignal<T extends any[]> {
     }
     get value() {
         if (currentEffect) {
-            currentEffect.__signal = this;
-
             this.deps.add(currentEffect);
+        }
+        if (currentReactiveFunction) {
+            currentReactiveFunction.__signal = this;
+            this.deps.add(currentReactiveFunction);
         }
 
         return this._val;
@@ -218,9 +225,11 @@ export class ObjectSignal<T extends Record<any, any>> {
     }
     get value() {
         if (currentEffect) {
-            currentEffect.__signal = this;
-
             this.deps.add(currentEffect);
+        }
+        if (currentReactiveFunction) {
+            currentReactiveFunction.__signal = this;
+            this.deps.add(currentReactiveFunction);
         }
         return this._val;
     }

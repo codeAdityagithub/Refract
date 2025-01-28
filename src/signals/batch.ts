@@ -15,7 +15,6 @@ export function batchUpdate(cb: Function) {
                     return;
                 }
                 depset.add(dep);
-
                 // effects and reactive nodes
                 const val = dep();
 
