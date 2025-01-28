@@ -25,6 +25,8 @@ export function render(element: Fiber, container: HTMLElement) {
     // console.log(element.type(element.props));
     element.parent = rootFiber;
     renderNode(element);
+    requestIdleCallback(workLoop);
+
     // container.appendChild(fragment);
 }
 
@@ -43,7 +45,6 @@ function workLoop(deadline: IdleDeadline) {
     }
     requestIdleCallback(workLoop);
 }
-requestIdleCallback(workLoop);
 
 function renderNode(fiber: Fiber) {
     if (fiber.type === "FRAGMENT") {

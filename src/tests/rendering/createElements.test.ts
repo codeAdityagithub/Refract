@@ -6,6 +6,7 @@ import {
     createTextChildren,
     FRAGMENT,
 } from "../../rendering/createElements";
+import { createSignal } from "../../signals/signal";
 
 describe("createElement", () => {
     it("creates a basic element with no props or children", () => {
@@ -140,7 +141,7 @@ describe("createNode", () => {
     it("adds event listeners", () => {
         let count = 0;
         const clickHandler = (e) => {
-            console.log(e.target);
+            // console.log(e.target);
             count++;
         };
         const element = {
@@ -150,5 +151,41 @@ describe("createNode", () => {
         const dom = createNode(element);
         dom.click();
         expect(count).toBe(1);
+    });
+
+    it("adds correct style attribute", () => {
+        const element = {
+            type: "div",
+            props: {
+                style: {
+                    color: "red",
+                    fontSize: null,
+                    hover: { color: "blue" },
+                },
+                children: [],
+            },
+        };
+        const dom = createNode(element);
+        console.log(dom.style.hover);
+        expect(dom.style.color).toBe("red");
+        expect(dom.style.fontSize).toBe("");
+        expect(dom.style.hover).toBeUndefined();
+    });
+    it("updates attribute with signal changes", async () => {
+        const signal = createSignal<boolean>(true);
+
+        const element = {
+            type: "div",
+            props: {
+                style: () =>
+                    signal.value ? { color: "red" } : { color: "blue" },
+                children: [],
+            },
+        };
+        const dom = createNode(element);
+        expect(dom.style.color).toBe("red");
+        signal.value = false;
+        await Promise.resolve();
+        expect(dom.style.color).toBe("blue");
     });
 });

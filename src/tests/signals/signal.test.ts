@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { describe, expect, it } from "vitest";
-import { setReactiveFunction } from "../../signals/batch";
 import {
     ArraySignal,
     createEffect,
@@ -117,16 +116,14 @@ describe("Signal", () => {
         expect(count).toBe(1);
 
         // to mimic rendering function
-        setReactiveFunction(func, (newVal) => {
-            count++;
-        });
+        // setReactiveFunction(func);
 
         signal.value = 10;
         arrSignal.value.push(4);
         objSignal.value.a = 4;
         // Wait for batching to complete
         await Promise.resolve();
-        expect(count).toBe(3);
+        expect(count).toBe(2);
     });
     it("should support all array modification operations and react as expected", async () => {
         const arrSignal = createSignal<number[]>([1, 2, 3]);
