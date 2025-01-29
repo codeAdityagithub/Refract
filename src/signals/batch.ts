@@ -60,9 +60,13 @@ export function setReactiveFunction(fn: Function, fiber: Fiber) {
 export function setReactiveAttributes(fn: Function, dom: HTMLElement | Text) {
     domAttributeMap.set(fn, dom);
 }
-export function clearReactiveAttributes(fn: Function) {
+export function clearReactiveAttributes(fn: any) {
     domAttributeMap.delete(fn);
-    // console.log("deleted", deleted);
+
+    if (fn && fn.__signal && fn.__signal.removeDep) {
+        fn.__signal.removeDep(fn);
+        delete fn.__signal;
+    }
 }
 
 export function clearReactiveFunction(fn: Function) {

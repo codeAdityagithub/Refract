@@ -159,12 +159,7 @@ function commitDeletion(fiber: Fiber) {
                 fiber.dom.removeEventListener(eventName, fiber.props[prop]);
                 delete fiber.props[prop];
             } else if (typeof fiber.props[prop] === "function") {
-                const fn = fiber.props[prop];
-                if (fn && fn.__signal && fn.__signal.removeDep) {
-                    fn.__signal.removeDep(fn);
-                    delete fn.__signal;
-                }
-                clearReactiveAttributes(fn);
+                clearReactiveAttributes(fiber.props[prop]);
             }
         }
 
