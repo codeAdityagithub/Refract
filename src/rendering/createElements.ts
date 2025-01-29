@@ -38,6 +38,9 @@ export function createChildren(children: FiberChildren): FiberChildren {
                 if (Array.isArray(child)) {
                     return createChildren(child);
                 }
+                if (child === null) {
+                    return createTextChildren("");
+                }
                 return child;
             } else if (typeof child === "function") {
                 const val = reactive(child);
