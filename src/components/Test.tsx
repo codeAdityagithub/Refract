@@ -144,6 +144,20 @@ const Test = () => {
                     return <h2>Not hidden</h2>;
                 }}
             </div> */}
+            {/* <div
+                id="type-coerce"
+                // data-count={() => 123}
+                data-count="12"
+            >
+                Type coersion
+            </div>
+            <textarea
+                name="area"
+                id=""
+                rows={() => 30}
+            ></textarea>
+            <div unknown-attr="value">Unknown attribute ignore</div> */}
+
             <button
                 onClick={() => (showTextSignal.value = !showTextSignal.value)}
             >

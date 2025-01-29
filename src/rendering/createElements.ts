@@ -133,7 +133,14 @@ export function createNode(element: Fiber) {
                         styleObjectToString(processedStyle)
                     );
                 } else {
-                    dom[name] = val;
+                    if (
+                        dom instanceof HTMLElement &&
+                        (name in dom || name.startsWith("data-"))
+                    ) {
+                        dom.setAttribute(name, String(val));
+                    } else {
+                        dom[name] = String(val);
+                    }
                 }
                 if (func.__signal) setReactiveAttributes(func, dom);
             } else {
@@ -156,7 +163,14 @@ export function createNode(element: Fiber) {
                         styleObjectToString(processedStyle)
                     );
                 } else {
-                    dom[name] = element.props[name];
+                    if (
+                        dom instanceof HTMLElement &&
+                        (name in dom || name.startsWith("data-"))
+                    ) {
+                        dom.setAttribute(name, String(element.props[name]));
+                    } else {
+                        dom[name] = String(element.props[name]);
+                    }
                 }
             }
         });
@@ -164,6 +178,7 @@ export function createNode(element: Fiber) {
 }
 
 export function updateDomProp(prop: string, dom: HTMLElement | Text, value) {
+    if (!value) return;
     if (
         prop === "style" &&
         typeof value !== "string" &&
@@ -177,7 +192,14 @@ export function updateDomProp(prop: string, dom: HTMLElement | Text, value) {
         const processedStyle = preprocessStyle(value);
         dom.setAttribute("style", styleObjectToString(processedStyle));
     } else {
-        dom[prop] = value;
+        if (
+            dom instanceof HTMLElement &&
+            (prop in dom || prop.startsWith("data-"))
+        ) {
+            dom.setAttribute(prop, String(value));
+        } else {
+            dom[prop] = String(value);
+        }
     }
 }
 
