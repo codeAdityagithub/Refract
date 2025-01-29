@@ -58,6 +58,7 @@ export function setReactiveFunction(fn: Function, fiber: Fiber) {
     reactiveFiberMap.set(fn, fiber);
 }
 export function setReactiveAttributes(fn: Function, dom: HTMLElement | Text) {
+    console.log("reactive attrubite", fn);
     domAttributeMap.set(fn, dom);
 }
 export function clearReactiveAttributes(fn: any) {

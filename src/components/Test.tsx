@@ -7,7 +7,7 @@ const Test = () => {
     return (
         <div>
             {/* Static content with reactivity */}
-            {/* <h1>{() => textSignal.value}</h1> */}
+            <h1>{() => textSignal.value}</h1>
             {/* Array rendering */}
 
             {/* Fragment - Fragment with reactivity */}
@@ -123,7 +123,19 @@ const Test = () => {
             } */}
             {/* <div>{() => !showTextSignal.value && textSignal.value}</div> */}
             {/* <div id={() => `id-${textSignal.value}`}>Dynamic ID</div> */}
-            <div className={null}>No Data</div>
+            {/* <div className={null}>No Data</div> */}
+            {/* <button
+                onClick={() => {
+                    textSignal.value = showTextSignal.value
+                        ? "Reacted to Toggle"
+                        : "Reset Text";
+                }}
+            >
+                Dynamic Event Listener Reactivity
+            </button> */}
+            <div className={() => "Class"}>
+                Attributes that are functions but not reactive to any signal
+            </div>
             <button
                 onClick={() => (showTextSignal.value = !showTextSignal.value)}
             >

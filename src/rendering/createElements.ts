@@ -1,5 +1,8 @@
 import { isValidStyle, preprocessStyle, styleObjectToString } from "../lib";
-import { setReactiveAttributes } from "../signals/batch";
+import {
+    clearReactiveAttributes,
+    setReactiveAttributes,
+} from "../signals/batch";
 import { reactive, reactiveAttribute } from "../signals/signal";
 import {
     Element,
@@ -114,6 +117,7 @@ export function createNode(element: Fiber) {
                 func.__propName = name;
                 // registers the function in corresponding signal
                 const val = reactiveAttribute(func);
+
                 if (!val) {
                     return;
                 }
@@ -134,7 +138,7 @@ export function createNode(element: Fiber) {
                 } else {
                     dom[name] = val;
                 }
-                setReactiveAttributes(func, dom);
+                if (func.__signal) setReactiveAttributes(func, dom);
             } else {
                 if (!element.props[name]) {
                     return;
