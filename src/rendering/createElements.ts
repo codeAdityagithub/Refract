@@ -115,7 +115,7 @@ export function createNode(element: Fiber) {
                 // registers the function in corresponding signal
                 const val = reactiveAttribute(func);
 
-                if (!val) {
+                if (!val && val !== 0) {
                     return;
                 }
                 if (
@@ -144,7 +144,7 @@ export function createNode(element: Fiber) {
                 }
                 if (func.__signal) setReactiveAttributes(func, dom);
             } else {
-                if (!element.props[name]) {
+                if (!element.props[name] && element.props[name] !== 0) {
                     return;
                 }
                 if (

@@ -157,7 +157,9 @@ const Test = () => {
                 rows={() => 30}
             ></textarea>
             <div unknown-attr="value">Unknown attribute ignore</div> */}
-
+            {/* <div tabIndex={() => 0}>Focusable</div> */}
+            {/* <div className={() => ["class1", "class2"].join(" ")}>Styled</div> */}
+            <input />
             <button
                 onClick={() => (showTextSignal.value = !showTextSignal.value)}
             >
