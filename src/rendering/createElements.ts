@@ -114,7 +114,9 @@ export function createNode(element: Fiber) {
                 func.__propName = name;
                 // registers the function in corresponding signal
                 const val = reactiveAttribute(func);
-
+                if (!val) {
+                    return;
+                }
                 if (
                     name === "style" &&
                     typeof val !== "string" &&
@@ -134,6 +136,9 @@ export function createNode(element: Fiber) {
                 }
                 setReactiveAttributes(func, dom);
             } else {
+                if (!element.props[name]) {
+                    return;
+                }
                 if (
                     name === "style" &&
                     typeof element.props[name] !== "string" &&

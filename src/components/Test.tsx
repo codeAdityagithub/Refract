@@ -121,7 +121,9 @@ const Test = () => {
                     </>
                 )
             } */}
-            <div>{() => !showTextSignal.value && textSignal.value}</div>
+            {/* <div>{() => !showTextSignal.value && textSignal.value}</div> */}
+            {/* <div id={() => `id-${textSignal.value}`}>Dynamic ID</div> */}
+            <div className={null}>No Data</div>
             <button
                 onClick={() => (showTextSignal.value = !showTextSignal.value)}
             >
@@ -132,6 +134,7 @@ const Test = () => {
             <button onClick={() => (textSignal.value = "Updated Text")}>
                 Update Text
             </button>
+            {/* <button onClick={() => alert("Clicked!")}>Click Me</button> */}
             {/* <input
                 type="checkbox"
                 checked={() => showTextSignal.value}
