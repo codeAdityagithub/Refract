@@ -61,7 +61,7 @@ export function setReactiveAttributes(fn: Function, dom: HTMLElement | Text) {
     domAttributeMap.set(fn, dom);
 }
 export function clearReactiveAttributes(fn: Function) {
-    const deleted = domAttributeMap.delete(fn);
+    domAttributeMap.delete(fn);
     // console.log("deleted", deleted);
 }
 

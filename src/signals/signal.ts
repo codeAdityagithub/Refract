@@ -28,9 +28,9 @@ export function reactiveAttribute(fn: Function) {
     if (typeof fn !== "function")
         throw new Error("reactive takes a render function as the argument");
 
-    currentEffect = fn;
+    currentReactiveFunction = fn;
     const retVal = fn();
-    currentEffect = null;
+    currentReactiveFunction = null;
 
     return retVal;
 }
@@ -71,7 +71,6 @@ export class Signal<T extends NormalSignal> {
             currentReactiveFunction.__signal = this;
             this.deps.add(currentReactiveFunction);
         }
-        // console.log(this.deps);
         return this.val;
     }
 
