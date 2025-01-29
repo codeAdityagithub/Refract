@@ -1,5 +1,4 @@
 import { createSignal } from "../signals/signal";
-import FC1 from "./FC1";
 
 const Test = () => {
     const textSignal = createSignal<string>("Initial Text");
@@ -8,7 +7,7 @@ const Test = () => {
     return (
         <div>
             {/* Static content with reactivity */}
-            <h1>{() => textSignal.value}</h1>
+            {/* <h1>{() => textSignal.value}</h1> */}
             {/* Array rendering */}
 
             {/* Fragment - Fragment with reactivity */}
@@ -102,7 +101,7 @@ const Test = () => {
                     <FC1 />
                 )
             } */}
-            {() =>
+            {/* {() =>
                 showTextSignal.value ? (
                     <>
                         <div
@@ -121,8 +120,8 @@ const Test = () => {
                         <span>Extra</span>
                     </>
                 )
-            }
-
+            } */}
+            <div>{() => !showTextSignal.value && textSignal.value}</div>
             <button
                 onClick={() => (showTextSignal.value = !showTextSignal.value)}
             >

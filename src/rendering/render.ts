@@ -185,7 +185,7 @@ export function updateFiber(prevFiber: Fiber, newValue) {
     if (isPrimitive(newValue)) {
         // console.log(fiber, newValue);
         const newFragment: Fiber = {
-            ...createTextChildren(String(newValue)),
+            ...createTextChildren(newValue),
             parent: prevFiber.parent,
         };
         createFiber(newFragment);

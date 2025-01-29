@@ -44,7 +44,7 @@ export function createChildren(children: FiberChildren): FiberChildren {
                 if (isPrimitive(val))
                     return createSignalChild(
                         "TEXT_CHILD",
-                        { nodeValue: String(val), children: [] },
+                        { nodeValue: val ? String(val) : "", children: [] },
                         child
                     );
                 else if (Array.isArray(val)) {
@@ -67,7 +67,7 @@ export function createTextChildren(text: string): Element {
     return {
         type: "TEXT_CHILD",
         props: {
-            nodeValue: text,
+            nodeValue: text ? text : "",
             children: [],
         },
     };
