@@ -71,6 +71,7 @@ export class Signal<T extends NormalSignal> {
             currentReactiveFunction.__signal = this;
             this.deps.add(currentReactiveFunction);
         }
+        // console.log(this.deps.size);
         return this.val;
     }
 

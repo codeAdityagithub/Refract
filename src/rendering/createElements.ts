@@ -1,8 +1,5 @@
 import { isValidStyle, preprocessStyle, styleObjectToString } from "../lib";
-import {
-    clearReactiveAttributes,
-    setReactiveAttributes,
-} from "../signals/batch";
+import { setReactiveAttributes } from "../signals/batch";
 import { reactive, reactiveAttribute } from "../signals/signal";
 import {
     Element,

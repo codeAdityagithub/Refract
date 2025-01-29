@@ -36,6 +36,7 @@ export function batchUpdate(cb: Function) {
                     // for updating reactive nodes
                     const fiber = reactiveFiberMap.get(dep);
                     if (fiber) {
+                        // console.log("updating fiber", fiber);
                         updateFiber(fiber, val);
                     }
                 }
@@ -58,7 +59,7 @@ export function setReactiveFunction(fn: Function, fiber: Fiber) {
     reactiveFiberMap.set(fn, fiber);
 }
 export function setReactiveAttributes(fn: Function, dom: HTMLElement | Text) {
-    console.log("reactive attrubite", fn);
+    // console.log("reactive attrubite", fn);
     domAttributeMap.set(fn, dom);
 }
 export function clearReactiveAttributes(fn: any) {
@@ -79,4 +80,8 @@ export function clearReactiveFunction(fn: Function) {
         // @ts-expect-error
         fn.__signal = null;
     }
+}
+
+export function deleteReactiveFunction(fn: Function) {
+    reactiveFiberMap.delete(fn);
 }

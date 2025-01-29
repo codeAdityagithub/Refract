@@ -1,9 +1,11 @@
-import { createSignal } from "../signals/signal";
+import { createEffect, createSignal } from "../signals/signal";
 
 const Test = () => {
     const textSignal = createSignal<string>("Initial Text");
     const showTextSignal = createSignal<boolean>(true);
-
+    createEffect(() => {
+        console.log(showTextSignal.value);
+    });
     return (
         <div>
             {/* Static content with reactivity */}
@@ -133,9 +135,15 @@ const Test = () => {
             >
                 Dynamic Event Listener Reactivity
             </button> */}
-            <div className={() => "Class"}>
+            {/* <div className={() => "Class"}>
                 Attributes that are functions but not reactive to any signal
-            </div>
+            </div> */}
+            {/* <div>
+                {() => {
+                    if (showTextSignal.value) return <p>{textSignal.value}</p>;
+                    return <h2>Not hidden</h2>;
+                }}
+            </div> */}
             <button
                 onClick={() => (showTextSignal.value = !showTextSignal.value)}
             >

@@ -145,10 +145,11 @@ function commitFiber(fiber: Fiber, referenceNode?: Node, replace?: boolean) {
     }
 }
 
-function commitDeletion(fiber: Fiber) {
+function commitDeletion(fiber: Fiber, toClearReactiveFunction?: boolean) {
     if (!fiber) return;
     if (fiber.renderFunction) {
-        clearReactiveFunction(fiber.renderFunction);
+        if (toClearReactiveFunction)
+            clearReactiveFunction(fiber.renderFunction);
         delete fiber.renderFunction;
     }
     if (fiber.dom) {
@@ -172,7 +173,7 @@ function commitDeletion(fiber: Fiber) {
         fiber.type.__cleanup = null;
         delete fiber.type;
     }
-    fiber.props.children.forEach((child) => commitDeletion(child));
+    fiber.props.children.forEach((child) => commitDeletion(child, true));
 }
 
 function setRenderFunction(fiber: Fiber) {
@@ -206,7 +207,7 @@ export function updateFiber(prevFiber: Fiber, newValue) {
     } else {
         const newFragment = { ...newValue, parent: prevFiber.parent };
         createFiber(newFragment);
-        // console.log("New Node Fiber", newFragment);
+        console.log("New Node Fiber", newFragment);
         updateNode(prevFiber, newFragment);
     }
 }
@@ -214,7 +215,8 @@ export function updateFiber(prevFiber: Fiber, newValue) {
 function replaceRenderFunction(prev: Fiber, next: Fiber) {
     if (prev.renderFunction) {
         next.renderFunction = prev.renderFunction;
-        clearReactiveFunction(prev.renderFunction);
+        console.log("Replace render function", prev, next);
+        // deleteReactiveFunction(prev.renderFunction);
         setRenderFunction(next);
     }
 }
@@ -291,7 +293,7 @@ function updateNode(prev: Fiber | undefined, next: Fiber | undefined) {
                 replaceRenderFunction(prev, next);
 
                 commitFiber(next, node);
-                node.remove();
+                commitDeletion(prev);
                 replaceChildFromParent(prev, next);
             } else {
                 // console.log("Node-Node");
