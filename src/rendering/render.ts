@@ -3,10 +3,11 @@ import {
     clearReactiveFunction,
     setReactiveFunction,
 } from "../signals/batch";
-import { Fiber, FiberChildren } from "../types";
+import { Fiber } from "../types";
 import { isPrimitive } from "../utils/general";
 import { clearCurrentFC, setCurrentFC } from "./cleanup";
 import {
+    FRAGMENT_SYMBOL,
     createChildren,
     createNode,
     createTextChildren,
@@ -52,6 +53,7 @@ function renderNode(fiber: Fiber) {
             fiber.props.children[i].parent = fiber;
             elements.push(fiber.props.children[i]);
         }
+        // console.log(fiber.props.children);
     } else if (typeof fiber.type === "function") {
         setCurrentFC(fiber.type);
 
@@ -91,9 +93,20 @@ function renderNode(fiber: Fiber) {
 
 function createFiber(fiber: Fiber) {
     if (fiber.type === "FRAGMENT") {
-        for (const child of fiber.props.children) {
-            child.parent = fiber;
-            createFiber(child);
+        const isFragment = fiber.props.children[FRAGMENT_SYMBOL];
+        if (isFragment) {
+            for (const child of fiber.props.children) {
+                child.parent = fiber;
+                createFiber(child);
+            }
+        } else {
+            for (const child of fiber.props.children) {
+                child.parent = fiber;
+                if (child.props.key === undefined) {
+                    console.error("Array children must have a key attribute");
+                }
+                createFiber(child);
+            }
         }
     } else if (typeof fiber.type === "function") {
         setCurrentFC(fiber.type);
@@ -182,7 +195,7 @@ function setRenderFunction(fiber: Fiber) {
 }
 
 export function updateFiber(prevFiber: Fiber, newValue) {
-    // console.log("Prev value", prevFiber);
+    // console.log("Prev value", prevFiber, newValue);
     if (isPrimitive(newValue)) {
         // console.log(fiber, newValue);
         const newFragment: Fiber = {
@@ -194,15 +207,17 @@ export function updateFiber(prevFiber: Fiber, newValue) {
 
         updateNode(prevFiber, newFragment);
     } else if (Array.isArray(newValue)) {
+        const isFragment = newValue[FRAGMENT_SYMBOL];
+
         const newFragment: Fiber = {
             type: "FRAGMENT",
             props: {
-                children: createChildren(newValue),
+                children: isFragment ? newValue : createChildren(newValue),
             },
             parent: prevFiber.parent,
         };
+
         createFiber(newFragment);
-        // console.log("New Fragment Fiber", newValue);
         updateNode(prevFiber, newFragment);
     } else {
         const newFragment = { ...newValue, parent: prevFiber.parent };
@@ -390,8 +405,13 @@ function updateChildren(prev: Fiber, next: Fiber) {
     let len = Math.max(prev.props.children.length, next.props.children.length);
     // const swaps = findKeySwaps(prev.props.children, next.props.children);
     // console.log(swaps);
+    const isFragment = next.props.children[FRAGMENT_SYMBOL];
+    const wasFragment = prev.props.children[FRAGMENT_SYMBOL];
 
-    // console.log(prev, next);
+    if (!isFragment && !wasFragment) {
+        console.log("Array was updated to array or was modified");
+    }
+
     for (let i = 0; i < len; i++) {
         let prevChild = prev.props.children[i];
         let nextChild = next.props.children[i];
@@ -438,5 +458,10 @@ function updateChildren(prev: Fiber, next: Fiber) {
                 i--;
             }
         }
+    }
+    if (isFragment) {
+        prev.props.children[FRAGMENT_SYMBOL] = true;
+    } else {
+        prev.props.children[FRAGMENT_SYMBOL] = false;
     }
 }

@@ -10,15 +10,18 @@ import {
     RenderFunction,
 } from "../types";
 import { isPrimitive } from "../utils/general";
+export const FRAGMENT_SYMBOL = Symbol("FRAGMENT");
 
 export function createElement(
     type: any,
     props: object | null,
     ...children: any[]
 ): Fiber | FiberChildren {
-    // console.log(type);
     if (type === "FRAGMENT") {
-        return createChildren(children);
+        const fragments = createChildren(children);
+        fragments[FRAGMENT_SYMBOL] = true;
+
+        return fragments;
     }
     // @ts-expect-error
     return {
@@ -44,6 +47,7 @@ export function createChildren(children: FiberChildren): FiberChildren {
                 return child;
             } else if (typeof child === "function") {
                 const val = reactive(child);
+                // console.log(child as Function);
                 if (isPrimitive(val))
                     return createSignalChild(
                         "TEXT_CHILD",
@@ -52,9 +56,10 @@ export function createChildren(children: FiberChildren): FiberChildren {
                     );
                 else if (Array.isArray(val)) {
                     // console.log(createChildren(val));
+                    const isFragment = val[FRAGMENT_SYMBOL];
                     return createSignalChild(
                         "FRAGMENT",
-                        { children: createChildren(val) },
+                        { children: isFragment ? val : createChildren(val) },
                         child
                     );
                 }

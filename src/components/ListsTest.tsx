@@ -2,7 +2,7 @@ import { createSignal } from "../index";
 
 export default function ListsTest() {
     const itemsSignal = createSignal(["Item 1", "Item 2", "Item 3"]);
-    // const showTextSignal = createSignal<boolean>(true);
+    const showTextSignal = createSignal<boolean>(true);
     return (
         <div>
             {/* Static content with reactivity */}
@@ -15,26 +15,24 @@ export default function ListsTest() {
                     Pop Item
                 </button>
 
-                {/* <button
+                <button
                     onClick={() =>
                         (showTextSignal.value = !showTextSignal.value)
                     }
                 >
                     {" "}
                     Toggle Text{" "}
-                </button> */}
+                </button>
             </div>
             {/* Conditional Lists with reactivity */}
             {/* <ul>
                 {() =>
-                    !showTextSignal.value ? (
+                    showTextSignal.value ? (
                         <>
                             <p>Hidden Text</p>
                         </>
                     ) : (
-                        itemsSignal.value.map((item, index) => (
-                            <li key={item}>{item}</li>
-                        ))
+                        itemsSignal.value.map((item, index) => <li>{item}</li>)
                     )
                 }
             </ul> */}
@@ -42,7 +40,7 @@ export default function ListsTest() {
             <ul>
                 {() =>
                     itemsSignal.value.map((item, index) => (
-                        <li key={item}>{item}</li>
+                        <li key={index}>{item}</li>
                     ))
                 }
             </ul>
