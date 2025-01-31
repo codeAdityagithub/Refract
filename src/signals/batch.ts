@@ -36,7 +36,7 @@ export function batchUpdate(cb: Function) {
                     // for updating reactive nodes
                     const fiber = reactiveFiberMap.get(dep);
                     if (fiber) {
-                        // console.log("updating fiber", fiber);
+                        // console.log("dep", fiber);
                         updateFiber(fiber, val);
                     }
                 }

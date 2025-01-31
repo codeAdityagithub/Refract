@@ -187,6 +187,22 @@ export class ArraySignal<T extends any[]> {
     private createNewProxy(val: T) {
         this._val = new Proxy(val, {
             get: (target, prop) => {
+                // if (prop === "swap") {
+                //     return (index1: number, index2: number) => {
+                //         if (
+                //             index1 < 0 ||
+                //             index2 < 0 ||
+                //             index1 > target.length ||
+                //             index2 > target.length
+                //         )
+                //             throw new Error("Index out of bounds for swap");
+                //         if (index1 === index2) return;
+                //         const temp = target[index1];
+                //         target[index1] = target[index2];
+                //         target[index2] = temp;
+                //         this.notify();
+                //     };
+                // }
                 const val = target[prop];
                 // Return the method wrapped with notify logic
                 if (typeof val === "function") {

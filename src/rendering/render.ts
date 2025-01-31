@@ -3,7 +3,7 @@ import {
     clearReactiveFunction,
     setReactiveFunction,
 } from "../signals/batch";
-import { Fiber } from "../types";
+import { Fiber, FiberChildren } from "../types";
 import { isPrimitive } from "../utils/general";
 import { clearCurrentFC, setCurrentFC } from "./cleanup";
 import {
@@ -182,7 +182,7 @@ function setRenderFunction(fiber: Fiber) {
 }
 
 export function updateFiber(prevFiber: Fiber, newValue) {
-    console.log("Prev value", prevFiber);
+    // console.log("Prev value", prevFiber);
     if (isPrimitive(newValue)) {
         // console.log(fiber, newValue);
         const newFragment: Fiber = {
@@ -207,7 +207,7 @@ export function updateFiber(prevFiber: Fiber, newValue) {
     } else {
         const newFragment = { ...newValue, parent: prevFiber.parent };
         createFiber(newFragment);
-        console.log("New Node Fiber", newFragment);
+        // console.log("New Node Fiber", newFragment);
         updateNode(prevFiber, newFragment);
     }
 }
@@ -215,7 +215,7 @@ export function updateFiber(prevFiber: Fiber, newValue) {
 function replaceRenderFunction(prev: Fiber, next: Fiber) {
     if (prev.renderFunction) {
         next.renderFunction = prev.renderFunction;
-        console.log("Replace render function", prev, next);
+        // console.log("Replace render function", prev, next);
         // deleteReactiveFunction(prev.renderFunction);
         setRenderFunction(next);
     }
@@ -360,12 +360,41 @@ function updateNode(prev: Fiber | undefined, next: Fiber | undefined) {
     }
 }
 
+// function findKeySwaps(oldFibers: FiberChildren, newFibers: FiberChildren) {
+//     const swaps: Record<string, { from: number; to: number }> = {};
+
+//     // Map each fiber's key to its index in the old array
+//     const oldFiberMap = oldFibers.reduce((map, fiber, index) => {
+//         if (fiber.props.key) map[fiber.props.key] = index;
+//         return map;
+//     }, {});
+
+//     // Compare the new fibers with the old fiber map to detect swaps
+//     newFibers.forEach((newFiber, newIndex) => {
+//         if (newFiber.props.key) {
+//             const oldIndex = oldFiberMap[newFiber.props.key];
+//             if (oldIndex !== undefined && oldIndex !== newIndex) {
+//                 // This indicates a swap
+
+//                 swaps[newFiber.props.key] = {
+//                     from: oldIndex,
+//                     to: newIndex,
+//                 };
+//             }
+//         }
+//     });
+
+//     return swaps;
+// }
 function updateChildren(prev: Fiber, next: Fiber) {
     let len = Math.max(prev.props.children.length, next.props.children.length);
+    // const swaps = findKeySwaps(prev.props.children, next.props.children);
+    // console.log(swaps);
 
+    // console.log(prev, next);
     for (let i = 0; i < len; i++) {
-        const prevChild = prev.props.children[i];
-        const nextChild = next.props.children[i];
+        let prevChild = prev.props.children[i];
+        let nextChild = next.props.children[i];
 
         if (nextChild) nextChild.parent = prev;
         if (!prevChild && nextChild) {
@@ -390,6 +419,15 @@ function updateChildren(prev: Fiber, next: Fiber) {
             //     "of",
             //     prev
             // );
+            // const prevSwap = swaps[prevChild.props.key];
+            // const nextSwap = swaps[nextChild.props.key];
+            // if (prevSwap && nextSwap) {
+            //     console.log("Swap", prevSwap, nextSwap);
+            // } else if (prevSwap) {
+            //     console.log("Prev swap", prevSwap);
+            // } else if (nextSwap) {
+            //     console.log("Next swap", nextSwap);
+            // }
             updateNode(prevChild, nextChild);
             const newLen = Math.max(
                 prev.props.children.length,

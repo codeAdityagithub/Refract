@@ -13,13 +13,15 @@ const Test = () => {
             {/* Array rendering */}
 
             {/* Fragment - Fragment with reactivity */}
-            {/* {() =>
+            {() =>
                 showTextSignal.value ? (
                     <>
                         <p>
                             <span>{textSignal.value}</span>
                         </p>
                         <h2>{textSignal.value}</h2>
+                        <div key={"hi1"}>Hi</div>
+                        <h3 key={"hi2"}>Hi</h3>
                     </>
                 ) : (
                     <>
@@ -27,12 +29,11 @@ const Test = () => {
                             <span>Hidden Text</span>
                         </p>
                         <h2>Hello!!</h2>
-                        <h3>Hi</h3>
-                        <h3>Hi</h3>
-                        <h3>Hi</h3>
+                        <h3 key={"hi2"}>Hi</h3>
+                        <div key={"hi1"}>Hi</div>
                     </>
                 )
-            } */}
+            }
             {/* FC - Fragment */}
             {/* {() =>
                 showTextSignal.value ? (
@@ -70,7 +71,7 @@ const Test = () => {
                         <h3>hi</h3>
                         <>
                             <p>hi</p>
-                            <p>{()=>textSignal.value}</p>
+                            <p>{() => textSignal.value}</p>
                         </>
                     </div>
                 )

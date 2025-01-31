@@ -1,4 +1,5 @@
 import { createSignal } from "../index.ts";
+import ListsTest from "./ListsTest.tsx";
 import Test from "./Test.tsx";
 
 const App = (props: any) => {
