@@ -1,12 +1,11 @@
-// @ts-nocheck
 import { describe, expect, it } from "vitest";
 import {
     ArraySignal,
     createEffect,
     createSignal,
     ObjectSignal,
+    PrimitiveSignal,
     reactive,
-    Signal,
 } from "../../signals/signal";
 describe("Signal", () => {
     it("should be defined", () => {
@@ -24,12 +23,14 @@ describe("Signal", () => {
     it("should should create Normal Signal for primitive and null values", () => {
         const values = [0, "", false, null, undefined];
         const signals = values.map((val) => createSignal(val));
-        expect(signals.every((signal) => signal instanceof Signal)).toBe(true);
+        expect(
+            signals.every((signal) => signal instanceof PrimitiveSignal)
+        ).toBe(true);
         const assignWrongValue = () => {
             signals[0].value = [1, 2, 4];
         };
         expect(assignWrongValue).toThrow(
-            "Invalid type for Signal, valid types: [boolean, string, number, undefined, null]"
+            "Invalid type for PrimitiveSignal. Valid types: [boolean, string, number, undefined, null]"
         );
     });
     it("should should create ArraySignal for array values", () => {
@@ -40,7 +41,7 @@ describe("Signal", () => {
             arraySignal.value = 3;
         };
         expect(assignWrongValue).toThrow(
-            "Invalid type for Reference Signal; can be array only"
+            "Invalid type for ArraySignal; value must be an array"
         );
     });
     it("should create ObjectSignal for object values", () => {
@@ -52,7 +53,7 @@ describe("Signal", () => {
             objectSignal.value = [1, 2];
         };
         expect(assignWrongValue).toThrow(
-            "Invalid type for Reference Signal; can be object only"
+            "Invalid type for ObjectSignal; value must be a plain object"
         );
     });
     it("should throw when creating effect without function", () => {
