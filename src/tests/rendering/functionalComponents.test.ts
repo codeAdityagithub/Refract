@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { cleanUp, clearCurrentFC, setCurrentFC } from "../../rendering/cleanup";
+import {
+    cleanUp,
+    cleanUpFC,
+    clearCurrentFC,
+    setCurrentFC,
+} from "../../rendering/functionalComponents";
 
 describe("cleanup", () => {
     it("should be defined", () => {
@@ -17,7 +22,7 @@ describe("cleanup", () => {
         cleanUp(cleanup);
         clearCurrentFC();
 
-        // @ts-expect-error
-        expect(FC.__cleanup).toBe(cleanup);
+        cleanUpFC(FC, {});
+        expect(count).toBe(1);
     });
 });

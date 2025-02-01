@@ -150,6 +150,7 @@ export function createNode(element: Fiber) {
                         dom[name] = String(val);
                     }
                 }
+                // this is a reactive attribute
                 if (func.__signal) setReactiveAttributes(func, dom);
             } else {
                 if (!element.props[name] && element.props[name] !== 0) {

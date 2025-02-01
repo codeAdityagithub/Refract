@@ -5,13 +5,17 @@ import {
 } from "../signals/batch";
 import { Fiber } from "../types";
 import { isPrimitive } from "../utils/general";
-import { clearCurrentFC, setCurrentFC } from "./cleanup";
 import {
     FRAGMENT_SYMBOL,
     createChildren,
     createNode,
     createTextChildren,
 } from "./createElements";
+import {
+    cleanUpFC,
+    clearCurrentFC,
+    setCurrentFC,
+} from "./functionalComponents";
 
 export function render(element: Fiber, container: HTMLElement) {
     // const fragment = document.createDocumentFragment();
@@ -180,18 +184,7 @@ function commitDeletion(fiber: Fiber, toClearReactiveFunction?: boolean) {
         fiber.dom.remove();
     }
     if (typeof fiber.type === "function") {
-        // @ts-expect-error
-        if (fiber.type.__cleanup) fiber.type.__cleanup();
-        // @ts-expect-error
-        fiber.type.__cleanup = null;
-
-        // @ts-expect-error
-        if (fiber.type.__signals) {
-            // @ts-expect-error
-            for (const signal of fiber.type.__signals) {
-                if (signal.clearDeps) signal.clearDeps();
-            }
-        }
+        cleanUpFC(fiber.type, fiber.props);
         delete fiber.type;
     }
     fiber.props.children.forEach((child) => commitDeletion(child, true));

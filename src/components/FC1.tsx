@@ -1,4 +1,4 @@
-import { createEffect, createSignal } from "../index";
+import { cleanUp, createEffect, createSignal } from "../index";
 // import { computed } from "../signals/signal";
 
 const FC1 = ({ textSignal }) => {
@@ -14,11 +14,14 @@ const FC1 = ({ textSignal }) => {
             value++;
         };
     });
+    cleanUp(() => {
+        console.log("Cleanup FC1");
+    });
     // const compText = computed(() => "FC1" + str.value);
     return (
         <>
             This is FC1
-            <h2>This is {() => textSignal.value}</h2>
+            <h2>This is {() => str.value}</h2>
             <button
                 onClick={() => {
                     clicked.value = !clicked.value;

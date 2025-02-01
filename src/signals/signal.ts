@@ -1,4 +1,4 @@
-import { getCurrentFC } from "../rendering/cleanup";
+import { addEffect, addSignal } from "../rendering/functionalComponents";
 import { isPlainObject, isPrimitive } from "../utils/general";
 import { addEffectCleanup, batchUpdate } from "./batch";
 
@@ -39,6 +39,7 @@ export function createEffect(fn: Function) {
     if (typeof fn !== "function")
         throw new Error("createEffect takes a effect function as the argument");
     currentEffect = fn;
+    addEffect(fn);
     const effectCleanup = fn();
     if (typeof effectCleanup === "function") addEffectCleanup(effectCleanup);
     currentEffect = null;
@@ -83,7 +84,7 @@ const NonMutatingArrayMethods = [
 /**
  * Base class for signals.
  */
-abstract class BaseSignal<T> {
+export abstract class BaseSignal<T> {
     protected _val: T;
     protected deps: Set<Function>;
     protected isNotified: boolean = false;
@@ -91,11 +92,6 @@ abstract class BaseSignal<T> {
     constructor(val: T) {
         this._val = val;
         this.deps = new Set();
-
-        const currentFC = getCurrentFC();
-        if (currentFC && currentFC.__signals && currentFC.__signals.push) {
-            currentFC.__signals.push(this);
-        }
     }
 
     protected notify() {
@@ -146,7 +142,7 @@ export class PrimitiveSignal<T extends NormalSignal> extends BaseSignal<T> {
             this.deps.add(currentReactiveFunction);
         }
         // (Optional) debug logging:
-        console.log(this.deps);
+        // console.log(this.deps);
         return this._val;
     }
 
@@ -301,9 +297,13 @@ function createSignal<T extends NormalSignal | any[] | Record<any, any>>(
 
     if (typeof val === "object" && val !== null) {
         if (Array.isArray(val)) {
-            return new ArraySignal(val);
-        } else if (Object.prototype.toString.call(val) === "[object Object]") {
-            return new ObjectSignal(val);
+            const signal = new ArraySignal(val);
+            addSignal(signal);
+            return signal;
+        } else if (isPlainObject(val)) {
+            const signal = new ObjectSignal(val);
+            addSignal(signal);
+            return signal;
         } else {
             throw new Error(
                 "Invalid type for signal initialization: " + typeof val
@@ -311,7 +311,9 @@ function createSignal<T extends NormalSignal | any[] | Record<any, any>>(
         }
     } else if (isPrimitive(val)) {
         // @ts-expect-error
-        return new PrimitiveSignal(val);
+        const signal = new PrimitiveSignal(val);
+        addSignal(signal);
+        return signal;
     } else {
         throw new Error(
             "Invalid type for signal initialization: " + typeof val
