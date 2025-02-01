@@ -184,6 +184,14 @@ function commitDeletion(fiber: Fiber, toClearReactiveFunction?: boolean) {
         if (fiber.type.__cleanup) fiber.type.__cleanup();
         // @ts-expect-error
         fiber.type.__cleanup = null;
+
+        // @ts-expect-error
+        if (fiber.type.__signals) {
+            // @ts-expect-error
+            for (const signal of fiber.type.__signals) {
+                if (signal.clearDeps) signal.clearDeps();
+            }
+        }
         delete fiber.type;
     }
     fiber.props.children.forEach((child) => commitDeletion(child, true));
@@ -405,12 +413,12 @@ function updateChildren(prev: Fiber, next: Fiber) {
     let len = Math.max(prev.props.children.length, next.props.children.length);
     // const swaps = findKeySwaps(prev.props.children, next.props.children);
     // console.log(swaps);
-    const isFragment = next.props.children[FRAGMENT_SYMBOL];
-    const wasFragment = prev.props.children[FRAGMENT_SYMBOL];
+    // const isFragment = next.props.children[FRAGMENT_SYMBOL];
+    // const wasFragment = prev.props.children[FRAGMENT_SYMBOL];
 
-    if (!isFragment && !wasFragment) {
-        console.log("Array was updated to array or was modified");
-    }
+    // if (!isFragment && !wasFragment) {
+    //     console.log("Array was updated to array or was modified");
+    // }
 
     for (let i = 0; i < len; i++) {
         let prevChild = prev.props.children[i];
@@ -459,9 +467,9 @@ function updateChildren(prev: Fiber, next: Fiber) {
             }
         }
     }
-    if (isFragment) {
-        prev.props.children[FRAGMENT_SYMBOL] = true;
-    } else {
-        prev.props.children[FRAGMENT_SYMBOL] = false;
-    }
+    // if (isFragment) {
+    //     prev.props.children[FRAGMENT_SYMBOL] = true;
+    // } else {
+    //     prev.props.children[FRAGMENT_SYMBOL] = false;
+    // }
 }

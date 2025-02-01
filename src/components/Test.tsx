@@ -1,4 +1,5 @@
 import { createEffect, createSignal } from "../signals/signal";
+import FC1 from "./FC1";
 
 const Test = () => {
     const textSignal = createSignal<string>("Initial Text");
@@ -6,6 +7,7 @@ const Test = () => {
     createEffect(() => {
         console.log(showTextSignal.value);
     });
+
     return (
         <div>
             {/* Static content with reactivity */}
@@ -13,7 +15,7 @@ const Test = () => {
             {/* Array rendering */}
 
             {/* Fragment - Fragment with reactivity */}
-            {() =>
+            {/* {() =>
                 showTextSignal.value ? (
                     <>
                         <p>
@@ -33,7 +35,7 @@ const Test = () => {
                         <div key={"hi1"}>Hi</div>
                     </>
                 )
-            }
+            } */}
             {/* FC - Fragment */}
             {/* {() =>
                 showTextSignal.value ? (
@@ -104,17 +106,15 @@ const Test = () => {
                     <FC1 />
                 )
             } */}
-            {/* {() =>
+            {() =>
                 showTextSignal.value ? (
                     <>
                         <div
                             className={() =>
                                 showTextSignal.value ? "visible" : "hidden"
                             }
-                        >
-                            {() => textSignal.value + "Hello"}
-                        </div>
-                        <FC1 />
+                        ></div>
+                        <FC1 textSignal={textSignal} />
                     </>
                 ) : (
                     <>
@@ -123,7 +123,7 @@ const Test = () => {
                         <span>Extra</span>
                     </>
                 )
-            } */}
+            }
             {/* <div>{() => !showTextSignal.value && textSignal.value}</div> */}
             {/* <div id={() => `id-${textSignal.value}`}>Dynamic ID</div> */}
             {/* <div className={null}>No Data</div> */}

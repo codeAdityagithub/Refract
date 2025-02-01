@@ -1,3 +1,4 @@
+import { getCurrentFC } from "../rendering/cleanup";
 import { isPlainObject, isPrimitive } from "../utils/general";
 import { addEffectCleanup, batchUpdate } from "./batch";
 
@@ -43,13 +44,20 @@ export function createEffect(fn: Function) {
     currentEffect = null;
 }
 
-// export function computed<T>(fn: () => T) {
+// export function computed<T extends NormalSignal | any[] | Record<any, any>>(
+//     fn: () => T
+// ) {
 //     if (typeof fn !== "function")
 //         throw new Error("createEffect takes a effect function as the argument");
-//     currentEffect = fn;
+
+//     currentEffect = () => {
+//         signal.value = fn();
+//     };
 //     const val = fn();
+//     const signal = createSignal(val);
 //     currentEffect = null;
-//     return val as T;
+
+//     return signal;
 // }
 
 type NormalSignal = boolean | string | number | undefined | null;
@@ -61,6 +69,10 @@ export class Signal<T extends NormalSignal> {
     constructor(val: T) {
         this.val = val;
         this.deps = new Set();
+        const currentFC = getCurrentFC();
+        if (currentFC && currentFC.__signals && currentFC.__signals.push) {
+            currentFC.__signals.push(this);
+        }
     }
 
     get value() {
@@ -71,7 +83,7 @@ export class Signal<T extends NormalSignal> {
             currentReactiveFunction.__signal = this;
             this.deps.add(currentReactiveFunction);
         }
-        // console.log(this.deps.size);
+        console.log(this.deps);
         return this.val;
     }
 
@@ -154,6 +166,10 @@ export class ArraySignal<T extends any[]> {
             throw new Error(
                 "Invalid type for Reference Signal; can be array only"
             );
+        }
+        const currentFC = getCurrentFC();
+        if (currentFC && currentFC.__signals && currentFC.__signals.push) {
+            currentFC.__signals.push(this);
         }
     }
     get value() {
@@ -249,6 +265,10 @@ export class ObjectSignal<T extends Record<any, any>> {
         this.deps = new Set();
 
         this.createNewProxy(val);
+        const currentFC = getCurrentFC();
+        if (currentFC && currentFC.__signals && currentFC.__signals.push) {
+            currentFC.__signals.push(this);
+        }
     }
     get value() {
         if (currentEffect) {
