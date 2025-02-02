@@ -145,7 +145,10 @@ export function createNode(element: Fiber) {
                         dom instanceof HTMLElement &&
                         (name in dom || name.startsWith("data-"))
                     ) {
-                        dom.setAttribute(name, String(val));
+                        dom.setAttribute(
+                            name === "className" ? "class" : name,
+                            String(val)
+                        );
                     } else {
                         dom[name] = String(val);
                     }
@@ -176,7 +179,10 @@ export function createNode(element: Fiber) {
                         dom instanceof HTMLElement &&
                         (name in dom || name.startsWith("data-"))
                     ) {
-                        dom.setAttribute(name, String(element.props[name]));
+                        dom.setAttribute(
+                            name === "className" ? "class" : name,
+                            String(element.props[name])
+                        );
                     } else {
                         dom[name] = String(element.props[name]);
                     }
@@ -205,6 +211,8 @@ export function updateDomProp(prop: string, dom: HTMLElement | Text, value) {
             dom instanceof HTMLElement &&
             (prop in dom || prop.startsWith("data-"))
         ) {
+            if (prop === "classProp") prop = "class";
+
             dom.setAttribute(prop, String(value));
         } else {
             dom[prop] = String(value);

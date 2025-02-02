@@ -29,7 +29,9 @@ export default function NonReactiveComponent() {
                 {/* Fragments */}
                 <>
                     <span>Fragment part 1</span>
-                    <span>Fragment part 2</span>
+                    <span>
+                        <>Fragment part 2</>
+                    </span>
                 </>
 
                 {/* Nested elements */}
