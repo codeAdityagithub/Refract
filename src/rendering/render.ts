@@ -18,14 +18,17 @@ import {
 } from "./functionalComponents";
 
 export function render(element: Fiber, container: HTMLElement) {
-    // const fragment = document.createDocumentFragment();
-    // @ts-expect-error
+    rootContainer = container;
+    const fragment = document.createDocumentFragment();
+    rootFragment = fragment;
+
     const rootFiber: Fiber = {
         type: "div",
         props: {
             children: [element],
         },
-        dom: container,
+        // @ts-expect-error
+        dom: fragment,
     };
     // console.log(element.type(element.props));
     element.parent = rootFiber;
@@ -35,7 +38,15 @@ export function render(element: Fiber, container: HTMLElement) {
     // container.appendChild(fragment);
 }
 
+function commitRootFragment() {
+    if (rootFragment && rootContainer) {
+        rootContainer.appendChild(rootFragment);
+    }
+}
+
 let elements: Fiber[] = [];
+let rootContainer: HTMLElement | null = null;
+let rootFragment: DocumentFragment | null = null;
 
 function workLoop(deadline: IdleDeadline) {
     let shouldYield = false;
@@ -46,6 +57,7 @@ function workLoop(deadline: IdleDeadline) {
     }
 
     if (elements.length == 0) {
+        commitRootFragment();
         return;
     }
     requestIdleCallback(workLoop);
