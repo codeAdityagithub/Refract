@@ -1,10 +1,10 @@
-import { computed, createEffect, createSignal } from "../signals/signal";
+import { computed, createSignal } from "../signals/signal";
 
-const Computed = () => {
+const Computed = ({ textSignal }) => {
     const signal = createSignal<number>(2);
-    const comp = computed(() => signal.value * 2);
-    createEffect(() => console.log(comp.value));
-
+    const comp = computed(() => []);
+    // createEffect(() => console.log(textSignal.value));
+    // console.log(comp.value);
     return (
         <div>
             <h2>{() => signal.value}</h2>*2 = <h2>{() => comp.value}</h2>

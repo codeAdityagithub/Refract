@@ -45,21 +45,26 @@ export function createEffect(fn: Function) {
     currentEffect = null;
 }
 
-// export function computed<T extends NormalSignal | any[] | Record<any, any>>(
-//     fn: () => T
-// ) {
-//     if (typeof fn !== "function")
-//         throw new Error("createEffect takes a effect function as the argument");
+function computed<T extends NormalSignal>(val: () => T): PrimitiveSignal<T>;
+function computed<T extends any[]>(val: () => T): ArraySignal<T>;
+function computed<T extends Record<any, any>>(val: () => T): ObjectSignal<T>;
+function computed<T extends NormalSignal | any[] | Record<any, any>>(
+    fn: () => T
+) {
+    if (typeof fn !== "function")
+        throw new Error("computed takes a function as the argument");
 
-//     currentEffect = () => {
-//         signal.value = fn();
-//     };
-//     const val = fn();
-//     const signal = createSignal(val);
-//     currentEffect = null;
+    currentEffect = () => {
+        signal.value = fn();
+    };
+    addEffect(currentEffect);
+    const val = fn();
+    // @ts-expect-error
+    const signal = createSignal<T>(val);
+    currentEffect = null;
 
-//     return signal;
-// }
+    return signal;
+}
 
 const NonMutatingArrayMethods = [
     "concat",
@@ -321,4 +326,4 @@ function createSignal<T extends NormalSignal | any[] | Record<any, any>>(
     }
 }
 
-export { createSignal };
+export { computed, createSignal };

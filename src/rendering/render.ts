@@ -320,7 +320,7 @@ function updateNode(prev: Fiber | undefined, next: Fiber | undefined) {
                         isGone(prevProps, nextProps, prop)
                     ) {
                         node[prop] = "";
-                        console.log("property removed", prop);
+                        // console.log("property removed", prop);
                     } else if (
                         isEvent(prop) &&
                         (!(prop in nextProps) ||
@@ -329,7 +329,7 @@ function updateNode(prev: Fiber | undefined, next: Fiber | undefined) {
                         const eventName = prop.toLowerCase().substring(2);
 
                         node.removeEventListener(eventName, prevProps[prop]);
-                        console.log("event listener removed", prop);
+                        // console.log("event listener removed", prop);
                     }
                 }
                 if (prev.type !== next.type) {
@@ -353,18 +353,18 @@ function updateNode(prev: Fiber | undefined, next: Fiber | undefined) {
                             isNew(prevProps, nextProps, prop)
                         ) {
                             node[prop] = nextProps[prop];
-                            console.log(
-                                "property added",
-                                prop,
-                                nextProps[prop]
-                            );
+                            // console.log(
+                            //     "property added",
+                            //     prop,
+                            //     nextProps[prop]
+                            // );
                             prevProps[prop] = nextProps[prop];
                         } else if (
                             isEvent(prop) &&
                             isNew(prevProps, nextProps, prop)
                         ) {
                             const eventName = prop.toLowerCase().substring(2);
-                            console.log("event listener added", prop);
+                            // console.log("event listener added", prop);
                             node.addEventListener(eventName, nextProps[prop]);
                             prevProps[prop] = nextProps[prop];
                         }

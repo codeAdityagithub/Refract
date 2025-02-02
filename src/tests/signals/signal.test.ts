@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     ArraySignal,
+    computed,
     createEffect,
     createSignal,
     ObjectSignal,
@@ -345,4 +346,57 @@ describe("Signal", () => {
     //         return 1;
     //     };
     // });
+});
+
+describe("Computed", () => {
+    it("should should create Normal Signal for primitive and null values", () => {
+        const values = [0, "", false, null, undefined];
+        const signals = values.map((val) => computed(() => val));
+        expect(
+            signals.every((signal) => signal instanceof PrimitiveSignal)
+        ).toBe(true);
+        const assignWrongValue = () => {
+            signals[0].value = [1, 2, 4];
+        };
+        expect(assignWrongValue).toThrow(
+            "Invalid type for PrimitiveSignal. Valid types: [boolean, string, number, undefined, null]"
+        );
+    });
+    it("should should create ArraySignal for array values", () => {
+        const arraySignal = computed(() => [0, 1, 2]);
+        expect(arraySignal instanceof ArraySignal).toBe(true);
+        expect(computed(() => ({})) instanceof ArraySignal).toBe(false);
+        const assignWrongValue = () => {
+            arraySignal.value = 3;
+        };
+        expect(assignWrongValue).toThrow(
+            "Invalid type for ArraySignal; value must be an array"
+        );
+    });
+    it("should create ObjectSignal for object values", () => {
+        const objectSignal = computed(() => ({ a: 0, b: 1, c: 2 }));
+        expect(objectSignal instanceof ObjectSignal).toBe(true);
+        expect(createSignal({ 0: "hello" }) instanceof ObjectSignal).toBe(true);
+        const assignWrongValue = () => {
+            objectSignal.value = 3;
+            objectSignal.value = [1, 2];
+        };
+        expect(assignWrongValue).toThrow(
+            "Invalid type for ObjectSignal; value must be a plain object"
+        );
+    });
+    it("Should support computed value from signals", async () => {
+        const numSignal = createSignal<number>(0);
+        let count = 0;
+        const doubleSignal = computed(() => {
+            count++;
+            return numSignal.value * 2;
+        });
+        expect(count).toBe(1);
+        expect(doubleSignal.value).toBe(0);
+        numSignal.value = 10;
+        await Promise.resolve();
+        expect(count).toBe(2);
+        expect(doubleSignal.value).toBe(20);
+    });
 });

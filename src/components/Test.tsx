@@ -1,5 +1,5 @@
 import { createEffect, createSignal } from "../signals/signal";
-import FC1 from "./FC1";
+import Computed from "./Computed";
 
 const Test = () => {
     const textSignal = createSignal<string>("Initial Text");
@@ -114,7 +114,8 @@ const Test = () => {
                                 showTextSignal.value ? "visible" : "hidden"
                             }
                         ></div>
-                        <FC1 textSignal={textSignal} />
+                        {/* <FC1 textSignal={textSignal} /> */}
+                        <Computed textSignal={textSignal} />
                     </>
                 ) : (
                     <>
