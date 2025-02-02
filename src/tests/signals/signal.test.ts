@@ -82,6 +82,34 @@ describe("Signal", () => {
         objSignal.value.a = 4;
         expect(count).toBe(1);
     });
+    it("should run the cleanup function of the effect once", async () => {
+        const signal = createSignal<number>(0);
+        const arrSignal = createSignal([1, 2, 3]);
+        const objSignal = createSignal({ a: 1, b: 2, c: 3 });
+
+        let count = 0;
+        let cleanup = 0;
+        createEffect(() => {
+            count++;
+            signal.value;
+            arrSignal.value;
+            objSignal.value;
+            return () => {
+                cleanup++;
+            };
+        });
+
+        expect(count).toBe(1);
+        expect(cleanup).toBe(0);
+
+        signal.value = 1;
+        arrSignal.value.push(4);
+        objSignal.value.a = 4;
+        await Promise.resolve();
+
+        expect(count).toBe(2);
+        expect(cleanup).toBe(1);
+    });
     it("reactive function should throw when invalid type for dom node is passed", () => {
         const wrongReactive = () => {
             reactive(1);
@@ -336,16 +364,6 @@ describe("Signal", () => {
 
         expect(count).toBe(1); // No reactivity trigger
     });
-    // it("Should support computed value from signals", async () => {
-    //     const numSignal = createSignal(0);
-    //     const doubleSignal = computed(() => numSignal.value * 2);
-    //     let count = 0;
-    //     const func = () => {
-    //         count++;
-    //         doubleSignal.value;
-    //         return 1;
-    //     };
-    // });
 });
 
 describe("Computed", () => {
