@@ -278,6 +278,7 @@ function updateNode(prev: Fiber | undefined, next: Fiber | undefined) {
             // PREV IS FRAGMENT
             if (next.type === "FRAGMENT" || typeof next.type === "function") {
                 // console.log("Fragment-Fragment");
+                prev.type = next.type;
                 updateChildren(prev, next);
                 // replaceChildFromParent(prev, next);
             } else {
@@ -477,4 +478,9 @@ function updateChildren(prev: Fiber, next: Fiber) {
     // } else {
     //     prev.props.children[FRAGMENT_SYMBOL] = false;
     // }
+}
+// @ts-expect-error
+if (process && process.env.NODE_ENV === "test") {
+    // @ts-expect-error
+    module.exports = { createFiber, commitDeletion, commitFiber, updateFiber };
 }
