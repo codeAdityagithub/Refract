@@ -297,9 +297,9 @@ function updateNode(prev: Fiber | undefined, next: Fiber | undefined) {
         } else {
             // PREV IS NODE
             if (
+                prev.props.key &&
                 prev.props.key === next.props.key &&
-                prev.type === next.type &&
-                prev.props.key
+                prev.type === next.type
             ) {
                 console.log("Same key", prev.props.key);
                 return;

@@ -299,7 +299,7 @@ describe("updateFiber - Adding a New Node", () => {
     });
 });
 
-describe("updateFiber - Component Replacement", () => {
+describe("updateFiber - Component Replacement FC-FC", () => {
     function ComponentA() {
         return <p>A</p>;
     }
@@ -312,12 +312,9 @@ describe("updateFiber - Component Replacement", () => {
         createFiber(fiber);
         commitFiber(fiber);
 
-        const prevDom = fiber.props.children[0].dom;
-
         const newFiber = <ComponentB />;
 
         updateFiber(fiber, newFiber);
-        // console.log()
         expect(fiber.type).toBe(ComponentB);
         expect(fiber.props.children[0].dom.innerHTML).toBe("B");
     });
@@ -355,7 +352,7 @@ describe("updateFiber - Handling Empty Nodes", () => {
     });
 });
 
-describe("updateFiber - Fragment Handling", () => {
+describe("updateFiber - Fragment-Fragment", () => {
     it("Should update fragments correctly", () => {
         const fiber = (
             <div>
@@ -376,9 +373,127 @@ describe("updateFiber - Fragment Handling", () => {
                 </>
             </div>
         );
-        console.log(fiber);
         updateFiber(fiber, newFiber);
 
         expect(fiber.dom.innerHTML).toBe("<h1>Updated</h1>");
     });
 });
+describe("updateFiber - Node-FC", () => {
+    it("Should update node with FC correctly", () => {
+        const fiber = (
+            <div>
+                <p>Hello</p>
+                <span>World</span>
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+        const FC = () => {
+            return <div>FC</div>;
+        };
+        const newFiber = (
+            <div>
+                <FC />
+            </div>
+        );
+        updateFiber(fiber, newFiber);
+        expect(fiber.props.children.length).toBe(1);
+        expect(fiber.props.children[0].type).toBe(FC);
+        expect(fiber.dom.innerHTML).toBe("<div>FC</div>");
+    });
+});
+describe("updateFiber - Node-Fragment", () => {
+    it("Should update node with FC correctly", () => {
+        const fiber = (
+            <div>
+                <p>Hello</p>
+                <span>World</span>
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+
+        const newFiber = (
+            <div>
+                <>
+                    <div>Fragment 1</div>
+                    <div>Fragment 2</div>
+                    <div>Fragment 3</div>
+                </>
+            </div>
+        );
+        updateFiber(fiber, newFiber);
+
+        expect(fiber.props.children.length).toBe(3);
+        expect(fiber.dom.innerHTML).toBe(
+            "<div>Fragment 1</div><div>Fragment 2</div><div>Fragment 3</div>"
+        );
+    });
+});
+describe("updateFiber - FC-Fragment", () => {
+    it("Should update node with FC correctly", () => {
+        const FC = () => {
+            return <p>Hello</p>;
+        };
+        const fiber = (
+            <div>
+                <FC />
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+        expect(fiber.dom.innerHTML).toBe("<p>Hello</p>");
+
+        const newFiber = (
+            <div>
+                {() => (
+                    <>
+                        <div>Fragment 1</div>
+                        <div>Fragment 2</div>
+                        <div>Fragment 3</div>
+                    </>
+                )}
+            </div>
+        );
+        // console.dir(fiber.props.children[0].type);
+        updateFiber(fiber, newFiber);
+        expect(fiber.props.children.length).toBe(1);
+        expect(fiber.props.children[0].type).toBe("FRAGMENT");
+        expect(fiber.dom.innerHTML).toBe(
+            "<div>Fragment 1</div><div>Fragment 2</div><div>Fragment 3</div>"
+        );
+    });
+});
+
+// describe("updateFiber - Reordering Nodes", () => {
+//     it("Should swap nodes without unnecessary re-creation", () => {
+//         const fiber = (
+//             <div>
+//                 <p>Hello</p>
+//                 <span>World</span>
+//             </div>
+//         );
+
+//         createFiber(fiber);
+//         commitFiber(fiber);
+
+//         const prevP = fiber.props.children[0].dom;
+//         const prevSpan = fiber.props.children[1].dom;
+
+//         const newFiber = (
+//             <div>
+//                 <span>World</span>
+//                 <p>Hello</p>
+//             </div>
+//         );
+
+//         updateFiber(fiber, newFiber);
+
+//         expect(fiber.props.children[0].dom).toBe(prevSpan);
+//         expect(fiber.props.children[1].dom).toBe(prevP);
+//         expect(fiber.dom.innerHTML).toBe("<span>World</span><p>Hello</p>");
+//     });
+// });
