@@ -468,6 +468,48 @@ describe("updateFiber - FC-Fragment", () => {
     });
 });
 
+describe("updateChildren - edge case", () => {
+    it("should handle last child not having dom node", () => {
+        const fiber = (
+            <div>
+                <p>Hello</p>
+                <span>World</span>
+                {() => (
+                    <>
+                        <div>Fragment 1</div>
+                        <div>Fragment 2</div>
+                    </>
+                )}
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+
+        const newFiber = (
+            <div>
+                <p>Hello</p>
+                <span>World</span>
+
+                {() => (
+                    <>
+                        <div>Fragment 3</div>
+                        <div>Fragment 4</div>
+                    </>
+                )}
+                <div>New Node2</div>
+            </div>
+        );
+
+        console.log(fiber.props.children.at(-1));
+        updateFiber(fiber, newFiber);
+
+        expect(fiber.dom.innerHTML).toBe(
+            "<p>Hello</p><span>World</span><div>Fragment 3</div><div>Fragment 4</div><div>New Node2</div>"
+        );
+    });
+});
+
 // describe("updateFiber - Reordering Nodes", () => {
 //     it("Should swap nodes without unnecessary re-creation", () => {
 //         const fiber = (

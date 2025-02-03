@@ -432,12 +432,6 @@ function updateChildren(prev: Fiber, next: Fiber) {
 
         if (nextChild) nextChild.parent = prev;
         if (!prevChild && nextChild) {
-            // console.log(
-            //     "To insert new ",
-            //     nextChild,
-            //     // prev.props.children.at(-1)?.dom?.nextSibling
-            // );
-
             commitFiber(
                 nextChild,
                 // @ts-expect-error
