@@ -278,7 +278,6 @@ function updateNode(prev: Fiber | undefined, next: Fiber | undefined) {
             // PREV IS FRAGMENT
             if (next.type === "FRAGMENT" || typeof next.type === "function") {
                 // console.log("Fragment-Fragment");
-                prev.type = next.type;
                 updateChildren(prev, next);
                 // replaceChildFromParent(prev, next);
             } else {
@@ -419,13 +418,15 @@ function updateChildren(prev: Fiber, next: Fiber) {
     let len = Math.max(prev.props.children.length, next.props.children.length);
     // const swaps = findKeySwaps(prev.props.children, next.props.children);
     // console.log(swaps);
-    // const isFragment = next.props.children[FRAGMENT_SYMBOL];
-    // const wasFragment = prev.props.children[FRAGMENT_SYMBOL];
+    const isFragment =
+        next.props.children[FRAGMENT_SYMBOL] || typeof next.type === "function";
+    const wasFragment =
+        prev.props.children[FRAGMENT_SYMBOL] || typeof prev.type === "function";
 
-    // if (!isFragment && !wasFragment) {
-    //     console.log("Array was updated to array or was modified");
-    // }
-
+    if (!isFragment && !wasFragment) {
+        console.log("Array was updated to array or was modified");
+    }
+    console.log(wasFragment, isFragment);
     for (let i = 0; i < len; i++) {
         let prevChild = prev.props.children[i];
         let nextChild = next.props.children[i];
@@ -467,14 +468,15 @@ function updateChildren(prev: Fiber, next: Fiber) {
             }
         }
     }
-    // if (isFragment) {
-    //     prev.props.children[FRAGMENT_SYMBOL] = true;
-    // } else {
-    //     prev.props.children[FRAGMENT_SYMBOL] = false;
-    // }
+    if (isFragment) {
+        prev.props.children[FRAGMENT_SYMBOL] = true;
+    } else {
+        prev.props.children[FRAGMENT_SYMBOL] = false;
+    }
+    prev.type = next.type;
 }
 // @ts-expect-error
-if (process && process.env.NODE_ENV === "test") {
+if (!window && process && process.env.NODE_ENV === "test") {
     // @ts-expect-error
     module.exports = { createFiber, commitDeletion, commitFiber, updateFiber };
 }

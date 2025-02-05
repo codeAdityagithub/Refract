@@ -8,8 +8,8 @@ const App = (props: any) => {
     // const count2 = createSignal(1);
     // return <ReactiveComponent />;
     // return <NonReactiveComponent />;
-    return <Test />;
-    // return <ListsTest />;
+    // return <Test />;
+    return <ListsTest />;
     // return <Computed />;
 };
 

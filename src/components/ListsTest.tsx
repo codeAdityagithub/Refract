@@ -1,5 +1,13 @@
 import { createSignal } from "../index";
 
+function Test() {
+    return (
+        <div>
+            <p>Test</p>
+        </div>
+    );
+}
+
 export default function ListsTest() {
     const itemsSignal = createSignal(["Item 1", "Item 2", "Item 3"]);
     const showTextSignal = createSignal<boolean>(true);
@@ -40,7 +48,7 @@ export default function ListsTest() {
             <ul>
                 {() =>
                     itemsSignal.value.map((item, index) => (
-                        <li key={index}>{item}</li>
+                        <li key={item}>{item}</li>
                     ))
                 }
             </ul>

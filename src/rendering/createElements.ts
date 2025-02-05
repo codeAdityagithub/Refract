@@ -47,7 +47,6 @@ export function createChildren(children: FiberChildren): FiberChildren {
                 return child;
             } else if (typeof child === "function") {
                 const val = reactive(child);
-                // console.log(child as Function);
                 if (isPrimitive(val))
                     return createSignalChild(
                         "TEXT_CHILD",
