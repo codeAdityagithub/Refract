@@ -426,7 +426,7 @@ function updateChildren(prev: Fiber, next: Fiber) {
     if (!isFragment && !wasFragment) {
         console.log("Array was updated to array or was modified");
     }
-    console.log(wasFragment, isFragment);
+
     for (let i = 0; i < len; i++) {
         let prevChild = prev.props.children[i];
         let nextChild = next.props.children[i];
@@ -476,7 +476,7 @@ function updateChildren(prev: Fiber, next: Fiber) {
     prev.type = next.type;
 }
 // @ts-expect-error
-if (!window && process && process.env.NODE_ENV === "test") {
+if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
     // @ts-expect-error
     module.exports = { createFiber, commitDeletion, commitFiber, updateFiber };
 }

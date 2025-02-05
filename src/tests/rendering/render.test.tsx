@@ -215,6 +215,38 @@ describe("updateFiber - Basic Node Replacement", () => {
     });
 });
 
+describe("updateFiber - Should update inplace if same nodes are", () => {
+    it("Should update a node correctly", () => {
+        const fiber = (
+            <div>
+                <p>Hello</p>
+                <h3>hi</h3>
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+        const prevP = fiber.props.children[0].dom;
+        const prevh3 = fiber.props.children[1].dom;
+
+        expect(fiber.dom.innerHTML).toBe("<p>Hello</p><h3>hi</h3>");
+
+        const newFiber = (
+            <div>
+                <p>HI</p>
+                <h3 onClick={() => {}}>World</h3>
+            </div>
+        );
+        updateFiber(fiber, newFiber);
+
+        expect(fiber.dom.innerHTML).toBe("<p>HI</p><h3>World</h3>");
+        expect(fiber.dom.children[1].onclick).toBeDefined();
+
+        expect(fiber.props.children[0].dom).toBe(prevP);
+        expect(fiber.props.children[1].dom).toBe(prevh3);
+    });
+});
+
 describe("updateFiber - Updating Text Content", () => {
     it("Should update text content in place", () => {
         const fiber = <p>Hello</p>;
