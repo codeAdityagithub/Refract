@@ -344,7 +344,23 @@ describe("Signal", () => {
         expect(undefinedSignal.value).toBe("changed");
         expect(nullSignal.value).toBe("not null anymore");
     });
+    it("Should handle array of objects changes", async () => {
+        const arrSignal = createSignal([
+            { id: 1, name: "John" },
+            { id: 2, name: "Jane" },
+        ]);
 
+        let count = 0;
+        const func = () => {
+            count++;
+            arrSignal.value;
+        };
+        createEffect(func);
+        arrSignal.value[0].id = 3;
+        await Promise.resolve();
+        expect(count).toBe(1);
+        expect(arrSignal.value[0].id).toBe(3);
+    });
     it("should not trigger reactivity on the same value set", async () => {
         const numSignal = createSignal(0);
         let count = 0;
