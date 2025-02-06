@@ -190,6 +190,29 @@ describe("commitFiber", () => {
     });
 });
 
+describe("render FC returning array fragment", () => {
+    it("Should be able to render FC returning array fragment and warn for key not being present", () => {
+        const ArrayReturningFC = () => {
+            const count = [1, 2, 3];
+            return <>{() => count.map((item) => <div>{item}</div>)}</>;
+        };
+
+        const fiber = (
+            <div>
+                <ArrayReturningFC />
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+
+        expect(fiber.dom.innerHTML).toBe(
+            "<div>1</div><div>2</div><div>3</div>"
+        );
+        expect(console.error).toBeCalled();
+    });
+});
+
 describe("updateFiber - Basic Node Replacement", () => {
     it("Should replace a node correctly", () => {
         const fiber = (

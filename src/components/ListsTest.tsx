@@ -45,13 +45,13 @@ export default function ListsTest() {
                 }
             </ul> */}
             {/* Simple Lists with reactivity */}
-            <ul>
+            {/* <ul>
                 {() =>
                     itemsSignal.value.map((item, index) => (
                         <li key={item}>{item}</li>
                     ))
                 }
-            </ul>
+            </ul> */}
 
             {/* Forms */}
             <form

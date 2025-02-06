@@ -65,8 +65,19 @@ function workLoop(deadline: IdleDeadline) {
 
 function renderNode(fiber: Fiber) {
     if (fiber.type === "FRAGMENT") {
+        const isArray = !fiber.props.children[FRAGMENT_SYMBOL];
+
         for (let i = fiber.props.children.length - 1; i >= 0; i--) {
             fiber.props.children[i].parent = fiber;
+
+            if (
+                isArray &&
+                !fiber.props.children[i].props.key &&
+                fiber.renderFunction
+            ) {
+                console.error("Array children must have a key attribute");
+            }
+
             elements.push(fiber.props.children[i]);
         }
         // console.log(fiber.props.children);
@@ -76,6 +87,7 @@ function renderNode(fiber: Fiber) {
         const children = fiber.type(fiber.props);
         clearCurrentFC();
         // fiber.type = "FRAGMENT";
+        console.log(children);
         if (Array.isArray(children)) {
             // which means that the FC returned a fragment
             // console.log(children);
@@ -98,6 +110,7 @@ function renderNode(fiber: Fiber) {
         if (fiberParent) {
             fiberParent.dom?.appendChild(fiber.dom);
         }
+
         for (let i = fiber.props.children.length - 1; i >= 0; i--) {
             fiber.props.children[i].parent = fiber;
             elements.push(fiber.props.children[i]);

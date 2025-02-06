@@ -1,7 +1,5 @@
 import { createSignal } from "../index.ts";
-import Computed from "./Computed.tsx";
 import ListsTest from "./ListsTest.tsx";
-import Test from "./Test.tsx";
 
 const App = (props: any) => {
     const count = createSignal(1);
@@ -10,6 +8,7 @@ const App = (props: any) => {
     // return <NonReactiveComponent />;
     // return <Test />;
     return <ListsTest />;
+    // return <ArrayReturningFC />;
     // return <Computed />;
 };
 
