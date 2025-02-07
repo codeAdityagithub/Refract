@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "../../rendering/render";
+import { createSignal } from "../../signals/signal";
 
 vi.stubGlobal("requestIdleCallback", (cb) => {
     queueMicrotask(() => cb({ timeRemaining: () => 2 }));
@@ -312,17 +313,12 @@ describe("Static Rendering Tests", () => {
     });
     it("renders a large list correctly", async () => {
         const totalChildren = 1000;
-        const items = Array.from(
-            { length: totalChildren },
-            (_, i) => `Item ${i + 1}`
+        const items = createSignal(
+            Array.from({ length: totalChildren }, (_, i) => `Item ${i + 1}`)
         );
 
         const FC = () => (
-            <ul>
-                {items.map((item, index) => (
-                    <li key={index}>{item}</li>
-                ))}
-            </ul>
+            <ul>{() => items.value.map((item, index) => <li>{item}</li>)}</ul>
         );
 
         const root = document.createElement("div");
@@ -338,6 +334,17 @@ describe("Static Rendering Tests", () => {
         console.log(`Render time for large list: ${renderTime}ms`);
         // @ts-expect-error
         expect(root.firstChild.children.length).toBe(totalChildren);
+
+        const start2 = performance.now();
+        items.value = Array.from(
+            { length: totalChildren },
+            (_, i) => `Item ${i + 1} updated`
+        );
+        await Promise.resolve();
+        const end2 = performance.now();
+        const renderTime2 = end2 - start2;
+
+        console.log(`Rerender time for large list: ${renderTime2}ms`);
         // expect(renderTime).toBeLessThanOrEqual(100);
     });
 });

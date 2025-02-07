@@ -556,7 +556,7 @@ describe("updateChildren - edge case", () => {
             </div>
         );
 
-        console.log(fiber.props.children.at(-1));
+        // console.log(fiber.props.children.at(-1));
         updateFiber(fiber, newFiber);
 
         expect(fiber.dom.innerHTML).toBe(
