@@ -85,7 +85,7 @@ function renderNode(fiber: Fiber) {
         }
         // console.log(fiber.props.children);
     } else if (typeof fiber.type === "function") {
-        setCurrentFC(fiber.type);
+        setCurrentFC(fiber);
 
         const children = fiber.type(fiber.props);
         clearCurrentFC();
@@ -144,7 +144,7 @@ function createFiber(fiber: Fiber) {
             }
         }
     } else if (typeof fiber.type === "function") {
-        setCurrentFC(fiber.type);
+        setCurrentFC(fiber);
         const children = fiber.type(fiber.props);
         clearCurrentFC();
         // fiber.type = "FRAGMENT";

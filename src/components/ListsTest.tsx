@@ -1,9 +1,19 @@
-import { createSignal } from "../index";
+import { cleanUp, createSignal } from "../index";
 
-function Test() {
+function Test({ text }) {
+    const signal = createSignal<boolean>(true);
+    const timeout = setTimeout(() => (signal.value = false), 1000);
+
+    cleanUp(() => {
+        clearTimeout(timeout);
+        console.log("unmounted");
+    });
     return (
         <div>
-            <p>Test</p>
+            <p>
+                {text}
+                {() => signal.value}
+            </p>
         </div>
     );
 }
@@ -45,13 +55,11 @@ export default function ListsTest() {
                 }
             </ul> */}
             {/* Simple Lists with reactivity */}
-            {/* <ul>
+            <ul>
                 {() =>
-                    itemsSignal.value.map((item, index) => (
-                        <li key={item}>{item}</li>
-                    ))
+                    itemsSignal.value.map((item, index) => <Test text={item} />)
                 }
-            </ul> */}
+            </ul>
 
             {/* Forms */}
             <form

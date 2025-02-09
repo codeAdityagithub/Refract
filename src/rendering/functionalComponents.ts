@@ -9,6 +9,7 @@ let fcMap = new WeakMap<
 export function setCurrentFC(fc) {
     currentFC = fc;
 }
+
 export function clearCurrentFC() {
     currentFC = null;
 }
@@ -18,6 +19,7 @@ export function getCurrentFC() {
 
 export function cleanUp(fn: Function) {
     if (currentFC) {
+        // console.log(currentFC, fcMap.has(currentFC));
         if (fcMap.has(currentFC)) {
             const fcData = fcMap.get(currentFC)!;
             if (fcData.cleanup)
