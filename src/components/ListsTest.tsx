@@ -18,6 +18,12 @@ function Test({ text }) {
     );
 }
 
+function Test2() {
+    const count = [1, 2, 3];
+
+    return <>{() => count.map((c) => <div>{c}</div>)}</>;
+}
+
 export default function ListsTest() {
     const itemsSignal = createSignal(["Item 1", "Item 2", "Item 3"]);
     const showTextSignal = createSignal<boolean>(true);
@@ -55,11 +61,12 @@ export default function ListsTest() {
                 }
             </ul> */}
             {/* Simple Lists with reactivity */}
-            <ul>
+            {/* <ul>
                 {() =>
                     itemsSignal.value.map((item, index) => <Test text={item} />)
                 }
-            </ul>
+            </ul> */}
+            <Test2 />
 
             {/* Forms */}
             <form

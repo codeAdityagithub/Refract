@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FRAGMENT_SYMBOL } from "../../rendering/createElements";
 
 import * as rendering from "../../rendering/render";
+import { createSignal } from "../../signals/signal";
 
 const mockFiber = (type: any, children: any[] = [], props: any = {}) => ({
     type,
@@ -58,7 +59,7 @@ describe("createFiber", () => {
 
         const fiber = mockFiber(funcComponent);
         createFiber(fiber);
-
+        commitFiber(fiber);
         // expect(setCurrentFC).toHaveBeenCalledWith(funcComponent);
         // expect(clearCurrentFC).toHaveBeenCalled();
         expect(fiber.type).toEqual(funcComponent);
@@ -67,10 +68,17 @@ describe("createFiber", () => {
     });
 
     it("should handle function components returning a single element", () => {
-        const funcComponent = vi.fn(() => mockFiber("h1"));
+        const FC = () => {
+            return <p>hello</p>;
+        };
 
-        const fiber = mockFiber(funcComponent);
+        const fiber = (
+            <div>
+                <FC />
+            </div>
+        );
         createFiber(fiber);
+        commitFiber(fiber);
 
         expect(fiber.props.children).toHaveLength(1);
         expect(fiber.props.children[0].parent).toBe(fiber);
@@ -191,15 +199,16 @@ describe("commitFiber", () => {
 });
 
 describe("render FC returning array fragment", () => {
-    it("Should be able to render FC returning array fragment and warn for key not being present", () => {
-        const ArrayReturningFC = () => {
-            const count = [1, 2, 3];
-            return <>{() => count.map((item) => <div>{item}</div>)}</>;
+    it("Should be able to render FC returning array fragment and warn for key not being present", async () => {
+        const count = createSignal([1, 2, 3]);
+
+        const ArrayReturningFC = ({ count }) => {
+            return <>{() => count.value.map((item) => <div>{item}</div>)}</>;
         };
 
         const fiber = (
             <div>
-                <ArrayReturningFC />
+                <ArrayReturningFC count={count} />
             </div>
         );
 
@@ -208,6 +217,12 @@ describe("render FC returning array fragment", () => {
 
         expect(fiber.dom.innerHTML).toBe(
             "<div>1</div><div>2</div><div>3</div>"
+        );
+        count.value.push(4);
+        await Promise.resolve();
+
+        expect(fiber.dom.innerHTML).toBe(
+            "<div>1</div><div>2</div><div>3</div><div>4</div>"
         );
         expect(console.error).toBeCalled();
     });
@@ -223,7 +238,6 @@ describe("updateFiber - Basic Node Replacement", () => {
 
         createFiber(fiber);
         commitFiber(fiber);
-
         expect(fiber.dom.innerHTML).toBe("<p>Hello</p>");
 
         const newFiber = (
@@ -561,6 +575,27 @@ describe("updateChildren - edge case", () => {
 
         expect(fiber.dom.innerHTML).toBe(
             "<p>Hello</p><span>World</span><div>Fragment 3</div><div>Fragment 4</div><div>New Node2</div>"
+        );
+    });
+});
+
+describe("render Functional components mapped by a list", () => {
+    it("renders a FC mapped by a list", async () => {
+        const items = createSignal(["Apple", "Banana", "Cherry"]);
+
+        const FC = ({ text }) => {
+            return <p>{text}</p>;
+        };
+        const element = (
+            <div>
+                {() => items.value.map((item, index) => <FC text={item} />)}
+            </div>
+        );
+
+        createFiber(element);
+        commitFiber(element);
+        expect(element.dom.innerHTML).toBe(
+            "<p>Apple</p><p>Banana</p><p>Cherry</p>"
         );
     });
 });

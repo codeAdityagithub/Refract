@@ -144,23 +144,23 @@ function createFiber(fiber: Fiber) {
             }
         }
     } else if (typeof fiber.type === "function") {
-        setCurrentFC(fiber);
-        const children = fiber.type(fiber.props);
-        clearCurrentFC();
-        // fiber.type = "FRAGMENT";
-        if (Array.isArray(children)) {
-            // which means that the FC returned a fragment
-            // console.log(children);
-            for (const child of children) {
-                child.parent = fiber;
-                createFiber(child);
-            }
-            fiber.props.children = children;
-        } else {
-            children.parent = fiber;
-            fiber.props.children.push(children);
-            createFiber(children);
-        }
+        // setCurrentFC(fiber);
+        // const children = fiber.type(fiber.props);
+        // clearCurrentFC();
+        // // fiber.type = "FRAGMENT";
+        // if (Array.isArray(children)) {
+        //     // which means that the FC returned a fragment
+        //     // console.log(children);
+        //     for (const child of children) {
+        //         child.parent = fiber;
+        //         createFiber(child);
+        //     }
+        //     fiber.props.children = children;
+        // } else {
+        //     children.parent = fiber;
+        //     fiber.props.children.push(children);
+        //     createFiber(children);
+        // }
     } else {
         for (const child of fiber.props.children) {
             child.parent = fiber;
@@ -170,10 +170,36 @@ function createFiber(fiber: Fiber) {
     // console.log(fiber);
     setRenderFunction(fiber);
 }
-function commitFiber(fiber: Fiber, referenceNode?: Node, replace?: boolean) {
-    if (fiber.type === "FRAGMENT" || typeof fiber.type === "function") {
+function commitFiber(
+    fiber: Fiber,
+    referenceNode?: Node,
+    replace?: boolean,
+    needCreation?: boolean
+) {
+    if (fiber.type === "FRAGMENT") {
         for (const child of fiber.props.children) {
-            commitFiber(child, referenceNode, replace);
+            if (needCreation) child.parent = fiber;
+            commitFiber(child, referenceNode, replace, needCreation);
+        }
+    } else if (typeof fiber.type === "function") {
+        setCurrentFC(fiber);
+
+        const children = fiber.type(fiber.props);
+        clearCurrentFC();
+
+        // console.log("commit FC", children);
+        if (Array.isArray(children)) {
+            // which means that the FC returned a fragment
+            // console.log(children);
+            for (const child of children) {
+                child.parent = fiber;
+                commitFiber(child, referenceNode, replace, true);
+            }
+            fiber.props.children = children;
+        } else {
+            children.parent = fiber;
+            fiber.props.children.push(children);
+            commitFiber(children, referenceNode, replace, true);
         }
     } else {
         if (!fiber.dom) fiber.dom = createNode(fiber);
@@ -188,8 +214,13 @@ function commitFiber(fiber: Fiber, referenceNode?: Node, replace?: boolean) {
             else fiberParent?.dom?.insertBefore(fiber.dom, referenceNode);
         } else fiberParent?.dom?.appendChild(fiber.dom);
         for (const child of fiber.props.children) {
+            if (needCreation) child.parent = fiber;
+
             commitFiber(child);
         }
+    }
+    if (needCreation) {
+        setRenderFunction(fiber);
     }
 }
 
@@ -215,7 +246,7 @@ function commitDeletion(fiber: Fiber, toClearReactiveFunction?: boolean) {
         fiber.dom.remove();
     }
     if (typeof fiber.type === "function") {
-        cleanUpFC(fiber.type, fiber.props);
+        cleanUpFC(fiber, fiber.props);
         delete fiber.type;
     }
     fiber.props.children.forEach((child) => commitDeletion(child, true));
@@ -285,6 +316,47 @@ export const isProperty = (key: string) => key !== "children" && !isEvent(key);
 const isNew = (prev: any, next: any, key: string) => prev[key] !== next[key];
 const isGone = (prev: any, next: any, key: string) => !(key in next);
 
+function deepCompareFibers(fiberA: any, fiberB: any): boolean {
+    // Fast path: identical references
+    if (fiberA === fiberB) {
+        return true;
+    }
+
+    // Compare the fiber types (e.g., function for FCs, string for DOM nodes)
+    if (fiberA.type !== fiberB.type) {
+        return false;
+    }
+
+    // Compare keys if they exist
+    if (fiberA.props?.key !== fiberB.props?.key) {
+        return false;
+    }
+    return deepEqual(fiberA.props, fiberB.props);
+}
+
+function deepEqual(objA: any, objB: any): boolean {
+    if (objA === objB) return true; // Same reference or primitive value
+
+    if (isPrimitive(objA) && isPrimitive(objB)) {
+        return objA === objB; // One is not an object or is null
+    }
+
+    if (typeof objA !== typeof objB) return false;
+
+    const keysA = Object.keys(objA);
+    const keysB = Object.keys(objB);
+
+    if (keysA.length !== keysB.length) return false; // Different number of keys
+
+    for (let key of keysA) {
+        if (key === "children") continue;
+        if (!keysB.includes(key)) return false; // Missing key in one of them
+        if (!deepEqual(objA[key], objB[key])) return false; // Recurse for nested objects/arrays
+    }
+
+    return true;
+}
+
 function updateNode(
     prev: Fiber | undefined,
     next: Fiber | undefined,
@@ -293,7 +365,7 @@ function updateNode(
     if (!prev && !next) return;
 
     if (prev && !next) {
-        commitDeletion(prev);
+        commitDeletion(prev, true);
         // console.log("to remove", prev);
         prev.parent.props.children = prev.parent.props.children.filter(
             (child) => child !== prev
@@ -304,8 +376,20 @@ function updateNode(
         if (prev.type === "FRAGMENT" || typeof prev.type === "function") {
             // PREV IS FRAGMENT
             if (next.type === "FRAGMENT" || typeof next.type === "function") {
-                // console.log("Fragment-Fragment");
-                updateChildren(prev, next);
+                // console.log("Fragment-Fragment", prev, next);
+                if (
+                    typeof prev.type === typeof next.type &&
+                    typeof prev.type === "function"
+                ) {
+                    const areSame = deepCompareFibers(prev, next);
+                    // console.log(areSame, prev, next);
+                    if (!areSame) {
+                        commitFiber(next);
+                        updateChildren(prev, next);
+                    }
+                } else {
+                    updateChildren(prev, next);
+                }
                 // replaceChildFromParent(prev, next);
             } else {
                 // console.log("Fragment-Node", prev, next);
@@ -460,6 +544,7 @@ function updateChildren(prev: Fiber, next: Fiber) {
 
         if (nextChild) nextChild.parent = prev;
         if (!prevChild && nextChild) {
+            // console.log(nextChild, "New");
             commitFiber(
                 nextChild,
                 // @ts-expect-error
