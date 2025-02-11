@@ -21,7 +21,6 @@ export function render(element: Fiber, container: HTMLElement) {
     rootContainer = container;
     const fragment = document.createDocumentFragment();
     rootFragment = fragment;
-
     const rootFiber: Fiber = {
         type: "div",
         props: {
@@ -32,7 +31,8 @@ export function render(element: Fiber, container: HTMLElement) {
     };
     // console.log(element.type(element.props));
     element.parent = rootFiber;
-    renderNode(element);
+    startTime = performance.now();
+    elements.push(element);
     requestIdleCallback(workLoop);
 
     // container.appendChild(fragment);
@@ -41,12 +41,15 @@ export function render(element: Fiber, container: HTMLElement) {
 function commitRootFragment() {
     if (rootFragment && rootContainer) {
         rootContainer.appendChild(rootFragment);
+        const endTime = performance.now();
+        console.log(`Render time: ${endTime - startTime}ms`);
     }
 }
 
 let elements: Fiber[] = [];
 let rootContainer: HTMLElement | null = null;
 let rootFragment: DocumentFragment | null = null;
+let startTime;
 
 function workLoop(deadline: IdleDeadline) {
     let shouldYield = false;
@@ -101,7 +104,7 @@ function renderNode(fiber: Fiber) {
         } else {
             children.parent = fiber;
             fiber.props.children.push(children);
-            renderNode(children);
+            elements.push(children);
         }
     } else {
         if (!fiber.dom) fiber.dom = createNode(fiber);
@@ -216,7 +219,7 @@ function commitFiber(
         for (const child of fiber.props.children) {
             if (needCreation) child.parent = fiber;
 
-            commitFiber(child);
+            commitFiber(child, undefined, undefined, needCreation);
         }
     }
     if (needCreation) {
@@ -259,6 +262,7 @@ function setRenderFunction(fiber: Fiber) {
 
 export function updateFiber(prevFiber: Fiber, newValue) {
     // console.log("Prev value", prevFiber, newValue);
+    startTime = performance.now();
     if (isPrimitive(newValue)) {
         // console.log(fiber, newValue);
         const newFragment: Fiber = {
@@ -288,6 +292,8 @@ export function updateFiber(prevFiber: Fiber, newValue) {
         // console.log("New Node Fiber", newFragment);
         updateNode(prevFiber, newFragment);
     }
+    const endTime = performance.now();
+    console.log("Update Time", endTime - startTime);
 }
 
 function replaceRenderFunction(prev: Fiber, next: Fiber) {
