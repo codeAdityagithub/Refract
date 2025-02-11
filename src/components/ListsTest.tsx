@@ -28,9 +28,6 @@ export default function ListsTest() {
     const itemsSignal = createSignal(["Item 1", "Item 2", "Item 3"]);
     const showTextSignal = createSignal<boolean>(true);
 
-    // createEffect(() => {
-    //     console.log(itemsSignal.value);
-    // });
     return (
         <div>
             {/* Static content with reactivity */}
@@ -67,7 +64,12 @@ export default function ListsTest() {
             {/* Simple Lists with reactivity */}
             <ul>
                 {() =>
-                    itemsSignal.value.map((item, index) => <Test text={item} />)
+                    itemsSignal.value.map((item, index) => (
+                        <div>
+                            hello<li>{item}</li>
+                            {index % 2 == 0 && <Test text={item} />}
+                        </div>
+                    ))
                 }
             </ul>
             {/* <Test2 /> */}

@@ -31,7 +31,6 @@ export function render(element: Fiber, container: HTMLElement) {
     };
     // console.log(element.type(element.props));
     element.parent = rootFiber;
-    startTime = performance.now();
     elements.push(element);
     requestIdleCallback(workLoop);
 
@@ -41,17 +40,19 @@ export function render(element: Fiber, container: HTMLElement) {
 function commitRootFragment() {
     if (rootFragment && rootContainer) {
         rootContainer.appendChild(rootFragment);
-        const endTime = performance.now();
-        console.log(`Render time: ${endTime - startTime}ms`);
+        // const endTime = performance.now();
+        // console.log(`Render time: ${endTime - startTime}ms`);
     }
 }
 
 let elements: Fiber[] = [];
 let rootContainer: HTMLElement | null = null;
 let rootFragment: DocumentFragment | null = null;
-let startTime;
+let startTime = -1;
 
 function workLoop(deadline: IdleDeadline) {
+    // if (startTime === -1) startTime = performance.now();
+
     let shouldYield = false;
     while (elements.length > 0 && !shouldYield) {
         const element = elements.pop();
@@ -75,7 +76,7 @@ function renderNode(fiber: Fiber) {
 
             if (
                 isArray &&
-                !fiber.props.children[i].props.key &&
+                fiber.props.children[i].props.key === undefined &&
                 fiber.renderFunction
             ) {
                 noKey = true;
@@ -293,7 +294,7 @@ export function updateFiber(prevFiber: Fiber, newValue) {
         updateNode(prevFiber, newFragment);
     }
     const endTime = performance.now();
-    console.log("Update Time", endTime - startTime);
+    console.log("Update Time:", (endTime - startTime).toFixed(2), "ms");
 }
 
 function replaceRenderFunction(prev: Fiber, next: Fiber) {
@@ -388,7 +389,7 @@ function updateNode(
                     typeof prev.type === "function"
                 ) {
                     const areSame = deepCompareFibers(prev, next);
-                    // console.log(areSame, prev, next);
+                    // console.log(areSame);
                     if (!areSame) {
                         commitFiber(next);
                         updateChildren(prev, next);
@@ -412,14 +413,7 @@ function updateNode(
             }
         } else {
             // PREV IS NODE
-            if (
-                prev.props.key &&
-                prev.props.key === next.props.key &&
-                prev.type === next.type
-            ) {
-                console.log("Same key", prev.props.key);
-                return;
-            }
+
             const node = prev.dom;
             if (
                 prev.type === "TEXT_CHILD" &&
