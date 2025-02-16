@@ -29,14 +29,14 @@ function Test({ text }) {
 // };
 
 export default function ListsTest() {
-    const itemsSignal = createSignal([3, 2, 1]);
+    const itemsSignal = createSignal([1, 2, 3]);
     const showTextSignal = createSignal<boolean>(true);
     let cur = 4;
     let swap = 0;
-    let curVal = "hello";
     createEffect(() => {
         console.log(itemsSignal.value);
     });
+    let curVal = "hello";
     return (
         <div>
             {/* Static content with reactivity */}
@@ -95,6 +95,9 @@ export default function ListsTest() {
                     {" "}
                     Toggle Text{" "}
                 </button>
+                <button onClick={() => itemsSignal.value.sort((a, b) => a - b)}>
+                    sort
+                </button>
             </div>
             {/* Conditional Lists with reactivity */}
             {/* <ul>
@@ -109,20 +112,21 @@ export default function ListsTest() {
                 }
             </ul> */}
             {/* Simple Lists with reactivity */}
-            {/* <ul>
-                {() =>
-                    itemsSignal.value.map((item, index) => (
-                        <Test
-                            key={`item-${item}`}
-                            text={item}
-                        />
-                    ))
-                }
-            </ul> */}
+            {/* <ul> */}
+            {/* {() =>
+                itemsSignal.value.map((item, index) => (
+                    <Test
+                        // key={`item-${item}`}
+                        text={item}
+                    />
+                ))
+            } */}
+            {/* </ul> */}
 
             {/* <div>
                 <ArrayReturningFC count={itemsSignal} />
             </div> */}
+            {/* {() => itemsSignal.value.map((item) => <p key={item}>{item}</p>)} */}
 
             {/* <Test2 /> */}
 

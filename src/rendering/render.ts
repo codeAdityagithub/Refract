@@ -1,4 +1,3 @@
-import { applyMoves, longestIncreasingSubsequenceIndices } from "../lib";
 import {
     clearReactiveAttributes,
     clearReactiveFunction,
@@ -321,7 +320,8 @@ function replaceChildFromParent(prev: Fiber, next: Fiber, index?: number) {
 }
 
 export const isEvent = (key: string) => key.startsWith("on");
-export const isProperty = (key: string) => key !== "children" && !isEvent(key);
+export const isProperty = (key: string) =>
+    key !== "children" && !isEvent(key) && key !== "key";
 const isNew = (prev: any, next: any, key: string) => prev[key] !== next[key];
 const isGone = (prev: any, next: any, key: string) => !(key in next);
 
@@ -388,10 +388,27 @@ function findFirstDom(fiber: Fiber): HTMLElement | Text | undefined {
         if (dom) return dom;
     }
 }
+function findFirstChildDom(fiber: Fiber): HTMLElement | Text | undefined {
+    if (!fiber) return;
+
+    for (const child of fiber.props.children) {
+        const dom = findFirstDom(child);
+        if (dom) return dom;
+    }
+}
 function findLastDom(fiber: Fiber): HTMLElement | Text | undefined {
     if (!fiber) return;
 
     if (fiber.dom) return fiber.dom;
+
+    for (let i = fiber.props.children.length - 1; i >= 0; i--) {
+        const child = fiber.props.children[i];
+        const dom = findLastDom(child);
+        if (dom) return dom;
+    }
+}
+function findLastChildDom(fiber: Fiber): HTMLElement | Text | undefined {
+    if (!fiber) return;
 
     for (let i = fiber.props.children.length - 1; i >= 0; i--) {
         const child = fiber.props.children[i];
@@ -539,132 +556,54 @@ function updateNode(
     }
 }
 function reconcileList(oldFibers: FiberChildren, newFibers: FiberChildren) {
-    const moved: Record<string, { from: number; to: number }> = {};
-    const newNodes: Record<string, number> = {};
+    // Create a map from key to fiber for oldFibers.
+    const oldMap: Record<string, any> = {};
+    for (let i = 0; i < oldFibers.length; i++) {
+        const key = oldFibers[i].props.key;
+        if (key === null || key === undefined) {
+            // If any fiber is missing a key, we cannot reconcile.
+            return false;
+        }
+        oldMap[String(key)] = oldFibers[i];
+    }
 
-    // Map each fiber’s key to its index in the old array.
-    const oldIndexMap: Record<string, number> = {};
-    let hadKeys = true;
-    oldFibers.forEach((fiber, index) => {
-        const key = fiber.props.key;
-        if (key !== null && key !== undefined) {
-            oldIndexMap[String(key)] = index;
+    // Create newChildren array based on newFibers order.
+    const newChildren = new Array(newFibers.length);
+    for (let i = 0; i < newFibers.length; i++) {
+        const newFiber = newFibers[i];
+        const key = newFiber.props.key;
+        const keyStr = String(key);
+        // If the fiber exists in the old list, reuse it.
+        if (oldMap.hasOwnProperty(keyStr)) {
+            newChildren[i] = oldMap[keyStr];
+            delete oldMap[keyStr];
         } else {
-            hadKeys = false;
-        }
-    });
-    if (!hadKeys) return false;
-    // Build a list of common fibers and track keys seen in newFibers.
-    interface CommonNode {
-        key: string;
-        oldIndex: number;
-        newIndex: number;
-    }
-    const common: CommonNode[] = [];
-    const newKeys = new Set<string>();
-
-    newFibers.forEach((fiber, newIndex) => {
-        const key = fiber.props.key;
-        if (key !== null && key !== undefined) {
-            const keyStr = String(key);
-            newKeys.add(keyStr);
-            if (oldIndexMap.hasOwnProperty(keyStr)) {
-                common.push({
-                    key: keyStr,
-                    oldIndex: oldIndexMap[keyStr],
-                    newIndex,
-                });
-            } else {
-                // This is a new fiber.
-                newNodes[keyStr] = newIndex;
-            }
-        }
-    });
-
-    console.log(oldIndexMap, newNodes);
-    if (common.length > 0) {
-        // We will build a set of stable keys:
-        const stableKeys = new Set<string>();
-
-        // Mark as stable any fiber that did not change position.
-        common.forEach((node) => {
-            if (node.oldIndex === node.newIndex) {
-                stableKeys.add(node.key);
-            }
-        });
-
-        // For fibers that actually moved, compute the LIS on their old indices.
-        const nonStableNodes = common.filter(
-            (node) => node.oldIndex !== node.newIndex
-        );
-        if (nonStableNodes.length > 0) {
-            const oldIndicesNonStable = nonStableNodes.map(
-                (node) => node.oldIndex
-            );
-            const lisIndices =
-                longestIncreasingSubsequenceIndices(oldIndicesNonStable);
-
-            // Edge-case: if more than one node moved yet the computed LIS length is 1,
-            // we treat that as “no stable node” among the moved ones.
-            if (!(lisIndices.length === 1 && nonStableNodes.length > 1)) {
-                lisIndices.forEach((i) => {
-                    stableKeys.add(nonStableNodes[i].key);
-                });
-            }
-        }
-
-        // Any common node not marked as stable is considered moved.
-        common.forEach((node) => {
-            if (!stableKeys.has(node.key)) {
-                moved[node.key] = { from: node.oldIndex, to: node.newIndex };
-            }
-        });
-    }
-
-    // Compute deleted nodes: keys present in oldFibers but not in newFibers.
-    const deletedNodes: Record<string, number> = {};
-    for (const key in oldIndexMap) {
-        if (!newKeys.has(key)) {
-            deletedNodes[key] = oldIndexMap[key];
+            // Otherwise, use the new fiber.
+            // console.log(first)
+            newChildren[i] = newFiber;
         }
     }
-
-    return [moved, newNodes, deletedNodes] as const;
-}
-
-function applyFiber(fiber: Fiber, parent: Node) {
-    if (fiber.dom) {
-        if (fiber.dom === parent) return;
-
-        parent.appendChild(fiber.dom);
-    } else {
-        for (const child of fiber.props.children) {
-            applyFiber(child, parent);
+    for (const key in oldMap) {
+        if (oldMap.hasOwnProperty(key)) {
+            const fiber = oldMap[key];
+            commitDeletion(fiber, true);
         }
     }
-}
-function handleMoves(
-    arr: FiberChildren,
-    moved: Record<string, { from: number; to: number }>
-): FiberChildren {
-    const fragment = document.createDocumentFragment();
-
-    let fiberParent: Fiber | undefined = arr[0].parent;
-    while (fiberParent && !fiberParent.dom) {
-        fiberParent = fiberParent.parent;
-    }
-
-    if (!fiberParent || !fiberParent.dom) return;
-
-    const newChildren = applyMoves(arr, moved);
-
-    for (const fiber of newChildren) {
-        applyFiber(fiber, fragment);
-    }
-    // console.log(newChildren, "new Children");
-    fiberParent.dom.appendChild(fragment);
 
     return newChildren;
+}
+
+function applyFiber(fiber: Fiber, parent: Node, referenceNode?: Node) {
+    if (fiber.dom) {
+        if (fiber.dom === parent || fiber.dom === referenceNode) return;
+        if (referenceNode) {
+            parent.insertBefore(fiber.dom, referenceNode);
+        } else parent.appendChild(fiber.dom);
+    } else {
+        for (const child of fiber.props.children) {
+            applyFiber(child, parent, referenceNode);
+        }
+    }
 }
 
 function updateChildren(prev: Fiber, next: Fiber) {
@@ -677,39 +616,34 @@ function updateChildren(prev: Fiber, next: Fiber) {
     // console.log(isList, wasList);
 
     if (isList && wasList) {
+        const referenceNode = findLastChildDom(prev)?.nextSibling;
+
         const result = reconcileList(prev.props.children, next.props.children);
         if (result === false) {
             updateNonListChildren(prev, next);
         } else {
-            const [moved, newNodes, deletedNodes] = result;
-            // console.log(moved, newNodes, deletedNodes);
-            for (const index of Object.values(deletedNodes)) {
-                commitDeletion(prev.props.children[index]);
-                prev.props.children.splice(index, 1);
+            prev.props.children = result;
+            // const fragment = document.createDocumentFragment();
+
+            let fiberParent: Fiber | undefined = prev.parent;
+            while (fiberParent && !fiberParent.dom) {
+                fiberParent = fiberParent.parent;
             }
-
-            for (const index of Object.values(newNodes)) {
-                const newFiber = next.props.children[index];
-                newFiber.parent = prev;
-
-                commitFiber(
-                    newFiber,
-                    findFirstDom(prev.props.children[index]),
-                    undefined,
-                    true
-                );
-
-                prev.props.children.splice(index, 0, newFiber);
-            }
-
-            prev.props.children = handleMoves(prev.props.children, moved);
 
             prev.props.children.forEach((child, i) => {
-                const nextChild = next.props.children[i];
-                nextChild.parent = prev;
-                updateNode(child, nextChild, i);
+                if (child === next.props.children[i]) {
+                    child.parent = prev;
+                    commitFiber(child, referenceNode, false, true);
+                } else {
+                    applyFiber(child, fiberParent.dom, referenceNode);
+
+                    const nextChild = next.props.children[i];
+
+                    if (nextChild) nextChild.parent = prev;
+
+                    updateNode(child, nextChild, i);
+                }
             });
-            // console.log(prev.props.children, next.props.children);
         }
     } else {
         updateNonListChildren(prev, next);

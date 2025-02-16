@@ -85,45 +85,49 @@ export function applyMoves<T>(
 }
 
 /**
- * Computes the indices of the longest increasing subsequence in an array.
- * For each position in the resulting subsequence, the value at that index
- * is strictly increasing relative to the previous.
+ * Computes the indices of the longest increasing subsequence in the given array.
+ * @param arr - An array of numbers.
+ * @returns An array of indices representing the longest increasing subsequence.
  *
- * @param arr - Array of numbers (here: the old indices in new order)
- * @returns An array of indices into `arr` representing the longest increasing subsequence.
+ * Time Complexity: O(n log n)
  */
 export function longestIncreasingSubsequenceIndices(arr: number[]): number[] {
     const n = arr.length;
-    const p = new Array(n).fill(0); // To track predecessors
-    const result: number[] = [];
+    const predecessors = new Array(n).fill(-1); // Track the previous index for each element in the subsequence.
+    const lisIndices: number[] = []; // Stores indices of the smallest tail for all increasing subsequences of each length.
 
     for (let i = 0; i < n; i++) {
         const x = arr[i];
-        // Binary search for the insertion point in result.
+
+        // Binary search for the insertion point in lisIndices.
         let low = 0;
-        let high = result.length;
+        let high = lisIndices.length;
         while (low < high) {
             const mid = Math.floor((low + high) / 2);
-            if (arr[result[mid]] < x) {
+            if (arr[lisIndices[mid]] < x) {
                 low = mid + 1;
             } else {
                 high = mid;
             }
         }
-        if (low === result.length) {
-            result.push(i);
+
+        // If low is at the end, extend lisIndices; otherwise, update the tail value.
+        if (low === lisIndices.length) {
+            lisIndices.push(i);
         } else {
-            result[low] = i;
+            lisIndices[low] = i;
         }
-        p[i] = low > 0 ? result[low - 1] : -1;
+
+        // Set the predecessor of arr[i] (if low is not the start of a subsequence).
+        predecessors[i] = low > 0 ? lisIndices[low - 1] : -1;
     }
 
-    // Reconstruct the longest increasing subsequence.
-    let lis: number[] = [];
-    let k = result.length > 0 ? result[result.length - 1] : -1;
-    for (let i = result.length - 1; i >= 0; i--) {
+    // Reconstruct the longest increasing subsequence using the predecessors.
+    const lis: number[] = [];
+    let k = lisIndices.length > 0 ? lisIndices[lisIndices.length - 1] : -1;
+    for (let i = lisIndices.length - 1; i >= 0; i--) {
         lis[i] = k;
-        k = p[k];
+        k = predecessors[k];
     }
     return lis;
 }

@@ -93,7 +93,7 @@ function createSignalChild(
 }
 
 function isProperty(key: string) {
-    return key !== "children";
+    return key !== "children" && key !== "key";
 }
 export function createNode(element: Fiber) {
     const dom =
@@ -192,7 +192,7 @@ export function createNode(element: Fiber) {
 }
 
 export function updateDomProp(prop: string, dom: HTMLElement | Text, value) {
-    if (!value) return;
+    if (!value || prop == "key") return;
     if (
         prop === "style" &&
         typeof value !== "string" &&

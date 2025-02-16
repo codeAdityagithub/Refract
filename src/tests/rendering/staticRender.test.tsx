@@ -316,9 +316,21 @@ describe("Static Rendering Tests", () => {
         const items = createSignal(
             Array.from({ length: totalChildren }, (_, i) => `Item ${i + 1}`)
         );
-
+        const Test = ({ text }) => {
+            return <li>{text}</li>;
+        };
         const FC = () => (
-            <ul>{() => items.value.map((item, index) => <li>{item}</li>)}</ul>
+            <ul>
+                {() =>
+                    items.value.map((item, index) => (
+                        // <Test
+                        //     key={item}
+                        //     text={item}
+                        // />
+                        <li>{item}</li>
+                    ))
+                }
+            </ul>
         );
 
         const root = document.createElement("div");
@@ -338,7 +350,7 @@ describe("Static Rendering Tests", () => {
         const start2 = performance.now();
         items.value = Array.from(
             { length: totalChildren },
-            (_, i) => `Item ${i + 1} updated`
+            (_, i) => `Item ${i + 1}`
         );
         await Promise.resolve();
         const end2 = performance.now();
