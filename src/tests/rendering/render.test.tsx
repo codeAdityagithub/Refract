@@ -629,3 +629,7 @@ describe("render Functional components mapped by a list", () => {
 //         expect(fiber.dom.innerHTML).toBe("<span>World</span><p>Hello</p>");
 //     });
 // });
+
+describe("updateFiber - Update Lists Efficiently Inplace", () => {
+    // it("Should handle push")
+});

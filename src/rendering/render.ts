@@ -1,9 +1,10 @@
+import { applyMoves, longestIncreasingSubsequenceIndices } from "../lib";
 import {
     clearReactiveAttributes,
     clearReactiveFunction,
     setReactiveFunction,
 } from "../signals/batch";
-import { Fiber } from "../types";
+import { Fiber, FiberChildren } from "../types";
 import { isPrimitive } from "../utils/general";
 import {
     FRAGMENT_SYMBOL,
@@ -294,7 +295,7 @@ export function updateFiber(prevFiber: Fiber, newValue) {
         updateNode(prevFiber, newFragment);
     }
     const endTime = performance.now();
-    console.log("Update Time:", (endTime - startTime).toFixed(2), "ms");
+    // console.log("Update Time:", (endTime - startTime).toFixed(2), "ms");
 }
 
 function replaceRenderFunction(prev: Fiber, next: Fiber) {
@@ -364,6 +365,17 @@ function deepEqual(objA: any, objB: any): boolean {
     return true;
 }
 
+function findFirstDom(fiber: Fiber): HTMLElement | Text | undefined {
+    if (!fiber) return;
+
+    if (fiber.dom) return fiber.dom;
+
+    for (const child of fiber.props.children) {
+        const dom = findFirstDom(child);
+        if (dom) return dom;
+    }
+}
+
 function updateNode(
     prev: Fiber | undefined,
     next: Fiber | undefined,
@@ -389,12 +401,17 @@ function updateNode(
                     typeof prev.type === "function"
                 ) {
                     const areSame = deepCompareFibers(prev, next);
-                    // console.log(areSame);
+                    // console.log("FC-FC");
                     if (!areSame) {
-                        commitFiber(next);
-                        updateChildren(prev, next);
+                        commitFiber(next, findFirstDom(prev), undefined, true);
+
+                        commitDeletion(prev);
+                        replaceChildFromParent(prev, next, index);
+
+                        // console.log(prev.parent.props.children, next, index);
                     }
                 } else {
+                    // console.log("fragment-fragment");
                     updateChildren(prev, next);
                 }
                 // replaceChildFromParent(prev, next);
@@ -498,93 +515,205 @@ function updateNode(
         }
     }
 }
+function reconcileList(oldFibers: FiberChildren, newFibers: FiberChildren) {
+    const moved: Record<string, { from: number; to: number }> = {};
+    const newNodes: Record<string, number> = {};
 
-// function findKeySwaps(oldFibers: FiberChildren, newFibers: FiberChildren) {
-//     const swaps: Record<string, { from: number; to: number }> = {};
+    // Map each fiber’s key to its index in the old array.
+    const oldIndexMap: Record<string, number> = {};
+    oldFibers.forEach((fiber, index) => {
+        const key = fiber.props.key;
+        if (key != null) {
+            oldIndexMap[String(key)] = index;
+        }
+    });
 
-//     // Map each fiber's key to its index in the old array
-//     const oldFiberMap = oldFibers.reduce((map, fiber, index) => {
-//         if (fiber.props.key) map[fiber.props.key] = index;
-//         return map;
-//     }, {});
+    // Build a list of common fibers and track keys seen in newFibers.
+    interface CommonNode {
+        key: string;
+        oldIndex: number;
+        newIndex: number;
+    }
+    const common: CommonNode[] = [];
+    const newKeys = new Set<string>();
 
-//     // Compare the new fibers with the old fiber map to detect swaps
-//     newFibers.forEach((newFiber, newIndex) => {
-//         if (newFiber.props.key) {
-//             const oldIndex = oldFiberMap[newFiber.props.key];
-//             if (oldIndex !== undefined && oldIndex !== newIndex) {
-//                 // This indicates a swap
+    newFibers.forEach((fiber, newIndex) => {
+        const key = fiber.props.key;
+        if (key != null) {
+            const keyStr = String(key);
+            newKeys.add(keyStr);
+            if (oldIndexMap.hasOwnProperty(keyStr)) {
+                common.push({
+                    key: keyStr,
+                    oldIndex: oldIndexMap[keyStr],
+                    newIndex,
+                });
+            } else {
+                // This is a new fiber.
+                newNodes[keyStr] = newIndex;
+            }
+        }
+    });
 
-//                 swaps[newFiber.props.key] = {
-//                     from: oldIndex,
-//                     to: newIndex,
-//                 };
-//             }
-//         }
-//     });
+    if (common.length > 0) {
+        // We will build a set of stable keys:
+        const stableKeys = new Set<string>();
 
-//     return swaps;
-// }
-function updateChildren(prev: Fiber, next: Fiber) {
-    let len = Math.max(prev.props.children.length, next.props.children.length);
-    // const swaps = findKeySwaps(prev.props.children, next.props.children);
-    // console.log(swaps);
-    const isFragment =
-        next.props.children[FRAGMENT_SYMBOL] || typeof next.type === "function";
-    const wasFragment =
-        prev.props.children[FRAGMENT_SYMBOL] || typeof prev.type === "function";
+        // Mark as stable any fiber that did not change position.
+        common.forEach((node) => {
+            if (node.oldIndex === node.newIndex) {
+                stableKeys.add(node.key);
+            }
+        });
 
-    if (!isFragment && !wasFragment) {
-        // console.log("Array was updated to array or was modified");
+        // For fibers that actually moved, compute the LIS on their old indices.
+        const nonStableNodes = common.filter(
+            (node) => node.oldIndex !== node.newIndex
+        );
+        if (nonStableNodes.length > 0) {
+            const oldIndicesNonStable = nonStableNodes.map(
+                (node) => node.oldIndex
+            );
+            const lisIndices =
+                longestIncreasingSubsequenceIndices(oldIndicesNonStable);
+
+            // Edge-case: if more than one node moved yet the computed LIS length is 1,
+            // we treat that as “no stable node” among the moved ones.
+            if (!(lisIndices.length === 1 && nonStableNodes.length > 1)) {
+                lisIndices.forEach((i) => {
+                    stableKeys.add(nonStableNodes[i].key);
+                });
+            }
+        }
+
+        // Any common node not marked as stable is considered moved.
+        common.forEach((node) => {
+            if (!stableKeys.has(node.key)) {
+                moved[node.key] = { from: node.oldIndex, to: node.newIndex };
+            }
+        });
     }
 
-    for (let i = 0; i < len; i++) {
-        let prevChild = prev.props.children[i];
-        let nextChild = next.props.children[i];
+    // Compute deleted nodes: keys present in oldFibers but not in newFibers.
+    const deletedNodes: Record<string, number> = {};
+    for (const key in oldIndexMap) {
+        if (!newKeys.has(key)) {
+            deletedNodes[key] = oldIndexMap[key];
+        }
+    }
 
-        if (nextChild) nextChild.parent = prev;
-        if (!prevChild && nextChild) {
-            // console.log(nextChild, "New");
+    return [moved, newNodes, deletedNodes] as const;
+}
+
+function applyFiber(fiber: Fiber, parent: Node) {
+    if (fiber.dom) {
+        if (fiber.dom === parent) return;
+
+        parent.appendChild(fiber.dom);
+    } else {
+        for (const child of fiber.props.children) {
+            applyFiber(child, parent);
+        }
+    }
+}
+function handleMoves(
+    arr: FiberChildren,
+    moved: Record<string, { from: number; to: number }>
+): FiberChildren {
+    const fragment = document.createDocumentFragment();
+
+    let fiberParent: Fiber | undefined = arr[0].parent;
+    while (fiberParent && !fiberParent.dom) {
+        fiberParent = fiberParent.parent;
+    }
+
+    if (!fiberParent || !fiberParent.dom) return;
+
+    const newChildren = applyMoves(arr, moved);
+
+    for (const fiber of newChildren) {
+        applyFiber(fiber, fragment);
+    }
+    // console.log(newChildren, "new Children");
+    fiberParent.dom.appendChild(fragment);
+
+    return newChildren;
+}
+
+function updateChildren(prev: Fiber, next: Fiber) {
+    let len = Math.max(prev.props.children.length, next.props.children.length);
+    const isList =
+        next.type === "FRAGMENT" && !next.props.children[FRAGMENT_SYMBOL];
+
+    const wasList =
+        prev.type === "FRAGMENT" && !prev.props.children[FRAGMENT_SYMBOL];
+
+    if (isList && wasList) {
+        // console.log({ ...prev }, { ...next });
+        const [moved, newNodes, deletedNodes] = reconcileList(
+            prev.props.children,
+            next.props.children
+        );
+        // console.log(moved, newNodes, deletedNodes);
+        for (const index of Object.values(deletedNodes)) {
+            commitDeletion(prev.props.children[index]);
+            prev.props.children.splice(index, 1);
+        }
+
+        for (const index of Object.values(newNodes)) {
+            const newFiber = next.props.children[index];
+            newFiber.parent = prev;
+
             commitFiber(
-                nextChild,
-                // @ts-expect-error
-                prev.props.children.at(-1)?.dom?.nextSibling
+                newFiber,
+                findFirstDom(prev.props.children[index]),
+                undefined,
+                true
             );
-            prev.props.children.push(nextChild);
-        } else {
-            // console.log(
-            //     "Updating child",
-            //     prevChild,
-            //     "with",
-            //     nextChild,
-            //     "of",
-            //     prev
-            // );
-            // const prevSwap = swaps[prevChild.props.key];
-            // const nextSwap = swaps[nextChild.props.key];
-            // if (prevSwap && nextSwap) {
-            //     console.log("Swap", prevSwap, nextSwap);
-            // } else if (prevSwap) {
-            //     console.log("Prev swap", prevSwap);
-            // } else if (nextSwap) {
-            //     console.log("Next swap", nextSwap);
-            // }
-            updateNode(prevChild, nextChild, i);
-            const newLen = Math.max(
-                prev.props.children.length,
-                next.props.children.length
-            );
-            if (newLen < len) {
-                len = newLen;
-                i--;
+
+            prev.props.children.splice(index, 0, newFiber);
+        }
+
+        prev.props.children = handleMoves(prev.props.children, moved);
+
+        prev.props.children.forEach((child, i) => {
+            const nextChild = next.props.children[i];
+            nextChild.parent = prev;
+            updateNode(child, nextChild, i);
+        });
+        // console.log(prev.props.children, next.props.children);
+    } else {
+        for (let i = 0; i < len; i++) {
+            let prevChild = prev.props.children[i];
+            let nextChild = next.props.children[i];
+
+            if (nextChild) nextChild.parent = prev;
+            if (!prevChild && nextChild) {
+                commitFiber(
+                    nextChild,
+                    // @ts-expect-error
+                    findFirstDom(prev.props.children.at(-1))?.nextSibling
+                );
+                prev.props.children.push(nextChild);
+            } else {
+                updateNode(prevChild, nextChild, i);
+                const newLen = Math.max(
+                    prev.props.children.length,
+                    next.props.children.length
+                );
+                if (newLen < len) {
+                    len = newLen;
+                    i--;
+                }
             }
         }
     }
-    if (isFragment) {
+    if (next.type === "FRAGMENT" && next.props.children[FRAGMENT_SYMBOL]) {
         prev.props.children[FRAGMENT_SYMBOL] = true;
     } else {
         prev.props.children[FRAGMENT_SYMBOL] = false;
     }
+
     prev.type = next.type;
 }
 // @ts-expect-error

@@ -1,4 +1,4 @@
-import { cleanUp, createSignal } from "../index";
+import { cleanUp, createEffect, createSignal } from "../index";
 
 function Test({ text }) {
     const signal = createSignal<boolean>(true);
@@ -25,16 +25,59 @@ function Test({ text }) {
 // }
 
 export default function ListsTest() {
-    const itemsSignal = createSignal(["Item 1", "Item 2", "Item 3"]);
+    const itemsSignal = createSignal([3, 2, 1]);
     const showTextSignal = createSignal<boolean>(true);
-
+    let cur = 4;
+    let swap = 0;
+    let curVal = "hello";
+    createEffect(() => {
+        console.log(itemsSignal.value);
+    });
     return (
         <div>
             {/* Static content with reactivity */}
 
             <div>
-                <button onClick={() => itemsSignal.value.push("New Item")}>
-                    Push Item
+                <button
+                    onClick={() => {
+                        itemsSignal.value.unshift(cur++);
+                        itemsSignal.value.pop();
+                    }}
+                >
+                    Shift
+                </button>
+                <button
+                    onClick={() => {
+                        itemsSignal.value.push(cur++);
+                    }}
+                >
+                    Push
+                </button>
+                <button
+                    onClick={() => {
+                        // const temp = itemsSignal.value.pop();
+                        // itemsSignal.value.unshift(temp);
+                        if (curVal === "hello") {
+                            curVal = "hi";
+                        } else {
+                            curVal = "hello";
+                        }
+
+                        if (itemsSignal.value.length < 2) return;
+
+                        const temp =
+                            itemsSignal.value[swap % itemsSignal.value.length];
+                        itemsSignal.value[swap] =
+                            itemsSignal.value[
+                                (swap + 1) % itemsSignal.value.length
+                            ];
+                        itemsSignal.value[
+                            (swap + 1) % itemsSignal.value.length
+                        ] = temp;
+                        swap = (swap + 1) % itemsSignal.value.length;
+                    }}
+                >
+                    Rotate
                 </button>
                 <button onClick={() => itemsSignal.value.pop()}>
                     Pop Item
@@ -65,10 +108,10 @@ export default function ListsTest() {
             <ul>
                 {() =>
                     itemsSignal.value.map((item, index) => (
-                        <div>
-                            hello<li>{item}</li>
-                            {index % 2 == 0 && <Test text={item} />}
-                        </div>
+                        <Test
+                            key={`item-${item}`}
+                            text={item}
+                        />
                     ))
                 }
             </ul>
