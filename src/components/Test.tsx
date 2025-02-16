@@ -1,5 +1,4 @@
 import { createEffect, createSignal } from "../signals/signal";
-import Computed from "./Computed";
 
 const Test = () => {
     const textSignal = createSignal<string>("Initial Text");
@@ -13,6 +12,33 @@ const Test = () => {
             {/* Static content with reactivity */}
             <h1>{() => textSignal.value}</h1>
             {/* Array rendering */}
+            {() =>
+                showTextSignal.value ? (
+                    <div>
+                        <p>Hello</p>
+                        <span>World</span>
+                        {() => (
+                            <>
+                                <div>Fragment 1</div>
+                                <div>Fragment 2</div>
+                            </>
+                        )}
+                    </div>
+                ) : (
+                    <div>
+                        <p>Hello</p>
+                        <span>World</span>
+
+                        {() => (
+                            <>
+                                <div>Fragment 3</div>
+                                <div>Fragment 4</div>
+                            </>
+                        )}
+                        <div>New Node2</div>
+                    </div>
+                )
+            }
 
             {/* Fragment - Fragment with reactivity */}
             {/* {() =>
@@ -106,25 +132,7 @@ const Test = () => {
                     <FC1 />
                 )
             } */}
-            {() =>
-                showTextSignal.value ? (
-                    <>
-                        <div
-                            className={() =>
-                                showTextSignal.value ? "visible" : "hidden"
-                            }
-                        ></div>
-                        {/* <FC1 textSignal={textSignal} /> */}
-                        <Computed textSignal={textSignal} />
-                    </>
-                ) : (
-                    <>
-                        <span>{() => textSignal.value}</span>
-                        <span>Extra</span>
-                        <span>Extra</span>
-                    </>
-                )
-            }
+
             {/* <div>{() => !showTextSignal.value && textSignal.value}</div> */}
             {/* <div id={() => `id-${textSignal.value}`}>Dynamic ID</div> */}
             {/* <div className={null}>No Data</div> */}

@@ -220,6 +220,7 @@ describe("render FC returning array fragment", () => {
         );
         count.value.push(4);
         await Promise.resolve();
+        expect(count.value[count.value.length - 1]).toBe(4);
 
         expect(fiber.dom.innerHTML).toBe(
             "<div>1</div><div>2</div><div>3</div><div>4</div>"
@@ -377,15 +378,27 @@ describe("updateFiber - Component Replacement FC-FC", () => {
         return <p>B</p>;
     }
     it("Should replace a component correctly", () => {
-        const fiber = <ComponentA />;
+        const fiber = (
+            <div>
+                <ComponentA />
+            </div>
+        );
+
         createFiber(fiber);
         commitFiber(fiber);
 
-        const newFiber = <ComponentB />;
+        const newFiber = (
+            <div>
+                <ComponentB />
+            </div>
+        );
 
         updateFiber(fiber, newFiber);
-        expect(fiber.type).toBe(ComponentB);
-        expect(fiber.props.children[0].dom.innerHTML).toBe("B");
+
+        expect(fiber.props.children[0].type).toBe(ComponentB);
+        expect(fiber.props.children[0].props.children[0].dom.innerHTML).toBe(
+            "B"
+        );
     });
 });
 
@@ -572,7 +585,6 @@ describe("updateChildren - edge case", () => {
 
         // console.log(fiber.props.children.at(-1));
         updateFiber(fiber, newFiber);
-
         expect(fiber.dom.innerHTML).toBe(
             "<p>Hello</p><span>World</span><div>Fragment 3</div><div>Fragment 4</div><div>New Node2</div>"
         );
@@ -630,6 +642,6 @@ describe("render Functional components mapped by a list", () => {
 //     });
 // });
 
-describe("updateFiber - Update Lists Efficiently Inplace", () => {
-    // it("Should handle push")
-});
+// describe("updateFiber - Update Lists Efficiently Inplace", () => {
+//     it("")
+// });
