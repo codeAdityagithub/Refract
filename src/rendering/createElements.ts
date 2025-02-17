@@ -52,7 +52,9 @@ export function createChildren(children: FiberChildren): FiberChildren {
                         "TEXT_CHILD",
                         {
                             nodeValue:
-                                val !== undefined || val !== null
+                                val !== undefined ||
+                                val !== null ||
+                                val !== false
                                     ? String(val)
                                     : "",
                             children: [],
@@ -76,11 +78,14 @@ export function createChildren(children: FiberChildren): FiberChildren {
         .flat();
 }
 
-export function createTextChildren(text: string): Element {
+export function createTextChildren(text: any): Element {
     return {
         type: "TEXT_CHILD",
         props: {
-            nodeValue: text ? text : "",
+            nodeValue:
+                text !== null && text !== undefined && text !== false
+                    ? String(text)
+                    : "",
             children: [],
         },
     };

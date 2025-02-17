@@ -41,8 +41,8 @@ export function render(element: Fiber, container: HTMLElement) {
 function commitRootFragment() {
     if (rootFragment && rootContainer) {
         rootContainer.appendChild(rootFragment);
-        // const endTime = performance.now();
-        // console.log(`Render time: ${endTime - startTime}ms`);
+        const endTime = performance.now();
+        console.log(`Render time: ${endTime - startTime}ms`);
     }
 }
 
@@ -52,7 +52,7 @@ let rootFragment: DocumentFragment | null = null;
 let startTime = -1;
 
 function workLoop(deadline: IdleDeadline) {
-    // if (startTime === -1) startTime = performance.now();
+    if (startTime === -1) startTime = performance.now();
 
     let shouldYield = false;
     while (elements.length > 0 && !shouldYield) {
@@ -148,25 +148,7 @@ function createFiber(fiber: Fiber) {
                 console.error("Array children must have a key attribute");
             }
         }
-    } else if (typeof fiber.type === "function") {
-        // setCurrentFC(fiber);
-        // const children = fiber.type(fiber.props);
-        // clearCurrentFC();
-        // // fiber.type = "FRAGMENT";
-        // if (Array.isArray(children)) {
-        //     // which means that the FC returned a fragment
-        //     // console.log(children);
-        //     for (const child of children) {
-        //         child.parent = fiber;
-        //         createFiber(child);
-        //     }
-        //     fiber.props.children = children;
-        // } else {
-        //     children.parent = fiber;
-        //     fiber.props.children.push(children);
-        //     createFiber(children);
-        // }
-    } else {
+    } else if (typeof fiber.type !== "function") {
         for (const child of fiber.props.children) {
             child.parent = fiber;
             createFiber(child);
@@ -295,7 +277,7 @@ export function updateFiber(prevFiber: Fiber, newValue) {
         updateNode(prevFiber, newFragment);
     }
     const endTime = performance.now();
-    // console.log("Update Time:", (endTime - startTime).toFixed(2), "ms");
+    console.log("Update Time:", (endTime - startTime).toFixed(2), "ms");
 }
 
 function replaceRenderFunction(prev: Fiber, next: Fiber) {
