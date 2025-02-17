@@ -198,6 +198,79 @@ describe("commitFiber", () => {
     });
 });
 
+describe("commitDeletion", () => {
+    it("should remove the DOM element", () => {
+        const container = <div></div>;
+
+        const fiber = <div>Test</div>;
+
+        fiber.parent = container;
+        fiber.parent.props.children = [fiber];
+
+        createFiber(container);
+        commitFiber(container);
+
+        expect(container.dom.innerHTML).toBe("<div>Test</div>");
+
+        commitDeletion(fiber);
+
+        expect(container.dom.innerHTML).toBe("");
+    });
+
+    it("should remove event listeners and properties", () => {
+        const onClick = vi.fn();
+        const container = <div></div>;
+
+        const fiber = <div onClick={onClick}>Test</div>;
+        fiber.parent = container;
+        fiber.parent.props.children = [fiber];
+
+        createFiber(container);
+        commitFiber(container);
+
+        expect(container.dom.innerHTML).toBe("<div>Test</div>");
+        fiber.dom.click();
+        expect(onClick).toHaveBeenCalled();
+
+        commitDeletion(fiber);
+        fiber.dom.click();
+
+        expect(onClick).toHaveBeenCalledTimes(1);
+    });
+
+    it("should stop updates after deletion", async () => {
+        const count = createSignal<number>(0);
+
+        const container = <div></div>;
+
+        const fiber = <div>{() => count.value}</div>;
+        fiber.parent = container;
+        fiber.parent.props.children = [fiber];
+
+        createFiber(container);
+        commitFiber(container);
+
+        expect(container.dom.innerHTML).toBe("<div>0</div>");
+        expect(fiber.props.children[0].renderFunction).toBeDefined();
+
+        count.value = 1;
+        await Promise.resolve();
+
+        expect(container.dom.innerHTML).toBe("<div>1</div>");
+
+        expect(count.deps.size).toBe(1);
+
+        commitDeletion(fiber, true);
+        expect(fiber.props.children[0].renderFunction).toBeUndefined();
+
+        count.value = 2;
+        await Promise.resolve();
+
+        expect(count.deps.size).toBe(0);
+        expect(container.dom.innerHTML).toBe("");
+    });
+});
+
 describe("render FC returning array fragment", () => {
     it("Should be able to render FC returning array fragment and warn for key not being present", async () => {
         const count = createSignal([1, 2, 3]);

@@ -50,7 +50,13 @@ export function createChildren(children: FiberChildren): FiberChildren {
                 if (isPrimitive(val))
                     return createSignalChild(
                         "TEXT_CHILD",
-                        { nodeValue: val ? String(val) : "", children: [] },
+                        {
+                            nodeValue:
+                                val !== undefined || val !== null
+                                    ? String(val)
+                                    : "",
+                            children: [],
+                        },
                         child
                     );
                 else if (Array.isArray(val)) {

@@ -447,6 +447,13 @@ function captureKeyedNodes(fiber) {
         return acc;
     }, {});
 }
+function captureKeyedFC(fiber) {
+    return fiber.props.children.reduce((acc, child) => {
+        const key = child.props.key;
+        acc[key] = child.props.children[0].dom;
+        return acc;
+    }, {});
+}
 describe("DOM Node Reuse Tests", () => {
     // Utility function: maps keyed children to their DOM node references.
 
@@ -470,6 +477,38 @@ describe("DOM Node Reuse Tests", () => {
         await Promise.resolve();
 
         const newNodes = captureKeyedNodes(fiber.props.children[0]);
+
+        // Verify that nodes for keys 1, 2, and 3 are reused.
+        expect(newNodes[1]).toBe(initialNodes[1]);
+        expect(newNodes[2]).toBe(initialNodes[2]);
+        expect(newNodes[3]).toBe(initialNodes[3]);
+        // And that a new node for key 4 was added.
+        expect(newNodes[4]).not.toBeUndefined();
+    });
+    it("should reuse existing DOM nodes when pushing a new element - FC", async () => {
+        const count = createSignal([1, 2, 3]);
+        const FC = ({ text }) => <p>{text}</p>;
+        const fiber = (
+            <div>
+                {() =>
+                    count.value.map((item) => (
+                        <FC
+                            key={item}
+                            text={item}
+                        />
+                    ))
+                }
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+        const initialNodes = captureKeyedFC(fiber.props.children[0]);
+
+        count.value.push(4);
+        await Promise.resolve();
+
+        const newNodes = captureKeyedFC(fiber.props.children[0]);
 
         // Verify that nodes for keys 1, 2, and 3 are reused.
         expect(newNodes[1]).toBe(initialNodes[1]);
@@ -503,8 +542,41 @@ describe("DOM Node Reuse Tests", () => {
         expect(newNodes[4]).toBeUndefined();
     });
 
+    it("should reuse existing DOM nodes when popping the last element - FC", async () => {
+        const count = createSignal([1, 2, 3, 4]);
+        const FC = ({ text }) => <p>{text}</p>;
+        const fiber = (
+            <div>
+                {() =>
+                    count.value.map((item) => (
+                        <FC
+                            key={item}
+                            text={item}
+                        />
+                    ))
+                }
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+        const initialNodes = captureKeyedFC(fiber);
+
+        count.value.pop();
+        await Promise.resolve();
+
+        const newNodes = captureKeyedFC(fiber);
+        // Nodes for keys 1, 2, and 3 should be reused.
+        expect(newNodes[1]).toBe(initialNodes[1]);
+        expect(newNodes[2]).toBe(initialNodes[2]);
+        expect(newNodes[3]).toBe(initialNodes[3]);
+        // Key 4 should no longer exist.
+        expect(newNodes[4]).toBeUndefined();
+    });
+
     it("should reuse existing DOM nodes when unshifting a new element", async () => {
         const count = createSignal([2, 3, 4]);
+
         const fiber = (
             <div>
                 {() => count.value.map((item) => <p key={item}>{item}</p>)}
@@ -519,6 +591,39 @@ describe("DOM Node Reuse Tests", () => {
         await Promise.resolve();
 
         const newNodes = captureKeyedNodes(fiber.props.children[0]);
+        // Existing nodes for keys 2, 3, and 4 should be reused even though their positions have shifted.
+        expect(newNodes[2]).toBe(initialNodes[2]);
+        expect(newNodes[3]).toBe(initialNodes[3]);
+        expect(newNodes[4]).toBe(initialNodes[4]);
+        // And a new node for key 1 is created.
+        expect(newNodes[1]).not.toBeUndefined();
+    });
+
+    it("should reuse existing DOM nodes when unshifting a new element - FC", async () => {
+        const count = createSignal([2, 3, 4]);
+
+        const FC = ({ text }) => <p>{text}</p>;
+        const fiber = (
+            <div>
+                {() =>
+                    count.value.map((item) => (
+                        <FC
+                            key={item}
+                            text={item}
+                        />
+                    ))
+                }
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+        const initialNodes = captureKeyedFC(fiber.props.children[0]);
+
+        count.value.unshift(1);
+        await Promise.resolve();
+
+        const newNodes = captureKeyedFC(fiber.props.children[0]);
         // Existing nodes for keys 2, 3, and 4 should be reused even though their positions have shifted.
         expect(newNodes[2]).toBe(initialNodes[2]);
         expect(newNodes[3]).toBe(initialNodes[3]);
@@ -550,6 +655,38 @@ describe("DOM Node Reuse Tests", () => {
         // Node for key 1 should no longer exist.
         expect(newNodes[1]).toBeUndefined();
     });
+    it("should reuse existing DOM nodes when shifting (removing the first element) - FC", async () => {
+        const count = createSignal([1, 2, 3, 4]);
+        const FC = ({ text }) => <p>{text}</p>;
+
+        const fiber = (
+            <div>
+                {() =>
+                    count.value.map((item) => (
+                        <FC
+                            key={item}
+                            text={item}
+                        />
+                    ))
+                }
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+        const initialNodes = captureKeyedFC(fiber.props.children[0]);
+
+        count.value.shift();
+        await Promise.resolve();
+
+        const newNodes = captureKeyedFC(fiber.props.children[0]);
+        // After removal, nodes for keys 2, 3, and 4 should be reused.
+        expect(newNodes[2]).toBe(initialNodes[2]);
+        expect(newNodes[3]).toBe(initialNodes[3]);
+        expect(newNodes[4]).toBe(initialNodes[4]);
+        // Node for key 1 should no longer exist.
+        expect(newNodes[1]).toBeUndefined();
+    });
 
     it("should reuse nodes when inserting an element via splice", async () => {
         const count = createSignal([1, 3, 4]);
@@ -574,6 +711,38 @@ describe("DOM Node Reuse Tests", () => {
         // A new node for key 2 should be created.
         expect(newNodes[2]).not.toBeUndefined();
     });
+    it("should reuse nodes when inserting an element via splice - FC", async () => {
+        const count = createSignal([1, 3, 4]);
+        const FC = ({ text }) => <p>{text}</p>;
+
+        const fiber = (
+            <div>
+                {() =>
+                    count.value.map((item) => (
+                        <FC
+                            key={item}
+                            text={item}
+                        />
+                    ))
+                }
+            </div>
+        );
+        createFiber(fiber);
+        commitFiber(fiber);
+        const initialNodes = captureKeyedFC(fiber.props.children[0]);
+
+        // Insert 2 at index 1.
+        count.value.splice(1, 0, 2);
+        await Promise.resolve();
+
+        const newNodes = captureKeyedFC(fiber.props.children[0]);
+        // Nodes for keys 1, 3, and 4 should be reused.
+        expect(newNodes[1]).toBe(initialNodes[1]);
+        expect(newNodes[3]).toBe(initialNodes[3]);
+        expect(newNodes[4]).toBe(initialNodes[4]);
+        // A new node for key 2 should be created.
+        expect(newNodes[2]).not.toBeUndefined();
+    });
 
     it("should reuse nodes when removing elements via splice", async () => {
         const count = createSignal([1, 2, 3, 4, 5]);
@@ -591,6 +760,39 @@ describe("DOM Node Reuse Tests", () => {
         await Promise.resolve();
 
         const newNodes = captureKeyedNodes(fiber);
+        // Keys 1 and 5 should be reused.
+        expect(newNodes[1]).toBe(initialNodes[1]);
+        expect(newNodes[5]).toBe(initialNodes[5]);
+        // Keys 2, 3, and 4 should have been removed.
+        expect(newNodes[2]).toBeUndefined();
+        expect(newNodes[3]).toBeUndefined();
+        expect(newNodes[4]).toBeUndefined();
+    });
+    it("should reuse nodes when removing elements via splice - FC", async () => {
+        const count = createSignal([1, 2, 3, 4, 5]);
+        const FC = ({ text }) => <p>{text}</p>;
+
+        const fiber = (
+            <div>
+                {() =>
+                    count.value.map((item) => (
+                        <FC
+                            key={item}
+                            text={item}
+                        />
+                    ))
+                }
+            </div>
+        );
+        createFiber(fiber);
+        commitFiber(fiber);
+        const initialNodes = captureKeyedFC(fiber);
+
+        // Remove items with keys 2, 3, and 4.
+        count.value.splice(1, 3);
+        await Promise.resolve();
+
+        const newNodes = captureKeyedFC(fiber);
         // Keys 1 and 5 should be reused.
         expect(newNodes[1]).toBe(initialNodes[1]);
         expect(newNodes[5]).toBe(initialNodes[5]);
@@ -723,6 +925,45 @@ describe("DOM Node Reuse Tests", () => {
         await Promise.resolve();
 
         const finalNodes = captureKeyedNodes(fiber);
+        // For each key that existed in the initial array and wasn’t replaced, its node should be reused.
+        [1, 2, 4, 5].forEach((key) => {
+            if (initialNodes[key] && finalNodes[key]) {
+                expect(finalNodes[key]).toBe(initialNodes[key]);
+            }
+        });
+    });
+    it("should consistently reuse DOM nodes through a rapid sequence of mutations - FC", async () => {
+        const count = createSignal([1, 2, 3, 4, 5]);
+        const FC = ({ text }) => <p>{text}</p>;
+
+        const fiber = (
+            <div>
+                {() =>
+                    count.value.map((item) => (
+                        <FC
+                            key={item}
+                            text={item}
+                        />
+                    ))
+                }
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+        const initialNodes = captureKeyedFC(fiber);
+
+        // Sequence of in-place mutations:
+        count.value.splice(2, 1); // remove item with key 3
+        await Promise.resolve();
+        count.value.push(6); // add new item with key 6
+        await Promise.resolve();
+        count.value.reverse();
+        await Promise.resolve();
+        count.value.splice(1, 2, 7, 8); // replace two items in the middle
+        await Promise.resolve();
+
+        const finalNodes = captureKeyedFC(fiber);
         // For each key that existed in the initial array and wasn’t replaced, its node should be reused.
         [1, 2, 4, 5].forEach((key) => {
             if (initialNodes[key] && finalNodes[key]) {

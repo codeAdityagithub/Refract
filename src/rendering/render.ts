@@ -388,14 +388,14 @@ function findFirstDom(fiber: Fiber): HTMLElement | Text | undefined {
         if (dom) return dom;
     }
 }
-function findFirstChildDom(fiber: Fiber): HTMLElement | Text | undefined {
-    if (!fiber) return;
+// function findFirstChildDom(fiber: Fiber): HTMLElement | Text | undefined {
+//     if (!fiber) return;
 
-    for (const child of fiber.props.children) {
-        const dom = findFirstDom(child);
-        if (dom) return dom;
-    }
-}
+//     for (const child of fiber.props.children) {
+//         const dom = findFirstDom(child);
+//         if (dom) return dom;
+//     }
+// }
 function findLastDom(fiber: Fiber): HTMLElement | Text | undefined {
     if (!fiber) return;
 
@@ -630,7 +630,8 @@ function updateChildren(prev: Fiber, next: Fiber) {
                 fiberParent = fiberParent.parent;
             }
 
-            prev.props.children.forEach((child, i) => {
+            for (let i = 0; i < prev.props.children.length; i++) {
+                const child = prev.props.children[i];
                 if (child === next.props.children[i]) {
                     child.parent = prev;
                     commitFiber(child, referenceNode, false, true);
@@ -643,7 +644,7 @@ function updateChildren(prev: Fiber, next: Fiber) {
 
                     updateNode(child, nextChild, i);
                 }
-            });
+            }
         }
     } else {
         updateNonListChildren(prev, next);
@@ -688,5 +689,12 @@ function updateNonListChildren(prev: Fiber, next: Fiber) {
 // @ts-expect-error
 if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
     // @ts-expect-error
-    module.exports = { createFiber, commitDeletion, commitFiber, updateFiber };
+    module.exports = {
+        createFiber,
+        commitDeletion,
+        commitFiber,
+        updateFiber,
+        deepCompareFibers,
+        deepEqual,
+    };
 }
