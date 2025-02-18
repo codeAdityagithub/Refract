@@ -654,6 +654,11 @@ function updateNonListChildren(prev: Fiber, next: Fiber) {
                 findLastDom(prev.props.children.at(-1))?.nextSibling
             );
             prev.props.children.push(nextChild);
+        } else if (!nextChild && prevChild) {
+            commitDeletion(prevChild, true);
+            prev.props.children.splice(i, 1);
+            len = prev.props.children.length;
+            i--;
         } else {
             updateNode(prevChild, nextChild, i);
             const newLen = Math.max(

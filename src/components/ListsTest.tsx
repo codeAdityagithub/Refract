@@ -126,7 +126,7 @@ export default function ListsTest() {
             {/* <div>
                 <ArrayReturningFC count={itemsSignal} />
             </div> */}
-            {/* {() => itemsSignal.value.map((item) => <p key={item}>{item}</p>)} */}
+            {() => itemsSignal.value.map((item) => <p key={item}>{item}</p>)}
 
             {/* <Test2 /> */}
 

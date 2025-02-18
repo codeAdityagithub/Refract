@@ -1,4 +1,13 @@
+import { cleanUp } from "../rendering/functionalComponents";
 import { createEffect, createSignal } from "../signals/signal";
+
+const FC = ({ text }) => {
+    console.log("FC mounted");
+    cleanUp(() => {
+        console.log("FC unmounted");
+    });
+    return <div>{text}</div>;
+};
 
 const Test = () => {
     const textSignal = createSignal<string>("Initial Text");
@@ -12,11 +21,11 @@ const Test = () => {
             {/* Static content with reactivity */}
             <h1>{() => textSignal.value}</h1>
             {/* Array rendering */}
-            {() =>
+            {/* {() =>
                 showTextSignal.value ? (
                     <div>
-                        <p>Hello</p>
-                        <span>World</span>
+                        <span key="world">World</span>
+                        <p key="hello">Hello</p>
                         {() => (
                             <>
                                 <div>Fragment 1</div>
@@ -26,15 +35,54 @@ const Test = () => {
                     </div>
                 ) : (
                     <div>
-                        <p>Hello</p>
-                        <span>World</span>
-
+                        <p key="hello">Hello</p>
+                        <span key="world">World</span>
+                        
                         {() => (
                             <>
                                 <div>Fragment 3</div>
                                 <div>Fragment 4</div>
                             </>
                         )}
+                        <div>New Node2</div>
+                    </div>
+                )
+            } */}
+            {() =>
+                showTextSignal.value ? (
+                    <div>
+                        <div>New Node2</div>
+                        <div>New Node2</div>
+                        <div>New Node2</div>
+
+                        <FC
+                            text="Hello"
+                            key="hello"
+                        />
+                        {/* {() => (
+                            <>
+                                <div>Fragment 1</div>
+                                <div>Fragment 2</div>
+                            </>
+                        )} */}
+                        <div>New Node2</div>
+                        <div>New Node2</div>
+                    </div>
+                ) : (
+                    <div>
+                        <span key="world">World</span>
+
+                        {/* {() => (
+                            <>
+                                <div>Fragment 3</div>
+                                <div>Fragment 4</div>
+                            </>
+                        )} */}
+                        <FC
+                            text="Hello Updated"
+                            key="hello"
+                        />
+
                         <div>New Node2</div>
                     </div>
                 )
