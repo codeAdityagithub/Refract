@@ -685,32 +685,441 @@ describe("render Functional components mapped by a list", () => {
     });
 });
 
-// describe("updateFiber - Reordering Nodes", () => {
-//     it("Should swap nodes without unnecessary re-creation", () => {
-//         const fiber = (
-//             <div>
-//                 <p>Hello</p>
-//                 <span>World</span>
-//             </div>
-//         );
+describe("Key-based node swap reconciliation", () => {
+    it("should swap two keyed elements and reuse their DOM nodes", () => {
+        const fiber = (
+            <div>
+                <p key="1">First</p>
+                <p key="2">Second</p>
+            </div>
+        );
 
-//         createFiber(fiber);
-//         commitFiber(fiber);
+        createFiber(fiber);
+        commitFiber(fiber);
 
-//         const prevP = fiber.props.children[0].dom;
-//         const prevSpan = fiber.props.children[1].dom;
+        const firstNode = fiber.props.children[0].dom;
+        const secondNode = fiber.props.children[1].dom;
 
-//         const newFiber = (
-//             <div>
-//                 <span>World</span>
-//                 <p>Hello</p>
-//             </div>
-//         );
+        // Swap the order based on key
+        const newFiber = (
+            <div>
+                <p key="2">Second</p>
+                <p key="1">First</p>
+            </div>
+        );
+        updateFiber(fiber, newFiber);
 
-//         updateFiber(fiber, newFiber);
+        expect(fiber.dom.innerHTML).toBe("<p>Second</p><p>First</p>");
+        expect(fiber.props.children[0].dom).toBe(secondNode);
+        expect(fiber.props.children[1].dom).toBe(firstNode);
+    });
 
-//         expect(fiber.props.children[0].dom).toBe(prevSpan);
-//         expect(fiber.props.children[1].dom).toBe(prevP);
-//         expect(fiber.dom.innerHTML).toBe("<span>World</span><p>Hello</p>");
-//     });
-// });
+    it("should handle insertion and removal in keyed lists", () => {
+        const fiber = (
+            <div>
+                <p key="1">One</p>
+                <p key="2">Two</p>
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+
+        const node1 = fiber.props.children[0].dom;
+        const node2 = fiber.props.children[1].dom;
+
+        // Insert a new element with key "3" between the existing ones.
+        const newFiber = (
+            <div>
+                <p key="1">One</p>
+                <p key="3">Three</p>
+                <p key="2">Two</p>
+            </div>
+        );
+        updateFiber(fiber, newFiber);
+
+        expect(fiber.dom.innerHTML).toBe("<p>One</p><p>Three</p><p>Two</p>");
+        expect(fiber.props.children[0].dom).toBe(node1);
+        expect(fiber.props.children[2].dom).toBe(node2);
+        // The new element (key "3") must be a new node.
+        expect(fiber.props.children[1].dom).not.toBe(node1);
+        expect(fiber.props.children[1].dom).not.toBe(node2);
+    });
+
+    it("should correctly handle mixed keyed and unkeyed children", () => {
+        const fiber = (
+            <div>
+                <p>Hello</p>
+                <p key="a">A</p>
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+
+        const keyedNode = fiber.props.children[1].dom;
+
+        // Swap their order: the keyed element should be found by key,
+        // while the unkeyed element is reconciled by its position.
+        const newFiber = (
+            <div>
+                <p key="a">A</p>
+                <p>Hello</p>
+            </div>
+        );
+        updateFiber(fiber, newFiber);
+
+        expect(fiber.dom.innerHTML).toBe("<p>A</p><p>Hello</p>");
+        console.log(fiber.props.children[0].dom, keyedNode);
+        expect(fiber.props.children[0].dom).toBe(keyedNode);
+    });
+
+    it("should warn or handle duplicate keys gracefully", () => {
+        // Spy on console.warn to check if a duplicate key warning is issued.
+        const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+        const fiber = (
+            <div>
+                <p key="dup">First</p>
+                <p key="dup">Duplicate</p>
+            </div>
+        );
+        createFiber(fiber);
+        commitFiber(fiber);
+
+        // Swap the order; duplicate keys may force a fallback to position diffing.
+        const newFiber = (
+            <div>
+                <p key="dup">Duplicate</p>
+                <p key="dup">First</p>
+            </div>
+        );
+        updateFiber(fiber, newFiber);
+
+        expect(fiber.dom.innerHTML).toBe("<p>Duplicate</p><p>First</p>");
+        expect(warnSpy).toHaveBeenCalled();
+
+        warnSpy.mockRestore();
+    });
+
+    it("should not remount functional components when swapped", () => {
+        let mountCount = 0;
+        // A simple functional component that increments a counter when mounted.
+        const TestFunctional = () => {
+            mountCount++;
+            return <div>Functional</div>;
+        };
+
+        const fiber = (
+            <div>
+                <TestFunctional key="1" />
+                <TestFunctional key="2" />
+            </div>
+        );
+        createFiber(fiber);
+        commitFiber(fiber);
+
+        // Capture the DOM nodes of the mounted functional components.
+        const node1 = fiber.props.children[0].dom;
+        const node2 = fiber.props.children[1].dom;
+        const initialMountCount = mountCount;
+
+        // Swap the order of the functional components.
+        const newFiber = (
+            <div>
+                <TestFunctional key="2" />
+                <TestFunctional key="1" />
+            </div>
+        );
+        updateFiber(fiber, newFiber);
+
+        expect(fiber.dom.innerHTML).toBe(
+            "<div>Functional</div><div>Functional</div>"
+        );
+        expect(fiber.props.children[0].dom).toBe(node2);
+        expect(fiber.props.children[1].dom).toBe(node1);
+        // The mountCount should not increase if the functional components were reused.
+        expect(mountCount).toBe(initialMountCount);
+    });
+});
+
+describe("Complex keyed nodes reconciliation", () => {
+    it("should handle reordering, insertion, and removal with multiple keyed nodes then reverse update", () => {
+        // Original fiber with 4 keyed children.
+        const originalFiber = (
+            <div>
+                <div key="A">A</div>
+                <p key="B">B</p>
+                <span key="C">C</span>
+                <h1 key="D">D</h1>
+            </div>
+        );
+
+        createFiber(originalFiber);
+        commitFiber(originalFiber);
+
+        // Save the initial DOM node references.
+        const nodeA = originalFiber.props.children[0].dom;
+        const nodeB = originalFiber.props.children[1].dom;
+        const nodeC = originalFiber.props.children[2].dom;
+        const nodeD = originalFiber.props.children[3].dom;
+
+        // New fiber: reordering keys and modifying the list.
+        // Order: B, D, A, and a new element E (while "C" is removed).
+        const newFiber = (
+            <div>
+                <p key="B">B</p>
+                <h1 key="D">D</h1>
+                <div key="A">A</div>
+                <section key="E">E</section>
+            </div>
+        );
+        updateFiber(originalFiber, newFiber);
+
+        // Check innerHTML is updated accordingly.
+        expect(originalFiber.dom.innerHTML).toBe(
+            "<p>B</p><h1>D</h1><div>A</div><section>E</section>"
+        );
+
+        // Ensure the nodes with keys A, B, and D were reused.
+        expect(originalFiber.props.children[0].dom).toBe(nodeB);
+        expect(originalFiber.props.children[1].dom).toBe(nodeD);
+        expect(originalFiber.props.children[2].dom).toBe(nodeA);
+        // The node for key "E" is new.
+
+        // Reverse update: go back to the original fiber.
+        const reverseFiber = (
+            <div>
+                <div key="A">A</div>
+                <p key="B">B</p>
+                <span key="C">C</span>
+                <h1 key="D">D</h1>
+            </div>
+        );
+        updateFiber(originalFiber, reverseFiber);
+
+        // Verify the DOM is restored to the original structure.
+        expect(originalFiber.dom.innerHTML).toBe(
+            "<div>A</div><p>B</p><span>C</span><h1>D</h1>"
+        );
+
+        // Check that keys A, B, and D reuse their previous nodes.
+        expect(originalFiber.props.children[0].dom).toBe(nodeA);
+        expect(originalFiber.props.children[1].dom).toBe(nodeB);
+        expect(originalFiber.props.children[3].dom).toBe(nodeD);
+
+        // Since "C" was removed in the intermediate step, its node should be new.
+        expect(originalFiber.props.children[2].dom).not.toBe(nodeC);
+    });
+
+    it("should handle complex reordering in a list of multiple keyed nodes and then reverse update", () => {
+        // Original list of 5 items.
+        const fiber = (
+            <ul>
+                <li key="1">Item 1</li>
+                <li key="2">Item 2</li>
+                <li key="3">Item 3</li>
+                <li key="4">Item 4</li>
+                <li key="5">Item 5</li>
+            </ul>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+
+        // Capture initial node references.
+        const node1 = fiber.props.children[0].dom;
+        const node2 = fiber.props.children[1].dom;
+        const node3 = fiber.props.children[2].dom;
+        const node4 = fiber.props.children[3].dom;
+        const node5 = fiber.props.children[4].dom;
+
+        // New fiber: reorder the items to: 3, 1, 4, 2, 5.
+        const newFiber = (
+            <ul>
+                <li key="3">Item 3</li>
+                <li key="1">Item 1</li>
+                <li key="4">Item 4</li>
+                <li key="2">Item 2</li>
+                <li key="5">Item 5</li>
+            </ul>
+        );
+        updateFiber(fiber, newFiber);
+
+        // Verify the innerHTML order.
+        expect(fiber.dom.innerHTML).toBe(
+            "<li>Item 3</li><li>Item 1</li><li>Item 4</li><li>Item 2</li><li>Item 5</li>"
+        );
+
+        // Ensure the nodes are reused correctly.
+        expect(fiber.props.children[0].dom).toBe(node3);
+        expect(fiber.props.children[1].dom).toBe(node1);
+        expect(fiber.props.children[2].dom).toBe(node4);
+        expect(fiber.props.children[3].dom).toBe(node2);
+        expect(fiber.props.children[4].dom).toBe(node5);
+
+        // Reverse update: revert back to the original order.
+        const reverseFiber = (
+            <ul>
+                <li key="1">Item 1</li>
+                <li key="2">Item 2</li>
+                <li key="3">Item 3</li>
+                <li key="4">Item 4</li>
+                <li key="5">Item 5</li>
+            </ul>
+        );
+        updateFiber(fiber, reverseFiber);
+
+        // Check the innerHTML order is back to the original.
+        expect(fiber.dom.innerHTML).toBe(
+            "<li>Item 1</li><li>Item 2</li><li>Item 3</li><li>Item 4</li><li>Item 5</li>"
+        );
+
+        // Validate that nodes are back in their original positions.
+        expect(fiber.props.children[0].dom).toBe(node1);
+        expect(fiber.props.children[1].dom).toBe(node2);
+        expect(fiber.props.children[2].dom).toBe(node3);
+        expect(fiber.props.children[3].dom).toBe(node4);
+        expect(fiber.props.children[4].dom).toBe(node5);
+    });
+
+    it("should handle non-adjacent swaps with multiple keyed nodes then reverse update", () => {
+        // Original fiber with 5 keyed elements of different types.
+        const fiber = (
+            <div>
+                <span key="s1">S1</span>
+                <div key="d1">D1</div>
+                <p key="p1">P1</p>
+                <article key="a1">A1</article>
+                <section key="sec1">Sec1</section>
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+
+        // Save original node references.
+        const nodeS1 = fiber.props.children[0].dom;
+        const nodeD1 = fiber.props.children[1].dom;
+        const nodeP1 = fiber.props.children[2].dom;
+        const nodeA1 = fiber.props.children[3].dom;
+        const nodeSec1 = fiber.props.children[4].dom;
+
+        // New fiber: swap non-adjacent nodes: move last node to first, first to last.
+        const newFiber = (
+            <div>
+                <section key="sec1">Sec1</section>
+                <div key="d1">D1</div>
+                <p key="p1">P1</p>
+                <article key="a1">A1</article>
+                <span key="s1">S1</span>
+            </div>
+        );
+        updateFiber(fiber, newFiber);
+
+        // Verify the new order.
+        expect(fiber.dom.innerHTML).toBe(
+            "<section>Sec1</section><div>D1</div><p>P1</p><article>A1</article><span>S1</span>"
+        );
+        expect(fiber.props.children[0].dom).toBe(nodeSec1);
+        expect(fiber.props.children[1].dom).toBe(nodeD1);
+        expect(fiber.props.children[2].dom).toBe(nodeP1);
+        expect(fiber.props.children[3].dom).toBe(nodeA1);
+        expect(fiber.props.children[4].dom).toBe(nodeS1);
+
+        // Reverse update: return to original order.
+        const reverseFiber = (
+            <div>
+                <span key="s1">S1</span>
+                <div key="d1">D1</div>
+                <p key="p1">P1</p>
+                <article key="a1">A1</article>
+                <section key="sec1">Sec1</section>
+            </div>
+        );
+        updateFiber(fiber, reverseFiber);
+
+        // Check that the DOM is restored.
+        expect(fiber.dom.innerHTML).toBe(
+            "<span>S1</span><div>D1</div><p>P1</p><article>A1</article><section>Sec1</section>"
+        );
+        expect(fiber.props.children[0].dom).toBe(nodeS1);
+        expect(fiber.props.children[1].dom).toBe(nodeD1);
+        expect(fiber.props.children[2].dom).toBe(nodeP1);
+        expect(fiber.props.children[3].dom).toBe(nodeA1);
+        expect(fiber.props.children[4].dom).toBe(nodeSec1);
+    });
+});
+
+describe("Complex update: different number of children with keyed and unkeyed nodes", () => {
+    it("should update correctly when reducing then increasing the number of children", () => {
+        // Initial fiber: a mix of unkeyed and keyed nodes.
+        const fiber = (
+            <div>
+                <p>Paragraph 1</p>
+                <span key="1">Span 1</span>
+                <p key="2">Paragraph 2</p>
+                <p>Paragraph 3</p>
+                <div key="3">Div 3</div>
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+
+        // Capture initial keyed node references for later reuse verification.
+        const keyedSpan = fiber.props.children[1].dom;
+        const keyedP2 = fiber.props.children[2].dom;
+        const keyedDiv3 = fiber.props.children[4].dom;
+
+        // Verify initial DOM structure.
+        expect(fiber.dom.innerHTML).toBe(
+            "<p>Paragraph 1</p><span>Span 1</span><p>Paragraph 2</p><p>Paragraph 3</p><div>Div 3</div>"
+        );
+
+        // First update: reduce children (removing both unkeyed nodes and key "3").
+        const fewerFiber = (
+            <div>
+                <span key="1">Span 1</span>
+                <p key="2">Paragraph 2</p>
+            </div>
+        );
+        updateFiber(fiber, fewerFiber);
+
+        // Verify that the DOM now contains only the two keyed nodes.
+        expect(fiber.dom.innerHTML).toBe(
+            "<span>Span 1</span><p>Paragraph 2</p>"
+        );
+
+        // Check that the keyed nodes for keys "1" and "2" are reused.
+        expect(fiber.props.children[0].dom).toBe(keyedSpan);
+        expect(fiber.props.children[1].dom).toBe(keyedP2);
+
+        // Second update: increase children by reintroducing unkeyed nodes, key "3",
+        // and adding a new unkeyed node at the end.
+        const moreFiber = (
+            <div>
+                <p>Paragraph 1</p>
+                <span key="1">Span 1 Updated</span>
+                <p key="2">Paragraph 2</p>
+                <p>Paragraph 3</p>
+                <div key="3">Div 3</div>
+                <footer>Footer</footer>
+            </div>
+        );
+        updateFiber(fiber, moreFiber);
+
+        // Verify the final DOM structure.
+        expect(fiber.dom.innerHTML).toBe(
+            "<p>Paragraph 1</p><span>Span 1 Updated</span><p>Paragraph 2</p><p>Paragraph 3</p><div>Div 3</div><footer>Footer</footer>"
+        );
+
+        // Check keyed nodes reuse:
+        // - Key "1" and "2" should be reused from the previous update.
+        expect(fiber.props.children[1].dom).toBe(keyedSpan);
+        expect(fiber.props.children[2].dom).toBe(keyedP2);
+
+        // - Key "3" was removed in the fewer update; therefore, it is expected to be a new node.
+        expect(fiber.props.children[4].dom).not.toBe(keyedDiv3);
+    });
+});

@@ -51,39 +51,16 @@ const Test = () => {
             {() =>
                 showTextSignal.value ? (
                     <div>
-                        <div>New Node2</div>
-                        <div>New Node2</div>
-                        <div>New Node2</div>
-
-                        <FC
-                            text="Hello"
-                            key="hello"
-                        />
-                        {/* {() => (
-                            <>
-                                <div>Fragment 1</div>
-                                <div>Fragment 2</div>
-                            </>
-                        )} */}
-                        <div>New Node2</div>
-                        <div>New Node2</div>
+                        <p>Paragraph 1</p>
+                        <span key="1">Span 1</span>
+                        <p key="2">Paragraph 2</p>
+                        <p>Paragraph 3</p>
+                        <div key="3">Div 3</div>
                     </div>
                 ) : (
                     <div>
-                        <span key="world">World</span>
-
-                        {/* {() => (
-                            <>
-                                <div>Fragment 3</div>
-                                <div>Fragment 4</div>
-                            </>
-                        )} */}
-                        <FC
-                            text="Hello Updated"
-                            key="hello"
-                        />
-
-                        <div>New Node2</div>
+                        <span key="1">Span 1</span>
+                        <p key="2">Paragraph 2</p>
                     </div>
                 )
             }

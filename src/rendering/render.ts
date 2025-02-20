@@ -210,9 +210,37 @@ function commitFiber(
         setRenderFunction(fiber);
     }
 }
+function commitReusedFiber(fiber: Fiber, referenceNode?: Node) {
+    if (!fiber) return;
+    if (fiber.type === "FRAGMENT") {
+        for (const child of fiber.props.children) {
+            commitReusedFiber(child, referenceNode);
+        }
+    } else if (typeof fiber.type === "function") {
+        for (const child of fiber.props.children) {
+            commitReusedFiber(child, referenceNode);
+        }
+    } else {
+        if (!fiber.dom) return;
+
+        let fiberParent: Fiber | undefined = fiber.parent;
+        while (fiberParent && !fiberParent.dom) {
+            fiberParent = fiberParent.parent;
+        }
+        if (referenceNode) {
+            fiberParent?.dom?.insertBefore(fiber.dom, referenceNode);
+        } else fiberParent?.dom?.appendChild(fiber.dom);
+
+        for (const child of fiber.props.children) {
+            commitReusedFiber(child);
+        }
+    }
+}
+
+let ToCommitDeletion = true;
 
 function commitDeletion(fiber: Fiber, toClearReactiveFunction?: boolean) {
-    if (!fiber) return;
+    if (!fiber || !ToCommitDeletion) return;
     if (fiber.renderFunction) {
         if (toClearReactiveFunction)
             clearReactiveFunction(fiber.renderFunction);
@@ -398,6 +426,14 @@ function findLastChildDom(fiber: Fiber): HTMLElement | Text | undefined {
         if (dom) return dom;
     }
 }
+function findParentFiberWithDom(fiber: Fiber): Fiber {
+    if (!fiber) return;
+    let fiberParent = fiber.parent;
+    while (fiberParent && !fiberParent.dom) {
+        fiberParent = fiberParent.parent;
+    }
+    return fiberParent;
+}
 
 function updateNode(
     prev: Fiber | undefined,
@@ -544,6 +580,7 @@ function reconcileList(oldFibers: FiberChildren, newFibers: FiberChildren) {
         const key = oldFibers[i].props.key;
         if (key === null || key === undefined) {
             // If any fiber is missing a key, we cannot reconcile.
+            // oldFibers[i].props.key =
             return false;
         }
         oldMap[String(key)] = oldFibers[i];
@@ -602,7 +639,7 @@ function updateChildren(prev: Fiber, next: Fiber) {
 
         const result = reconcileList(prev.props.children, next.props.children);
         if (result === false) {
-            updateNonListChildren(prev, next);
+            updateNonListChildrenWithKeys(prev, next);
         } else {
             prev.props.children = result;
             // const fragment = document.createDocumentFragment();
@@ -611,12 +648,11 @@ function updateChildren(prev: Fiber, next: Fiber) {
             while (fiberParent && !fiberParent.dom) {
                 fiberParent = fiberParent.parent;
             }
-
             for (let i = 0; i < prev.props.children.length; i++) {
                 const child = prev.props.children[i];
                 if (child === next.props.children[i]) {
                     child.parent = prev;
-                    commitFiber(child, referenceNode, false, true);
+                    commitFiber(child, referenceNode, false);
                 } else {
                     applyFiber(child, fiberParent.dom, referenceNode);
 
@@ -629,7 +665,7 @@ function updateChildren(prev: Fiber, next: Fiber) {
             }
         }
     } else {
-        updateNonListChildren(prev, next);
+        updateNonListChildrenWithKeys(prev, next);
     }
     if (next.type === "FRAGMENT" && next.props.children[FRAGMENT_SYMBOL]) {
         prev.props.children[FRAGMENT_SYMBOL] = true;
@@ -671,6 +707,159 @@ function updateNonListChildren(prev: Fiber, next: Fiber) {
             }
         }
     }
+}
+
+function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
+    let len = Math.max(prev.props.children.length, next.props.children.length);
+    const oldMap: Record<string, { fiber: Fiber; index: number }> = {};
+    let count = 0;
+    for (let i = 0; i < prev.props.children.length; i++) {
+        const key = prev.props.children[i].props.key;
+        if (key === null || key === undefined) {
+            continue;
+        }
+        count++;
+        if (oldMap.hasOwnProperty(String(key))) {
+            console.warn("Found two children with the same key", key);
+            continue;
+        }
+        oldMap[String(key)] = { fiber: prev.props.children[i], index: i };
+    }
+    if (count == 0) {
+        updateNonListChildren(prev, next);
+    }
+    const newMap: Record<
+        string,
+        { fiber: Fiber; newIndex: number; oldIndex: number }
+    > = {};
+
+    for (let i = 0; i < next.props.children.length; i++) {
+        const key = next.props.children[i].props.key;
+        if (key === null || key === undefined) {
+            continue;
+        }
+        const oldFiber = oldMap[String(key)];
+        if (oldFiber) {
+            if (newMap.hasOwnProperty(String(key))) {
+                console.warn("Found two children with the same key", key);
+                continue;
+            }
+            newMap[String(key)] = {
+                fiber: oldFiber.fiber,
+                newIndex: i,
+                oldIndex: oldFiber.index,
+            };
+        }
+    }
+    // console.log(prev, next);
+    for (let i = 0; i < len; i++) {
+        let prevChild = prev.props.children[i];
+        let nextChild = next.props.children[i];
+        // console.log(prevChild, nextChild);
+
+        const nextKey = nextChild?.props.key
+            ? String(nextChild.props.key)
+            : null;
+        const isReused = newMap.hasOwnProperty(nextKey);
+
+        let prevKey = prevChild?.props.key ? String(prevChild.props.key) : null;
+
+        if (prevKey && nextKey && prevKey === nextKey) {
+            // console.log("same", prevChild, nextChild);
+            updateNode(prevChild, nextChild, i);
+            if (prev.props.children[i] === nextChild) {
+                commitReusedFiber(nextChild);
+            } else if (prev.props.children[i] === prevChild) {
+                commitReusedFiber(prevChild);
+            }
+            continue;
+        }
+
+        const isUsedLater =
+            newMap.hasOwnProperty(prevKey) && newMap[prevKey].newIndex > i;
+        const isUsedPreviously =
+            newMap.hasOwnProperty(prevKey) && newMap[prevKey].newIndex < i;
+
+        if (isUsedLater || isUsedPreviously) {
+            ToCommitDeletion = false;
+        }
+        // console.log(
+        //     prevChild,
+        //     nextChild,
+        //     isReused,
+        //     isUsedLater,
+        //     isUsedPreviously
+        // );
+        if (nextChild) nextChild.parent = prev;
+
+        if (!prevChild && nextChild) {
+            if (isReused) {
+                const { fiber } = newMap[nextKey];
+                commitReusedFiber(fiber);
+                prev.props.children.push(fiber);
+                updateNode(fiber, nextChild, i);
+                if (prev.props.children[i] === nextChild) {
+                    commitReusedFiber(nextChild);
+                } else if (prev.props.children[i] === fiber) {
+                    commitReusedFiber(fiber);
+                }
+            } else {
+                // needCreation just creates parent child heirarchy
+                commitFiber(nextChild);
+                prev.props.children.push(nextChild);
+            }
+        } else if (!nextChild && prevChild) {
+            commitDeletion(prevChild, true);
+            prev.props.children.splice(i, 1);
+            len = prev.props.children.length;
+            i--;
+        } else {
+            if (isReused) {
+                const { fiber } = newMap[nextKey];
+                commitReusedFiber(fiber);
+                // console.log(
+                //     fiber,
+                //     nextChild,
+                //     prevChild,
+                //     findLastChildDom(prev) === prevChild.dom
+                // );
+                commitDeletion(prevChild, true);
+                // because updateNode can call commitDeletion internally
+                ToCommitDeletion = true;
+
+                prev.props.children[i] = fiber;
+                updateNode(fiber, nextChild, i);
+                if (prev.props.children[i] === nextChild) {
+                    commitReusedFiber(nextChild);
+                } else if (prev.props.children[i] === fiber) {
+                    commitReusedFiber(fiber);
+                }
+            } else {
+                // console.log(ToCommitDeletion);
+                if (isUsedLater || isUsedPreviously) {
+                    commitFiber(nextChild);
+                    prev.props.children[i] = nextChild;
+                } else {
+                    updateNode(prevChild, nextChild, i);
+                    if (prev.props.children[i] === nextChild) {
+                        commitReusedFiber(nextChild);
+                    } else if (prev.props.children[i] === prevChild) {
+                        commitReusedFiber(prevChild);
+                    }
+                    const newLen = Math.max(
+                        prev.props.children.length,
+                        next.props.children.length
+                    );
+                    if (newLen < len) {
+                        len = newLen;
+                        i--;
+                    }
+                }
+            }
+        }
+        ToCommitDeletion = true;
+    }
+    // console.log(prev.props.children, next.props.children);
 }
 
 // @ts-expect-error
