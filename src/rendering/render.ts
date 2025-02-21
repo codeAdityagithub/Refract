@@ -210,32 +210,6 @@ function commitFiber(
         setRenderFunction(fiber);
     }
 }
-function commitReusedFiber(fiber: Fiber, referenceNode?: Node) {
-    if (!fiber) return;
-    if (fiber.type === "FRAGMENT") {
-        for (const child of fiber.props.children) {
-            commitReusedFiber(child, referenceNode);
-        }
-    } else if (typeof fiber.type === "function") {
-        for (const child of fiber.props.children) {
-            commitReusedFiber(child, referenceNode);
-        }
-    } else {
-        if (!fiber.dom) return;
-
-        let fiberParent: Fiber | undefined = fiber.parent;
-        while (fiberParent && !fiberParent.dom) {
-            fiberParent = fiberParent.parent;
-        }
-        if (referenceNode) {
-            fiberParent?.dom?.insertBefore(fiber.dom, referenceNode);
-        } else fiberParent?.dom?.appendChild(fiber.dom);
-
-        for (const child of fiber.props.children) {
-            commitReusedFiber(child);
-        }
-    }
-}
 
 let ToCommitDeletion = true;
 
@@ -434,6 +408,16 @@ function findParentFiberWithDom(fiber: Fiber): Fiber {
     }
     return fiberParent;
 }
+function findNearestParentWithDom(fiber: Fiber): Fiber {
+    if (!fiber) return;
+    if (fiber.dom) return fiber;
+
+    let fiberParent = fiber.parent;
+    while (fiberParent && !fiberParent.dom) {
+        fiberParent = fiberParent.parent;
+    }
+    return fiberParent;
+}
 
 function updateNode(
     prev: Fiber | undefined,
@@ -496,7 +480,7 @@ function updateNode(
                 !next.dom
             )
                 next.dom = prev.dom;
-            if (!node) {
+            if (node === undefined) {
                 console.error("no node found", prev, next);
                 return;
             }
@@ -573,7 +557,11 @@ function updateNode(
         }
     }
 }
-function reconcileList(oldFibers: FiberChildren, newFibers: FiberChildren) {
+
+function reconcileList(prev: Fiber, next: Fiber) {
+    const oldFibers = prev.props.children;
+    const newFibers = next.props.children;
+
     // Create a map from key to fiber for oldFibers.
     const oldMap: Record<string, any> = {};
     for (let i = 0; i < oldFibers.length; i++) {
@@ -586,20 +574,41 @@ function reconcileList(oldFibers: FiberChildren, newFibers: FiberChildren) {
         oldMap[String(key)] = oldFibers[i];
     }
 
+    const referenceNode = findLastChildDom(prev)?.nextSibling;
     // Create newChildren array based on newFibers order.
-    const newChildren = new Array(newFibers.length);
+    const fiberParent = findParentFiberWithDom(prev);
+
+    const prevLen = prev.props.children.length;
+
+    // const newChildren = new Array(newFibers.length);
     for (let i = 0; i < newFibers.length; i++) {
         const newFiber = newFibers[i];
         const key = newFiber.props.key;
         const keyStr = String(key);
         // If the fiber exists in the old list, reuse it.
         if (oldMap.hasOwnProperty(keyStr)) {
-            newChildren[i] = oldMap[keyStr];
+            const oldFiber = oldMap[keyStr];
+
+            if (prevLen > i) prev.props.children[i] = oldFiber;
+            else prev.props.children.push(oldFiber);
+
             delete oldMap[keyStr];
+
+            applyFiber(oldFiber, fiberParent.dom, referenceNode);
+
+            const newFiber = next.props.children[i];
+
+            if (newFiber) newFiber.parent = prev;
+
+            updateNode(oldFiber, newFiber, i);
         } else {
             // Otherwise, use the new fiber.
             // console.log(first)
-            newChildren[i] = newFiber;
+            if (prevLen > i) prev.props.children[i] = newFiber;
+            else prev.props.children.push(newFiber);
+
+            newFiber.parent = prev;
+            commitFiber(newFiber, referenceNode);
         }
     }
     for (const key in oldMap) {
@@ -608,8 +617,6 @@ function reconcileList(oldFibers: FiberChildren, newFibers: FiberChildren) {
             commitDeletion(fiber, true);
         }
     }
-
-    return newChildren;
 }
 
 function applyFiber(fiber: Fiber, parent: Node, referenceNode?: Node) {
@@ -635,34 +642,9 @@ function updateChildren(prev: Fiber, next: Fiber) {
     // console.log(isList, wasList);
 
     if (isList && wasList) {
-        const referenceNode = findLastChildDom(prev)?.nextSibling;
-
-        const result = reconcileList(prev.props.children, next.props.children);
+        const result = reconcileList(prev, next);
         if (result === false) {
             updateNonListChildrenWithKeys(prev, next);
-        } else {
-            prev.props.children = result;
-            // const fragment = document.createDocumentFragment();
-
-            let fiberParent: Fiber | undefined = prev.parent;
-            while (fiberParent && !fiberParent.dom) {
-                fiberParent = fiberParent.parent;
-            }
-            for (let i = 0; i < prev.props.children.length; i++) {
-                const child = prev.props.children[i];
-                if (child === next.props.children[i]) {
-                    child.parent = prev;
-                    commitFiber(child, referenceNode, false);
-                } else {
-                    applyFiber(child, fiberParent.dom, referenceNode);
-
-                    const nextChild = next.props.children[i];
-
-                    if (nextChild) nextChild.parent = prev;
-
-                    updateNode(child, nextChild, i);
-                }
-            }
         }
     } else {
         updateNonListChildrenWithKeys(prev, next);
@@ -752,6 +734,8 @@ function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
         }
     }
     // console.log(prev, next);
+    const parent = findNearestParentWithDom(prev);
+
     for (let i = 0; i < len; i++) {
         let prevChild = prev.props.children[i];
         let nextChild = next.props.children[i];
@@ -767,11 +751,8 @@ function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
         if (prevKey && nextKey && prevKey === nextKey) {
             // console.log("same", prevChild, nextChild);
             updateNode(prevChild, nextChild, i);
-            if (prev.props.children[i] === nextChild) {
-                commitReusedFiber(nextChild);
-            } else if (prev.props.children[i] === prevChild) {
-                commitReusedFiber(prevChild);
-            }
+
+            applyFiber(prev.props.children[i], parent.dom);
             continue;
         }
 
@@ -783,26 +764,18 @@ function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
         if (isUsedLater || isUsedPreviously) {
             ToCommitDeletion = false;
         }
-        // console.log(
-        //     prevChild,
-        //     nextChild,
-        //     isReused,
-        //     isUsedLater,
-        //     isUsedPreviously
-        // );
+
         if (nextChild) nextChild.parent = prev;
 
         if (!prevChild && nextChild) {
             if (isReused) {
                 const { fiber } = newMap[nextKey];
-                commitReusedFiber(fiber);
+
                 prev.props.children.push(fiber);
+
                 updateNode(fiber, nextChild, i);
-                if (prev.props.children[i] === nextChild) {
-                    commitReusedFiber(nextChild);
-                } else if (prev.props.children[i] === fiber) {
-                    commitReusedFiber(fiber);
-                }
+
+                applyFiber(prev.props.children[i], parent.dom);
             } else {
                 // needCreation just creates parent child heirarchy
                 commitFiber(nextChild);
@@ -816,24 +789,16 @@ function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
         } else {
             if (isReused) {
                 const { fiber } = newMap[nextKey];
-                commitReusedFiber(fiber);
-                // console.log(
-                //     fiber,
-                //     nextChild,
-                //     prevChild,
-                //     findLastChildDom(prev) === prevChild.dom
-                // );
+
                 commitDeletion(prevChild, true);
                 // because updateNode can call commitDeletion internally
                 ToCommitDeletion = true;
 
                 prev.props.children[i] = fiber;
+
                 updateNode(fiber, nextChild, i);
-                if (prev.props.children[i] === nextChild) {
-                    commitReusedFiber(nextChild);
-                } else if (prev.props.children[i] === fiber) {
-                    commitReusedFiber(fiber);
-                }
+
+                applyFiber(prev.props.children[i], parent.dom);
             } else {
                 // console.log(ToCommitDeletion);
                 if (isUsedLater || isUsedPreviously) {
@@ -841,11 +806,8 @@ function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
                     prev.props.children[i] = nextChild;
                 } else {
                     updateNode(prevChild, nextChild, i);
-                    if (prev.props.children[i] === nextChild) {
-                        commitReusedFiber(nextChild);
-                    } else if (prev.props.children[i] === prevChild) {
-                        commitReusedFiber(prevChild);
-                    }
+                    applyFiber(prev.props.children[i], parent.dom);
+
                     const newLen = Math.max(
                         prev.props.children.length,
                         next.props.children.length
