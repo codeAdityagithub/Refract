@@ -3,7 +3,7 @@ import { computed, createSignal } from "../signals/signal";
 const PerformanceTest = () => {
     // Simulating a real-world list of items using your signal-based library
     const items = createSignal(
-        Array.from({ length: 2000 }, (_, i) => `Item ${i}`)
+        Array.from({ length: 1000 }, (_, i) => `Item ${i}`)
     );
     const sortAsc = createSignal<boolean>(true);
 

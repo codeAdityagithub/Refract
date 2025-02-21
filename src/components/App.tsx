@@ -9,8 +9,8 @@ const App = (props: any) => {
     // return <ReactiveComponent />;
     // return <NonReactiveComponent />;
     // return <Test />;
-    return <ListsTest />;
-    // return <PerformanceTest />;
+    // return <ListsTest />;
+    return <PerformanceTest />;
     // return <ArrayReturningFC />;
     // return <Computed />;
 };

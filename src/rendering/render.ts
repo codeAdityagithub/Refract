@@ -566,7 +566,11 @@ function reconcileList(prev: Fiber, next: Fiber) {
     const oldMap: Record<string, any> = {};
     for (let i = 0; i < oldFibers.length; i++) {
         const key = oldFibers[i].props.key;
-        if (key === null || key === undefined) {
+        if (
+            key === null ||
+            key === undefined ||
+            oldMap.hasOwnProperty(String(key))
+        ) {
             // If any fiber is missing a key, we cannot reconcile.
             // oldFibers[i].props.key =
             return false;
@@ -703,7 +707,11 @@ function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
         count++;
         if (oldMap.hasOwnProperty(String(key))) {
             console.warn("Found two children with the same key", key);
-            continue;
+            console.warn(
+                "When two fibers are found having same key the whole children will default to manual updates, which can be slower than with key based reconciliation"
+            );
+            updateNonListChildren(prev, next);
+            return;
         }
         oldMap[String(key)] = { fiber: prev.props.children[i], index: i };
     }
@@ -724,7 +732,11 @@ function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
         if (oldFiber) {
             if (newMap.hasOwnProperty(String(key))) {
                 console.warn("Found two children with the same key", key);
-                continue;
+                console.warn(
+                    "When two fibers are found having same key the whole children will default to manual updates, which can be slower than with key based reconciliation"
+                );
+                updateNonListChildren(prev, next);
+                return;
             }
             newMap[String(key)] = {
                 fiber: oldFiber.fiber,
