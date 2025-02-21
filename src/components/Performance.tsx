@@ -31,8 +31,11 @@ const PerformanceTest = () => {
     });
 
     setTimeout(() => {
-        // items.value = [];
-        items.value[0] = "item modified";
+        items.value = [];
+        // items.value[0] = "item modified";
+        // setTimeout(() => {
+        //     items.value = Array.from({ length: 1000 }, (_, i) => `Item ${i}`);
+        // }, 1000);
     }, 5000);
 
     // Sorting the list based on the selected order
