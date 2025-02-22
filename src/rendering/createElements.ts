@@ -69,6 +69,10 @@ export function createChildren(children: FiberChildren): FiberChildren {
                         { children: isFragment ? val : createChildren(val) },
                         child
                     );
+                } else if (!val.type || !val.props) {
+                    throw new Error(
+                        "Invalid type for a dom node, found " + val
+                    );
                 }
                 return createSignalChild(val.type, val.props, child);
             } else {

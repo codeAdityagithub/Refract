@@ -3,6 +3,7 @@ import {
     ArraySignal,
     computed,
     createEffect,
+    createPromise,
     createSignal,
     ObjectSignal,
     PrimitiveSignal,
@@ -432,5 +433,80 @@ describe("Computed", () => {
         await Promise.resolve();
         expect(count).toBe(2);
         expect(doubleSignal.value).toBe(20);
+    });
+});
+
+describe("createPromise", () => {
+    const asyncResolvedFunction = async () => {
+        // wait 100 ms
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return "resolved";
+    };
+    const asyncRejectedFunction = async () => {
+        // wait 100 ms then reject
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        throw new Error("rejected");
+    };
+
+    it("should resolve a promise", async () => {
+        const promise = createPromise(asyncResolvedFunction);
+        expect(promise.value.data).toBe(null);
+        expect(promise.value.error).toBe(null);
+        expect(promise.value.status).toBe("pending");
+
+        await new Promise((resolve) => setTimeout(resolve, 110));
+
+        expect(promise.value.data).toBe("resolved");
+        expect(promise.value.error).toBe(null);
+        expect(promise.value.status).toBe("resolved");
+    });
+
+    it("should reject a promise", async () => {
+        const promise = createPromise(asyncRejectedFunction);
+        expect(promise.value.data).toBe(null);
+        expect(promise.value.error).toBe(null);
+        expect(promise.value.status).toBe("pending");
+
+        await new Promise((resolve) => setTimeout(resolve, 110));
+
+        expect(promise.value.data).toBe(null);
+        expect(promise.value.error).toBeInstanceOf(Error);
+        expect(promise.value.status).toBe("rejected");
+    });
+
+    describe("additional edge cases", () => {
+        it("should remain stable after resolution", async () => {
+            const promise = createPromise(asyncResolvedFunction);
+            await new Promise((resolve) => setTimeout(resolve, 110));
+            const resolvedState = { ...promise.value };
+            // Wait additional time to ensure state does not change
+            await new Promise((resolve) => setTimeout(resolve, 50));
+            expect(promise.value).toEqual(resolvedState);
+        });
+
+        it("should handle non-Error rejections", async () => {
+            const asyncRejectNonError = async () => {
+                await new Promise((resolve) => setTimeout(resolve, 100));
+                return Promise.reject("non-error rejection");
+            };
+            const promise = createPromise(asyncRejectNonError);
+            await new Promise((resolve) => setTimeout(resolve, 110));
+            expect(promise.value.data).toBe(null);
+            expect(promise.value.error).toBe("non-error rejection");
+            expect(promise.value.status).toBe("rejected");
+        });
+
+        it("should create independent promises", async () => {
+            const promise1 = createPromise(asyncResolvedFunction);
+            const promise2 = createPromise(asyncResolvedFunction);
+            await new Promise((resolve) => setTimeout(resolve, 110));
+            expect(promise1.value.data).toBe("resolved");
+            expect(promise2.value.data).toBe("resolved");
+        });
+
+        it("should throw if a non-function is passed", () => {
+            // @ts-expect-error: intentionally passing a non-function
+            expect(() => createPromise(123)).toThrow();
+        });
     });
 });

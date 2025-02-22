@@ -66,6 +66,40 @@ function computed<T extends NormalSignal | any[] | Record<any, any>>(
     return signal;
 }
 
+type PromiseOverload<T> =
+    | { status: "pending"; data: null; error: null }
+    | { status: "resolved"; data: T; error: null }
+    | { status: "rejected"; data: null; error: Error };
+
+export function createPromise<T>(fn: () => Promise<T>) {
+    if (typeof fn !== "function")
+        throw new Error("createPromise takes a function as the argument");
+    const promise = fn();
+
+    if (!(promise instanceof Promise)) {
+        throw new Error(
+            "createPromise takes a function that returns a promise"
+        );
+    }
+    const triggerSignal = createSignal<PromiseOverload<T>>({
+        status: "pending",
+        data: null,
+        error: null,
+    });
+
+    promise
+        .then((val) => {
+            triggerSignal.value.data = val;
+            triggerSignal.value.status = "resolved";
+        })
+        .catch((err) => {
+            triggerSignal.value.error = err;
+            triggerSignal.value.status = "rejected";
+        });
+
+    return triggerSignal;
+}
+
 const NonMutatingArrayMethods = [
     "concat",
     "every",
@@ -315,7 +349,6 @@ function createSignal<T extends NormalSignal | any[] | Record<any, any>>(
             );
         }
     } else if (isPrimitive(val)) {
-        // @ts-expect-error
         const signal = new PrimitiveSignal(val);
         addSignal(signal);
         return signal;

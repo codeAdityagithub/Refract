@@ -1,13 +1,25 @@
 import { cleanUp } from "../rendering/functionalComponents";
-import { createEffect, createSignal } from "../signals/signal";
+import { createEffect, createPromise, createSignal } from "../signals/signal";
 
-const FC = ({ text }) => {
-    console.log("FC mounted");
-    cleanUp(() => {
-        console.log("FC unmounted");
-    });
-    return <div>{text}</div>;
-};
+// const FC = () => {
+//     const promise = createPromise(() => {
+//         return new Promise<string>((resolve) => {
+//             setTimeout(() => resolve("resolved"), 1000);
+//         });
+//     });
+
+//     return (
+//         <div>
+//             <p>
+//                 {() =>
+//                     promise.value.status !== "resolved"
+//                         ? "pending"
+//                         : promise.value.data.toUpperCase()
+//                 }
+//             </p>
+//         </div>
+//     );
+// };
 
 const Test = () => {
     const textSignal = createSignal<string>("Initial Text");
@@ -48,6 +60,7 @@ const Test = () => {
                     </div>
                 )
             } */}
+            {/* <FC /> */}
             {() =>
                 showTextSignal.value ? (
                     <div>

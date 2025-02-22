@@ -14,8 +14,11 @@ vi.stubGlobal("requestIdleCallback", (cb) => {
     queueMicrotask(() => cb({ timeRemaining: () => 2 }));
 });
 
+// @ts-expect-error
 const createFiber = rendering.createFiber;
+// @ts-expect-error
 const commitFiber = rendering.commitFiber;
+// @ts-expect-error
 const commitDeletion = rendering.commitDeletion;
 const updateFiber = rendering.updateFiber;
 

@@ -8,7 +8,8 @@
         "jsx": "preserve", // Keep JSX syntax in the output for custom transformation
         "jsxFactory": "createElement", // Match your jsxFactory in esbuild
         "jsxFragmentFactory": "FRAGMENT",
-        "moduleResolution": "bundler"
+        "moduleResolution": "bundler",
+        "strictNullChecks": true
     },
     "exclude": ["node_modules", "dist"] // Exclude generated and third-party files
 }
