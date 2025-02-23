@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
 import * as rendering from "../../rendering/render";
-import { createPromise, createRef, createSignal } from "../../signals/signal";
+import {
+    createEffect,
+    createPromise,
+    createRef,
+    createSignal,
+} from "../../signals/signal";
+import { cleanUp } from "../../rendering/functionalComponents";
 
 vi.stubGlobal("requestIdleCallback", (cb) => {
     queueMicrotask(() => cb({ timeRemaining: () => 2 }));
@@ -362,5 +368,85 @@ describe("Refs", () => {
 
         // After unmounting, the ref should be reset to null.
         expect(myRef.current).toBe(null);
+    });
+});
+
+describe("Extra Edge cases", () => {
+    it("Should handle FC FC edge case", async () => {
+        const FC1 = ({ textSignal }) => {
+            const str = createSignal<string>("FC1");
+            const clicked = createSignal<boolean>(false);
+            let value = 0;
+            createEffect(() => {
+                console.log("Effect", value);
+                textSignal.value;
+                str.value;
+                return () => {
+                    console.log("Cleanup", value);
+                    value++;
+                };
+            });
+            cleanUp(() => {
+                console.log("Cleanup FC1");
+            });
+            // const compText = computed(() => "FC1" + str.value);
+            return (
+                <>
+                    This is FC1
+                    <h2>This is {() => str.value}</h2>
+                    <button
+                        onClick={() => {
+                            clicked.value = !clicked.value;
+                            str.value = clicked.value ? "FC1 Clicked" : "FC1";
+                        }}
+                    >
+                        Click
+                    </button>
+                </>
+            );
+        };
+        const FC2 = () => {
+            return (
+                <div>
+                    This is FC2
+                    <h2>This is FC2</h2>
+                </div>
+            );
+        };
+        const showTextSignal = createSignal<boolean>(false);
+        const textSignal = createSignal<string>("Initial Text");
+
+        const fiber = (
+            <div>
+                {() =>
+                    showTextSignal.value ? (
+                        <FC2 />
+                    ) : (
+                        <FC1 textSignal={textSignal} />
+                    )
+                }
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+
+        expect(fiber.dom.innerHTML).toBe(
+            "This is FC1<h2>This is FC1</h2><button>Click</button>"
+        );
+
+        showTextSignal.value = true;
+        await Promise.resolve();
+
+        expect(fiber.dom.innerHTML).toBe(
+            "<div>This is FC2<h2>This is FC2</h2></div>"
+        );
+
+        showTextSignal.value = false;
+        await Promise.resolve();
+
+        expect(fiber.dom.innerHTML).toBe(
+            "This is FC1<h2>This is FC1</h2><button>Click</button>"
+        );
     });
 });

@@ -5,6 +5,8 @@ import {
     createRef,
     createSignal,
 } from "../signals/signal";
+import FC1 from "./FC1";
+import FC2 from "./FC2";
 
 // const FC = () => {
 //     const promise = createPromise(() => {
@@ -33,11 +35,6 @@ const Test = () => {
         console.log(showTextSignal.value);
     });
     const h1ref = createRef<HTMLHeadingElement>();
-
-    // createEffect(() => {
-    //     console.log(h1ref.current);
-    //     showTextSignal.value;
-    // });
 
     return (
         <div>
@@ -130,7 +127,9 @@ const Test = () => {
                 )
             } */}
             {/* FC - FC */}
-            {/* {() => (showTextSignal.value ? <FC2 /> : <FC1 />)} */}
+            {() =>
+                showTextSignal.value ? <FC2 /> : <FC1 textSignal={textSignal} />
+            }
 
             {/* Fragment - Node */}
             {/* {() =>

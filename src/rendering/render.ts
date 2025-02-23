@@ -463,9 +463,9 @@ function updateNode(
                     if (!areSame) {
                         commitFiber(next, findFirstDom(prev), undefined, true);
 
+                        replaceRenderFunction(prev, next);
                         commitDeletion(prev);
                         replaceChildFromParent(prev, next, index);
-                        // console.log(prev.parent.props.children, next, index);
                     }
                 } else {
                     // console.log("fragment-fragment", { ...prev }, next);
@@ -474,14 +474,13 @@ function updateNode(
                 }
                 // replaceChildFromParent(prev, next);
             } else {
-                // console.log("Fragment-Node", prev, next);
                 next.parent = prev.parent;
                 let firstChild: Fiber | undefined = prev.props.children[0];
                 while (firstChild && !firstChild.dom)
                     firstChild = firstChild.props.children[0];
-                replaceRenderFunction(prev, next);
                 commitFiber(next, firstChild?.dom);
 
+                replaceRenderFunction(prev, next);
                 // removing all nodes of previous fragment
                 commitDeletion(prev);
                 replaceChildFromParent(prev, next, index);
