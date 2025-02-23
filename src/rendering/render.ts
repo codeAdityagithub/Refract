@@ -3,7 +3,7 @@ import {
     clearReactiveFunction,
     setReactiveFunction,
 } from "../signals/batch";
-import { BaseSignal } from "../signals/signal";
+import { BaseSignal, Ref } from "../signals/signal";
 import { Fiber, FiberChildren } from "../types";
 import { isPrimitive } from "../utils/general";
 import {
@@ -242,6 +242,8 @@ function commitDeletion(fiber: Fiber, toClearReactiveFunction?: boolean) {
                 delete fiber.props[prop];
             } else if (typeof fiber.props[prop] === "function") {
                 clearReactiveAttributes(fiber.props[prop]);
+            } else if (prop === "ref" && fiber.props[prop] instanceof Ref) {
+                fiber.props[prop].current = null;
             }
         }
 
@@ -319,7 +321,7 @@ function replaceChildFromParent(prev: Fiber, next: Fiber, index?: number) {
 
 export const isEvent = (key: string) => key.startsWith("on");
 export const isProperty = (key: string) =>
-    key !== "children" && !isEvent(key) && key !== "key";
+    key !== "children" && !isEvent(key) && key !== "key" && key !== "ref";
 const isNew = (prev: any, next: any, key: string) => prev[key] !== next[key];
 const isGone = (prev: any, next: any, key: string) => !(key in next);
 

@@ -100,6 +100,18 @@ export function createPromise<T>(fn: () => Promise<T>) {
     return triggerSignal;
 }
 
+export class Ref<T extends HTMLElement> {
+    current: T | null;
+    constructor(val: T | null) {
+        this.current = val;
+    }
+}
+
+export function createRef<T extends HTMLElement>() {
+    const ref = new Ref<T>(null);
+    return ref;
+}
+
 const NonMutatingArrayMethods = [
     "concat",
     "every",

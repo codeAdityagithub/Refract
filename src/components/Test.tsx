@@ -1,5 +1,10 @@
 import { cleanUp } from "../rendering/functionalComponents";
-import { createEffect, createPromise, createSignal } from "../signals/signal";
+import {
+    createEffect,
+    createPromise,
+    createRef,
+    createSignal,
+} from "../signals/signal";
 
 // const FC = () => {
 //     const promise = createPromise(() => {
@@ -27,11 +32,17 @@ const Test = () => {
     createEffect(() => {
         console.log(showTextSignal.value);
     });
+    const h1ref = createRef<HTMLHeadingElement>();
+
+    // createEffect(() => {
+    //     console.log(h1ref.current);
+    //     showTextSignal.value;
+    // });
 
     return (
         <div>
             {/* Static content with reactivity */}
-            <h1>{() => textSignal.value}</h1>
+            <h1 ref={h1ref}>{() => textSignal.value}</h1>
             {/* Array rendering */}
             {/* {() =>
                 showTextSignal.value ? (

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import * as rendering from "../../rendering/render";
-import { createPromise, createSignal } from "../../signals/signal";
+import { createPromise, createRef, createSignal } from "../../signals/signal";
 
 vi.stubGlobal("requestIdleCallback", (cb) => {
     queueMicrotask(() => cb({ timeRemaining: () => 2 }));
@@ -245,5 +245,122 @@ describe("Promises within components", () => {
         await new Promise((resolve) => setTimeout(resolve, 110));
         // Since the fiber is unmounted, its DOM should not be updated.
         expect(fiber.dom.innerHTML).toBe("");
+    });
+});
+
+describe("Refs", () => {
+    const renderComponent = (component) => {
+        const fiber = component;
+        createFiber(fiber);
+        commitFiber(fiber);
+        return fiber;
+    };
+    it("should initialize ref.current as null", () => {
+        const myRef = createRef();
+        expect(myRef.current).toBe(null);
+    });
+
+    it("should assign ref to the DOM element after mounting", () => {
+        const myRef = createRef();
+
+        const FC = () => <div ref={myRef}>Hello</div>;
+
+        const fiber = renderComponent(<FC />);
+        // After commit, the ref should point to the div element.
+        expect(myRef.current).not.toBe(null);
+
+        expect(myRef.current?.tagName).toBe("DIV");
+        expect(myRef.current?.innerHTML).toContain("Hello");
+    });
+
+    it("should update ref when element is conditionally rendered", async () => {
+        const myRef = createRef();
+        const showSignal = createSignal<boolean>(true);
+
+        const FC = () => (
+            <div>
+                {() =>
+                    showSignal.value ? (
+                        <span ref={myRef}>Conditional</span>
+                    ) : (
+                        <p>No Element</p>
+                    )
+                }
+            </div>
+        );
+
+        let fiber = renderComponent(<FC />);
+        // Initially, the element is rendered.
+        expect(myRef.current).not.toBe(null);
+        expect(myRef.current?.tagName).toBe("SPAN");
+
+        // Update the signal to unmount the <span>.
+        showSignal.value = false;
+        await Promise.resolve();
+
+        commitFiber(fiber);
+
+        // After unmounting, the ref should be reset to null.
+        expect(myRef.current).toBe(null);
+    });
+
+    it("should persist the same ref if the element remains after re-render", async () => {
+        const myRef = createRef();
+        const countSignal = createSignal(0);
+
+        const FC = () => (
+            <div>
+                <span ref={myRef}>Count is {() => countSignal.value}</span>
+            </div>
+        );
+
+        const fiber = renderComponent(<FC />);
+        const initialRef = myRef.current;
+
+        // Trigger an update that does not remove the element.
+        countSignal.value++;
+        await Promise.resolve();
+
+        // The ref should remain the same across re-renders.
+        expect(myRef.current).toBe(initialRef);
+    });
+
+    it("should update ref when element is removed and remounted", async () => {
+        const myRef = createRef();
+        const showSignal = createSignal<boolean>(false);
+
+        const FC = () => (
+            <div>
+                <button onClick={() => (showSignal.value = !showSignal.value)}>
+                    Toggle
+                </button>
+                {() =>
+                    showSignal.value ? (
+                        <input ref={myRef} />
+                    ) : (
+                        <div>No Input</div>
+                    )
+                }
+            </div>
+        );
+
+        const fiber = renderComponent(<FC />);
+
+        // Initially, no input is rendered so ref should be null.
+        expect(myRef.current).toBe(null);
+
+        // Toggle to mount the <input>.
+        showSignal.value = true;
+        await Promise.resolve();
+
+        expect(myRef.current).not.toBe(null);
+        expect(myRef.current?.tagName).toBe("INPUT");
+
+        // Toggle again to unmount the <input>.
+        showSignal.value = false;
+        await Promise.resolve();
+
+        // After unmounting, the ref should be reset to null.
+        expect(myRef.current).toBe(null);
     });
 });

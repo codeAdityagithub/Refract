@@ -1,6 +1,6 @@
 import { isValidStyle, preprocessStyle, styleObjectToString } from "../lib";
 import { setReactiveAttributes } from "../signals/batch";
-import { reactive, reactiveAttribute } from "../signals/signal";
+import { reactive, reactiveAttribute, Ref } from "../signals/signal";
 import {
     Element,
     Fiber,
@@ -108,7 +108,7 @@ function createSignalChild(
 }
 
 function isProperty(key: string) {
-    return key !== "children" && key !== "key";
+    return key !== "children" && key !== "key" && key !== "ref";
 }
 export function createNode(element: Fiber) {
     const dom =
@@ -117,6 +117,15 @@ export function createNode(element: Fiber) {
             : // @ts-expect-error
               document.createElement(element.type);
     if (!element.props) return dom;
+
+    if (
+        element.props.ref &&
+        element.props.ref instanceof Ref &&
+        dom instanceof HTMLElement
+    ) {
+        element.props.ref.current = dom;
+    }
+
     Object.keys(element.props)
         .filter(isProperty)
         .forEach((name) => {
