@@ -5,6 +5,16 @@ import { addEffectCleanup, batchUpdate } from "./batch";
 let currentReactiveFunction: any = null;
 let currentEffect: any = null;
 
+function addSignalToReactiveFunction(signal: any) {
+    if (!currentReactiveFunction.__signals)
+        currentReactiveFunction.__signals = [signal];
+    else currentReactiveFunction.__signals.push(signal);
+}
+function addSignalToEffect(signal: any) {
+    if (!currentEffect.__signals) currentEffect.__signals = [signal];
+    else currentEffect.__signals.push(signal);
+}
+
 export function reactive(fn: Function) {
     if (typeof fn !== "function")
         throw new Error("reactive takes a render function as the argument");
@@ -187,10 +197,12 @@ export class PrimitiveSignal<T extends NormalSignal> extends BaseSignal<T> {
     get value(): T {
         if (currentEffect) {
             this.deps.add(currentEffect);
+            addSignalToEffect(this);
         }
         if (currentReactiveFunction) {
-            currentReactiveFunction.__signal = this;
             this.deps.add(currentReactiveFunction);
+
+            addSignalToReactiveFunction(this);
         }
         // (Optional) debug logging:
         // console.log(this.deps);
@@ -252,10 +264,11 @@ export class ArraySignal<T extends any[]> extends BaseSignal<T> {
     get value(): T {
         if (currentEffect) {
             this.deps.add(currentEffect);
+            addSignalToEffect(this);
         }
         if (currentReactiveFunction) {
-            currentReactiveFunction.__signal = this;
             this.deps.add(currentReactiveFunction);
+            addSignalToReactiveFunction(this);
         }
         return this._val;
     }
@@ -312,10 +325,11 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
     get value(): T {
         if (currentEffect) {
             this.deps.add(currentEffect);
+            addSignalToEffect(this);
         }
         if (currentReactiveFunction) {
-            currentReactiveFunction.__signal = this;
             this.deps.add(currentReactiveFunction);
+            addSignalToReactiveFunction(this);
         }
         return this._val;
     }

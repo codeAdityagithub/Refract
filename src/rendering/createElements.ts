@@ -151,7 +151,7 @@ export function createNode(element: Fiber) {
                 // registers the function in corresponding signal
                 const val = reactiveAttribute(func);
 
-                if (!val && val !== 0) {
+                if (val === null || val === undefined || val === false) {
                     return;
                 }
                 if (
@@ -182,9 +182,13 @@ export function createNode(element: Fiber) {
                     }
                 }
                 // this is a reactive attribute
-                if (func.__signal) setReactiveAttributes(func, dom);
+                if (func.__signals) setReactiveAttributes(func, dom);
             } else {
-                if (!element.props[name] && element.props[name] !== 0) {
+                if (
+                    element.props[name] === null ||
+                    element.props[name] === undefined ||
+                    element.props[name] === false
+                ) {
                     return;
                 }
 
@@ -222,7 +226,13 @@ export function createNode(element: Fiber) {
 }
 
 export function updateDomProp(prop: string, dom: HTMLElement | Text, value) {
-    if (!value || prop == "key") return;
+    if (
+        value === null ||
+        value === undefined ||
+        value === false ||
+        prop === "key"
+    )
+        return;
     if (
         prop === "style" &&
         typeof value !== "string" &&
@@ -240,7 +250,7 @@ export function updateDomProp(prop: string, dom: HTMLElement | Text, value) {
             dom instanceof HTMLElement &&
             (prop in dom || prop.startsWith("data-"))
         ) {
-            if (prop === "classProp") prop = "class";
+            if (prop === "className") prop = "class";
 
             dom.setAttribute(prop, String(value));
         } else {

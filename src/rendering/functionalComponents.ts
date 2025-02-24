@@ -3,7 +3,11 @@ import { BaseSignal } from "../signals/signal";
 let currentFC = null;
 let fcMap = new WeakMap<
     Function,
-    { signals: Set<BaseSignal<any>>; cleanup: Function; effects: Function[] }
+    {
+        signals: Set<BaseSignal<any>>;
+        cleanup: Function | null;
+        effects: Set<Function>;
+    }
 >();
 
 export function setCurrentFC(fc) {
@@ -32,7 +36,7 @@ export function cleanUp(fn: Function) {
             fcMap.set(currentFC, {
                 signals: new Set(),
                 cleanup: fn,
-                effects: [],
+                effects: new Set(),
             });
         }
     }
@@ -42,12 +46,14 @@ export function addEffect(fn: Function) {
     if (currentFC) {
         if (fcMap.has(currentFC)) {
             const fcData = fcMap.get(currentFC)!;
-            fcData.effects.push(fn);
+            fcData.effects.add(fn);
         } else {
+            const effects = new Set<Function>();
+            effects.add(fn);
             fcMap.set(currentFC, {
                 signals: new Set(),
                 cleanup: null,
-                effects: [fn],
+                effects: effects,
             });
         }
     }
@@ -63,7 +69,7 @@ export function addSignal(signal: BaseSignal<any>) {
             fcMap.set(currentFC, {
                 signals: signals,
                 cleanup: null,
-                effects: [],
+                effects: new Set(),
             });
         }
     }
@@ -77,13 +83,16 @@ export function cleanUpFC(currentFC, props) {
 
         fcData.cleanup = null;
 
-        for (const prop of Object.values(props)) {
-            if (prop instanceof BaseSignal) {
-                // console.log("External signal removing effect");
-                for (const effect of fcData.effects) {
-                    prop.removeDep(effect);
+        for (const effect of fcData.effects) {
+            // @ts-expect-error
+            if (effect.__signals && Array.isArray(effect.__signals)) {
+                // @ts-expect-error
+                for (const signal of effect.__signals) {
+                    signal.removeDep(effect);
                 }
             }
+            // @ts-expect-error
+            delete effect.__signals;
         }
 
         fcData.signals.forEach((signal) => signal.clearDeps());

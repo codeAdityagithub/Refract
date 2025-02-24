@@ -11,12 +11,14 @@ import {
 const LazyFC1 = lazy(() => import("./FC1.jsx"));
 const LazyFC2 = lazy(() => import("./FC2.jsx"));
 
+const showTextSignal = createSignal<boolean>(true);
+export const textSignal = createSignal<string>("Initial Text");
+
 const Test = () => {
-    const textSignal = createSignal<string>("Initial Text");
-    const showTextSignal = createSignal<boolean>(true);
     createEffect(() => {
         console.log(showTextSignal.value);
     });
+
     const h1ref = createRef<HTMLHeadingElement>();
 
     return (
@@ -32,7 +34,6 @@ const Test = () => {
                     />
                 ) : (
                     <LazyFC1
-                        textSignal={textSignal}
                         fallback={"Loading..."}
                         errorFallback={(error) => <h2>{error.message}</h2>}
                     />

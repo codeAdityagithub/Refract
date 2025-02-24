@@ -66,20 +66,25 @@ export function setReactiveAttributes(fn: Function, dom: HTMLElement | Text) {
 export function clearReactiveAttributes(fn: any) {
     domAttributeMap.delete(fn);
 
-    if (fn && fn.__signal && fn.__signal.removeDep) {
-        fn.__signal.removeDep(fn);
-        delete fn.__signal;
+    const signals = fn.__signals;
+    if (signals && Array.isArray(signals)) {
+        for (const signal of signals) {
+            signal.removeDep(fn);
+        }
+        fn.__signals = null;
     }
 }
 
 export function clearReactiveFunction(fn: Function) {
     reactiveFiberMap.delete(fn);
     // @ts-expect-error
-    const signal = fn.__signal;
-    if (signal && signal.removeDep) {
-        signal.removeDep(fn);
+    const signals = fn.__signals;
+    if (signals && Array.isArray(signals)) {
+        for (const signal of signals) {
+            signal.removeDep(fn);
+        }
         // @ts-expect-error
-        fn.__signal = null;
+        fn.__signals = null;
     }
 }
 
