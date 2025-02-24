@@ -44,16 +44,21 @@ export function createChildren(children: FiberChildren): FiberChildren {
                 if (child === null) {
                     return createTextChildren("");
                 }
+                if (!child.type || !child.props) {
+                    throw new Error(
+                        "Invalid type for a dom node, found " + child
+                    );
+                }
                 return child;
             } else if (typeof child === "function") {
                 const val = reactive(child);
-                if (isPrimitive(val))
+                if (isPrimitive(val)) {
                     return createSignalChild(
                         "TEXT_CHILD",
                         {
                             nodeValue:
-                                val !== undefined ||
-                                val !== null ||
+                                val !== undefined &&
+                                val !== null &&
                                 val !== false
                                     ? String(val)
                                     : "",
@@ -61,7 +66,7 @@ export function createChildren(children: FiberChildren): FiberChildren {
                         },
                         child
                     );
-                else if (Array.isArray(val)) {
+                } else if (Array.isArray(val)) {
                     // console.log(createChildren(val));
                     const isFragment = val[FRAGMENT_SYMBOL];
                     return createSignalChild(
@@ -182,6 +187,7 @@ export function createNode(element: Fiber) {
                 if (!element.props[name] && element.props[name] !== 0) {
                     return;
                 }
+
                 if (
                     name === "style" &&
                     typeof element.props[name] !== "string" &&

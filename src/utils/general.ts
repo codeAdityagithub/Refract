@@ -9,7 +9,8 @@ export function isPlainObject(variable: any) {
 export function isPrimitive(val: any) {
     return (
         ["boolean", "string", "number", "undefined"].includes(typeof val) ||
-        val === null
+        val === null ||
+        val instanceof Error
     );
 }
 

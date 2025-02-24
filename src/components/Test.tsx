@@ -1,3 +1,4 @@
+import { lazy } from "../lazy/Lazyloading.jsx";
 import { cleanUp } from "../rendering/functionalComponents";
 import {
     createEffect,
@@ -5,28 +6,10 @@ import {
     createRef,
     createSignal,
 } from "../signals/signal";
-import FC1 from "./FC1";
-import FC2 from "./FC2";
 
-// const FC = () => {
-//     const promise = createPromise(() => {
-//         return new Promise<string>((resolve) => {
-//             setTimeout(() => resolve("resolved"), 1000);
-//         });
-//     });
-
-//     return (
-//         <div>
-//             <p>
-//                 {() =>
-//                     promise.value.status !== "resolved"
-//                         ? "pending"
-//                         : promise.value.data.toUpperCase()
-//                 }
-//             </p>
-//         </div>
-//     );
-// };
+// Lazy load components
+const LazyFC1 = lazy(() => import("./FC1.jsx"));
+const LazyFC2 = lazy(() => import("./FC2.jsx"));
 
 const Test = () => {
     const textSignal = createSignal<string>("Initial Text");
@@ -40,185 +23,21 @@ const Test = () => {
         <div>
             {/* Static content with reactivity */}
             <h1 ref={h1ref}>{() => textSignal.value}</h1>
-            {/* Array rendering */}
-            {/* {() =>
-                showTextSignal.value ? (
-                    <div>
-                        <span key="world">World</span>
-                        <p key="hello">Hello</p>
-                        {() => (
-                            <>
-                                <div>Fragment 1</div>
-                                <div>Fragment 2</div>
-                            </>
-                        )}
-                    </div>
-                ) : (
-                    <div>
-                        <p key="hello">Hello</p>
-                        <span key="world">World</span>
-                        
-                        {() => (
-                            <>
-                                <div>Fragment 3</div>
-                                <div>Fragment 4</div>
-                            </>
-                        )}
-                        <div>New Node2</div>
-                    </div>
-                )
-            } */}
-            {/* <FC /> */}
+
             {() =>
                 showTextSignal.value ? (
-                    <div>
-                        <p>Paragraph 1</p>
-                        <span key="1">Span 1</span>
-                        <p key="2">Paragraph 2</p>
-                        <p>Paragraph 3</p>
-                        <div key="3">Div 3</div>
-                    </div>
+                    <LazyFC2
+                        fallback={<h2>Loading...</h2>}
+                        errorFallback={(error) => <h2>{error.message}</h2>}
+                    />
                 ) : (
-                    <div>
-                        <span key="1">Span 1</span>
-                        <p key="2">Paragraph 2</p>
-                    </div>
+                    <LazyFC1
+                        textSignal={textSignal}
+                        fallback={"Loading..."}
+                        errorFallback={(error) => <h2>{error.message}</h2>}
+                    />
                 )
             }
-
-            {/* Fragment - Fragment with reactivity */}
-            {/* {() =>
-                showTextSignal.value ? (
-                    <>
-                        <p>
-                            <span>{textSignal.value}</span>
-                        </p>
-                        <h2>{textSignal.value}</h2>
-                        <div key={"hi1"}>Hi</div>
-                        <h3 key={"hi2"}>Hi</h3>
-                    </>
-                ) : (
-                    <>
-                        <p>
-                            <span>Hidden Text</span>
-                        </p>
-                        <h2>Hello!!</h2>
-                        <h3 key={"hi2"}>Hi</h3>
-                        <div key={"hi1"}>Hi</div>
-                    </>
-                )
-            } */}
-            {/* FC - Fragment */}
-            {/* {() =>
-                showTextSignal.value ? (
-                    <>
-                        <FC1 />
-                        <FC2 />
-                    </>
-                ) : (
-                    <>
-                        <p>
-                            <span>{() => textSignal.value}</span>
-                        </p>
-                        <h2>{() => textSignal.value}</h2>
-                        <h2>Hello!!</h2>
-                        <h3>Hi</h3>
-                    </>
-                )
-            } */}
-            {/* FC - FC */}
-            {() =>
-                showTextSignal.value ? <FC2 /> : <FC1 textSignal={textSignal} />
-            }
-
-            {/* Fragment - Node */}
-            {/* {() =>
-                showTextSignal.value ? (
-                    <>
-                        <p>
-                            <span>{textSignal.value}</span>
-                        </p>
-                        <h2>{textSignal.value}</h2>
-                        <div>hello</div>
-                    </>
-                ) : (
-                    <div>
-                        <h3>hello</h3>
-                        <h3>hi</h3>
-                        <>
-                            <p>hi</p>
-                            <p>{() => textSignal.value}</p>
-                        </>
-                    </div>
-                )
-            } */}
-
-            {/* Node - Node with reactivity */}
-            {/* {() =>
-                showTextSignal.value ? (
-                    <p>
-                        <span>Extra</span>
-                        {textSignal.value}
-                    </p>
-                ) : (
-                    <div>
-                        hidden
-                        <span>hidden</span>
-                        hidden
-                    </div>
-                )
-            } */}
-
-            {/* Node - FC with reactivity */}
-            {/* {() =>
-                showTextSignal.value ? (
-                    <p>
-                        <span>Extra</span>
-                        {textSignal.value}
-                    </p>
-                ) : (
-                    <FC1 />
-                )
-            } */}
-
-            {/* <div>{() => !showTextSignal.value && textSignal.value}</div> */}
-            {/* <div id={() => `id-${textSignal.value}`}>Dynamic ID</div> */}
-            {/* <div className={null}>No Data</div> */}
-            {/* <button
-                onClick={() => {
-                    textSignal.value = showTextSignal.value
-                        ? "Reacted to Toggle"
-                        : "Reset Text";
-                }}
-            >
-                Dynamic Event Listener Reactivity
-            </button> */}
-            {/* <div className={() => "Class"}>
-                Attributes that are functions but not reactive to any signal
-            </div> */}
-            {/* <div>
-                {() => {
-                    if (showTextSignal.value) return <p>{textSignal.value}</p>;
-                    return <h2>Not hidden</h2>;
-                }}
-            </div> */}
-            {/* <div
-                id="type-coerce"
-                // data-count={() => 123}
-                data-count="12"
-            >
-                Type coersion
-            </div>
-            <textarea
-                name="area"
-                id=""
-                rows={() => 30}
-            ></textarea>
-            <div unknown-attr="value">Unknown attribute ignore</div> */}
-            {/* <div tabIndex={() => 0}>Focusable</div> */}
-            {/* <div className={() => ["class1", "class2"].join(" ")}>Styled</div> */}
-            {/* <input /> */}
-            {/* <p>{undefined}</p> */}
             <button
                 onClick={() => (showTextSignal.value = !showTextSignal.value)}
             >
@@ -229,21 +48,6 @@ const Test = () => {
             <button onClick={() => (textSignal.value = "Updated Text")}>
                 Update Text
             </button>
-            {/* <button onClick={() => alert("Clicked!")}>Click Me</button> */}
-            {/* <input
-                type="checkbox"
-                checked={() => showTextSignal.value}
-            /> */}
-
-            {/* <div
-                style={() => ({
-                    color: showTextSignal.value ? "red" : "blue",
-                    backgroundColor: "lightgray",
-                    fontSize: "40px",
-                })}
-            >
-                Styled Text
-            </div> */}
         </div>
     );
 };

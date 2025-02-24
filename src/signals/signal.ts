@@ -170,7 +170,7 @@ export abstract class BaseSignal<T> {
     abstract set value(val: T);
 }
 
-type NormalSignal = boolean | string | number | undefined | null;
+type NormalSignal = boolean | string | number | undefined | null | Error;
 /**
  * Signal for primitive types.
  */

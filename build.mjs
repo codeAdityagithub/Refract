@@ -4,6 +4,9 @@ import fs from "node:fs/promises";
 import path from "path";
 
 import { WebSocketServer } from "ws";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const isProd =
     process.env.NODE_ENV === "production" ||
@@ -13,38 +16,41 @@ const isProd =
 const buildOptions = {
     entryPoints: ["./src/components/Main.tsx"], // Your JSX entry file
     bundle: true, // Bundle all dependencies into one file
-    outfile: "dist/bundle.js", // Output file
+    splitting: true,
+    outdir: isProd ? "build" : "dist", // Output file
     minify: false, // Minify the output
     format: "esm", // Output as ES module
     jsx: "transform", // Convert JSX to JavaScript
     jsxFactory: "createElement", // Use your custom createElement function,
     jsxFragment: '"FRAGMENT"',
-    inject: [
-        path.join(import.meta.dirname, "./src/rendering/createElements.ts"),
-    ],
+    inject: [path.join(__dirname, "./src/rendering/createElements.ts")],
 };
 const injectHtml = async () => {
     try {
+        const outputDir = path.join(__dirname, isProd ? "build" : "dist");
+
+        // Ensure the output directory exists before writing
+        await fs.mkdir(outputDir, { recursive: true });
+
         const index = await fs.readFile(
-            path.join(import.meta.dirname, "./public/index.html"),
+            path.join(__dirname, "./public/index.html"),
             "utf-8"
         );
         const injectWSScript = index.replace(
             "</body>",
             `
-              <script>
-                const ws = new WebSocket("ws://localhost:3001");
-                ws.onmessage = (event) => {
-                  if (event.data === "reload") {
-                    window.location.reload();
-                  }
-                };
-              </script>
+            <script>
+              const ws = new WebSocket("ws://localhost:3001");
+              ws.onmessage = (event) => {
+                if (event.data === "reload") window.location.reload();
+              };
+            </script>
             </body>
             `
         );
+
         await fs.writeFile(
-            path.join(import.meta.dirname, "./dist/index.html"),
+            path.join(outputDir, "index.html"),
             injectWSScript,
             "utf-8"
         );
@@ -52,6 +58,7 @@ const injectHtml = async () => {
         console.error("Error updating index.html:", err);
     }
 };
+
 async function dev() {
     const context = await esbuild.context(buildOptions);
 
@@ -73,9 +80,9 @@ async function dev() {
     console.log("Server Listening on http://localhost:3000");
 
     chokidar
-        .watch(["./src", "./signals.ts", "./index.html"])
+        .watch(["./src", "./signals.ts", "./public/index.html"])
         .on("change", async (path) => {
-            if (path === "index.html") {
+            if (path === "public/index.html") {
                 console.log(`${path} changed, rebuilding...`);
                 await injectHtml();
                 console.log("Server Listening on http://localhost:3000");
@@ -89,7 +96,7 @@ async function dev() {
     console.log("Watching for changes...");
 }
 if (isProd) {
-    // buildOptions.minify = true;
+    buildOptions.minify = true;
     injectHtml()
         .then(() => {
             esbuild.build(buildOptions).catch((err) => {

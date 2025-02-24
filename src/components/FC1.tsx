@@ -21,7 +21,7 @@ const FC1 = ({ textSignal }: { textSignal: BaseSignal<string> }) => {
     // const compText = computed(() => "FC1" + str.value);
     return (
         <>
-            This is FC1
+            This is FC1 {() => textSignal.value}
             <h2>This is {() => str.value}</h2>
             <button
                 onClick={() => {
