@@ -81,7 +81,7 @@ export function lazy<T extends (props: any) => any>(
                 {() =>
                     loading.value
                         ? props.fallback
-                        : error.value
+                        : error.value !== null
                         ? props.errorFallback
                             ? typeof props.errorFallback === "function"
                                 ? props.errorFallback(error.value)

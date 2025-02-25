@@ -8,6 +8,6 @@ export default defineConfig({
         jsxFactory: "createElement",
         jsxFragment: '"FRAGMENT"',
         // jsxImportSource: "./src/rendering/createElements.ts",
-        jsxInject: `import { createElement } from "../../rendering/createElements.ts";`,
+        jsxInject: `import { createElement } from "../../rendering/createElements.ts"`,
     },
 });
