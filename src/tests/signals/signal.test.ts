@@ -362,6 +362,103 @@ describe("Signal", () => {
         expect(count).toBe(1);
         expect(arrSignal.value[0].id).toBe(3);
     });
+    it("Should handle object containing array changes", async () => {
+        const arrSignal = createSignal({
+            ids: [1, 2, 3],
+        });
+
+        let count = 0;
+
+        // Reactive function to track changes
+        const func = () => {
+            count++;
+            return arrSignal.value.ids.join(","); // Joining the array for easy comparison
+        };
+
+        const retval = reactive(func);
+        expect(retval).toBe("1,2,3");
+        expect(count).toBe(1);
+
+        // Test push
+        arrSignal.value.ids.push(4);
+        await Promise.resolve();
+        expect(arrSignal.value.ids).toEqual([1, 2, 3, 4]);
+        expect(count).toBe(2);
+
+        // Test pop
+        arrSignal.value.ids.pop();
+        await Promise.resolve();
+        expect(arrSignal.value.ids).toEqual([1, 2, 3]);
+        expect(count).toBe(3);
+
+        // Test shift
+        arrSignal.value.ids.shift();
+        await Promise.resolve();
+        expect(arrSignal.value.ids).toEqual([2, 3]);
+        expect(count).toBe(4);
+
+        // Test unshift
+        arrSignal.value.ids.unshift(0);
+        await Promise.resolve();
+        expect(arrSignal.value.ids).toEqual([0, 2, 3]);
+        expect(count).toBe(5);
+
+        // Test splice (remove and add elements)
+        arrSignal.value.ids.splice(1, 1, 8, 9);
+        await Promise.resolve();
+        expect(arrSignal.value.ids).toEqual([0, 8, 9, 3]);
+        expect(count).toBe(6);
+
+        // Test reverse
+        arrSignal.value.ids.reverse();
+        await Promise.resolve();
+        expect(arrSignal.value.ids).toEqual([3, 9, 8, 0]);
+        expect(count).toBe(7);
+
+        // Test sort
+        arrSignal.value.ids.sort((a, b) => a - b);
+        await Promise.resolve();
+        expect(arrSignal.value.ids).toEqual([0, 3, 8, 9]);
+        expect(count).toBe(8);
+
+        // Test fill
+        arrSignal.value.ids.fill(1, 1, 3);
+        await Promise.resolve();
+        expect(arrSignal.value.ids).toEqual([0, 1, 1, 9]);
+        expect(count).toBe(9);
+
+        // Test copyWithin
+        arrSignal.value.ids.copyWithin(1, 2, 4);
+        await Promise.resolve();
+        expect(arrSignal.value.ids).toEqual([0, 1, 9, 9]);
+        expect(count).toBe(10);
+
+        // Test length modification (truncation)
+        arrSignal.value.ids.length = 2;
+        await Promise.resolve();
+        expect(arrSignal.value.ids).toEqual([0, 1]);
+        expect(count).toBe(11);
+
+        // Test length extension
+        arrSignal.value.ids.length = 5;
+        await Promise.resolve();
+        expect(arrSignal.value.ids).toEqual([
+            0,
+            1,
+            undefined,
+            undefined,
+            undefined,
+        ]);
+        expect(count).toBe(12);
+
+        arrSignal.value.ids[0] = 10;
+        await Promise.resolve();
+        expect(count).toBe(13);
+
+        arrSignal.value.ids[1]++;
+        await Promise.resolve();
+        expect(count).toBe(14);
+    });
     it("should not trigger reactivity on the same value set", async () => {
         const numSignal = createSignal(0);
         let count = 0;

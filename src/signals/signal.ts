@@ -298,9 +298,43 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
         super(val);
         this._val = this.createProxy(val);
     }
-
+    private createInternalArrayProxy<A extends any[]>(val: A): A {
+        return new Proxy(val, {
+            get: (target, prop) => {
+                const value = target[prop as any];
+                // If a function is accessed, wrap it to trigger notifications on mutation.
+                if (typeof value === "function") {
+                    return (...args: any[]) => {
+                        const result = value.apply(target, args);
+                        // Notify if the method is mutating.
+                        if (!NonMutatingArrayMethods.includes(String(prop))) {
+                            this.notify();
+                        }
+                        return result;
+                    };
+                }
+                return value;
+            },
+            set: (target, prop, newValue) => {
+                target[prop as any] = newValue;
+                this.notify();
+                return true;
+            },
+        });
+    }
     private createProxy(val: T): T {
         return new Proxy(val, {
+            get: (target, prop) => {
+                const value = target[prop as any];
+                if (Array.isArray(value)) {
+                    // @ts-expect-error
+                    target[prop as any] =
+                        this.createInternalArrayProxy<typeof value>(value);
+
+                    return target[prop as any];
+                }
+                return value;
+            },
             set: (target, prop, newValue) => {
                 // Do not allow functions to be set as values.
                 if (typeof newValue === "function") return false;
