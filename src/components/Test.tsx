@@ -24,7 +24,9 @@ const Test = () => {
     return (
         <div>
             {/* Static content with reactivity */}
-            <h1 ref={h1ref}>{() => textSignal.value}</h1>
+            <h1 ref={h1ref}>
+                <>{() => textSignal.value}</>
+            </h1>
 
             {() =>
                 showTextSignal.value ? (
