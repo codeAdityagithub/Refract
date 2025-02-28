@@ -1,18 +1,20 @@
 {
-    "name": "refract",
+    "name": "refract-js",
     "type": "module",
     "version": "1.0.0",
-    "description": "",
+    "description": "Simpler, Faster and Lighter JSX based rendering for Single-Page Applications",
     "main": "src/index.ts",
-    "types": "build/index.d.ts",
+    "types": "src/index.d.ts",
     "scripts": {
         "test": "vitest",
         "build": "vite build",
         "dev": "vite",
         "start": "vite preview"
     },
-    "keywords": [],
-    "author": "",
+    "keywords": [
+        "refract-js"
+    ],
+    "author": "Aditya",
     "license": "ISC",
     "devDependencies": {
         "@testing-library/dom": "^10.4.0",
@@ -20,5 +22,10 @@
         "vite": "^6.2.0",
         "vite-plugin-dts": "^4.5.0",
         "vitest": "^3.0.1"
+    },
+    "homepage": "https://github.com/codeAdityagithub/Refract#readme",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/codeAdityagithub/Refract.git"
     }
 }
