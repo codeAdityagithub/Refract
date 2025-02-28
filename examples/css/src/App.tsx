@@ -1,4 +1,12 @@
+import Emotion from "./Emotion";
+import Tailwind from "./Tailwind";
+
 const App = () => {
-    return <div>App</div>;
+    return (
+        <>
+            <Emotion />
+            <Tailwind />
+        </>
+    );
 };
 export default App;

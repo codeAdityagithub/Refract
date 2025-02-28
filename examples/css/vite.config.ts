@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import path from "path";
 // @ts-expect-error
 const isProd = process.env.NODE_ENV === "production";
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
     root: "./",
@@ -23,8 +24,9 @@ export default defineConfig({
     esbuild: {
         jsxFactory: "createElement", // Your custom JSX factory function
         jsxFragment: '"FRAGMENT"', // Your custom fragment syntax,
-        jsxInject: `import { createElement } from "refract"`,
+        jsxInject: `import { createElement } from "../refract"`,
     },
+    plugins: [tailwindcss()],
     server: {
         port: 3000,
     },
