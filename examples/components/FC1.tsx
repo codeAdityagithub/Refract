@@ -1,5 +1,5 @@
-import { cleanUp, createEffect, createSignal } from "../index";
-import { BaseSignal } from "../signals/signal";
+import { cleanUp, createEffect, createSignal } from "../../src/index";
+import { BaseSignal } from "../../src/signals/signal";
 import { textSignal } from "./Test";
 // import { computed } from "../signals/signal";
 

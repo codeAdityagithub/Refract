@@ -1,4 +1,4 @@
-import { cleanUp, createEffect, createSignal } from "../index";
+import { cleanUp, createEffect, createSignal } from "../../src/index";
 
 function Test({ text }) {
     const signal = createSignal<boolean>(true);

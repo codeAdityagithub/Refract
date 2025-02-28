@@ -1,4 +1,4 @@
-import { computed, createSignal } from "../signals/signal";
+import { computed, createSignal } from "../../src/signals/signal";
 
 const PerformanceTest = () => {
     // Simulating a real-world list of items using your signal-based library

@@ -1,6 +1,7 @@
-import { createSignal } from "../index.ts";
+import { createSignal } from "../../src/index.ts";
 import ListsTest from "./ListsTest.tsx";
 import PerformanceTest from "./Performance.tsx";
+import StylesTest from "./StylesTest.tsx";
 import Test from "./Test.tsx";
 
 const App = (props: any) => {
@@ -9,6 +10,7 @@ const App = (props: any) => {
     // return <ReactiveComponent />;
     // return <NonReactiveComponent />;
     return <Test />;
+    // return <StylesTest />;
     // return <ListsTest />;
     // return <PerformanceTest />;
     // return <ArrayReturningFC />;

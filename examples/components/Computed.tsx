@@ -1,4 +1,4 @@
-import { computed, createSignal } from "../signals/signal";
+import { computed, createSignal } from "../../src/signals/signal";
 
 const Computed = ({ textSignal }) => {
     const signal = createSignal<number>(2);

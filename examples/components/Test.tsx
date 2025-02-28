@@ -1,11 +1,9 @@
-import { lazy } from "../lazy/Lazyloading.jsx";
-import { cleanUp } from "../rendering/functionalComponents";
+import { lazy } from "../../src/lazy/Lazyloading.jsx";
 import {
     createEffect,
-    createPromise,
     createRef,
     createSignal,
-} from "../signals/signal";
+} from "../../src/signals/signal.js";
 
 // Lazy load components
 const LazyFC1 = lazy(() => import("./FC1.jsx"));
