@@ -26,15 +26,9 @@ export default defineConfig({
     resolve: {
         alias: {
             // @ts-expect-error
-            "@": path.resolve(__dirname, "./src"),
+            "@": path.resolve(__dirname, "./"),
         },
     },
-    esbuild: {
-        jsxFactory: "createElement", // Your custom JSX factory function
-        jsxFragment: '"FRAGMENT"', // Your custom fragment syntax,
-        jsxInject: `import { createElement } from "@/rendering/createElements.ts"`,
-    },
-
     server: {
         port: 3000,
     },
@@ -45,24 +39,5 @@ export default defineConfig({
             insertTypesEntry: true,
             rollupTypes: true,
         }),
-        {
-            name: "generate-package-json",
-            async closeBundle() {
-                const fs = await import("fs");
-
-                const packageJson = {
-                    name: "refract",
-                    version: "1.0.0",
-                    main: "refract.js",
-                    types: "index.d.ts",
-                };
-
-                fs.writeFileSync(
-                    // @ts-expect-error
-                    path.resolve(__dirname, "build/package.json"),
-                    JSON.stringify(packageJson, null, 2)
-                );
-            },
-        },
     ],
 });

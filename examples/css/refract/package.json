@@ -1,6 +1,0 @@
-{
-  "name": "refract",
-  "version": "1.0.0",
-  "main": "refract.js",
-  "types": "index.d.ts"
-}

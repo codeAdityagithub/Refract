@@ -18,13 +18,13 @@ export default defineConfig({
     resolve: {
         alias: {
             // @ts-expect-error
-            "@": path.resolve(__dirname, "./src"),
+            "@": path.resolve(__dirname, "../../build/"),
         },
     },
     esbuild: {
         jsxFactory: "createElement", // Your custom JSX factory function
         jsxFragment: '"FRAGMENT"', // Your custom fragment syntax,
-        jsxInject: `import { createElement } from "../refract"`,
+        jsxInject: `import { createElement } from "@/refract"`,
     },
     plugins: [tailwindcss()],
     server: {
