@@ -1,4 +1,4 @@
-import { createSignal } from "../signals/signal";
+import { BaseSignal, createSignal, PrimitiveSignal } from "../index";
 
 // If the component takes no parameters, treat its props as {}
 type PropsOf<T extends (...args: any) => any> = Parameters<T> extends []
@@ -15,7 +15,10 @@ export function lazy<T extends (props: any) => any>(
 ) => ReturnType<T> {
     let Component: T | null = null;
 
-    const load = (loading, error) => {
+    const load = (
+        loading: PrimitiveSignal<boolean>,
+        error: PrimitiveSignal<Error | null>
+    ) => {
         if (!Component) {
             importFn()
                 .then((mod) => {
@@ -26,21 +29,24 @@ export function lazy<T extends (props: any) => any>(
                             );
                         }
                         Component = mod.default;
-                        loading.value = false;
-                        error.value = null;
+
+                        loading.update(false);
+                        error.update(null);
                     } else {
-                        error.value = new Error(
-                            "No default export found from lazy-loaded module"
+                        error.update(
+                            new Error(
+                                "No default export found from lazy-loaded module"
+                            )
                         );
                     }
                 })
                 .catch((err) => {
-                    error.value = err;
-                    loading.value = false;
+                    error.update(err);
+                    loading.update(false);
                 });
         } else {
-            loading.value = false;
-            error.value = null;
+            loading.update(false);
+            error.update(null);
         }
     };
 

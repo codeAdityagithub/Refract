@@ -79,7 +79,8 @@ function computed<T extends NormalSignal | any[] | Record<any, any>>(
         throw new Error("computed takes a function as the argument");
 
     currentEffect = () => {
-        signal.value = fn();
+        const newVal = fn();
+        signal.update(newVal);
     };
     addEffect(currentEffect);
     const val = fn();
@@ -113,12 +114,16 @@ export function createPromise<T>(fn: () => Promise<T>) {
 
     promise
         .then((val) => {
-            triggerSignal.value.data = val;
-            triggerSignal.value.status = "resolved";
+            triggerSignal.update((prev) => {
+                prev.data = val;
+                prev.status = "resolved";
+            });
         })
         .catch((err) => {
-            triggerSignal.value.error = err;
-            triggerSignal.value.status = "rejected";
+            triggerSignal.update((prev) => {
+                prev.error = err;
+                prev.status = "rejected";
+            });
         });
 
     return triggerSignal;
@@ -156,7 +161,12 @@ const NonMutatingArrayMethods = [
     "toLocaleString",
     "toString",
 ];
+
+type DeepReadonly<T> = {
+    readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K];
+};
 /**
+ *
  * Base class for signals.
  */
 export abstract class BaseSignal<T> {
@@ -171,10 +181,10 @@ export abstract class BaseSignal<T> {
 
     protected notify() {
         if (this.isNotified) return;
-        this.isNotified = true;
+
+        if (this.deps.size !== 0) this.isNotified = true;
 
         this.deps.forEach((dep) => {
-            // console.log("notifying", dep.__signals);
             batchUpdate(() => {
                 // Reset the flag before calling the dependency
                 this.isNotified = false;
@@ -191,8 +201,9 @@ export abstract class BaseSignal<T> {
         this.deps.clear();
     }
 
-    abstract get value(): T;
-    abstract set value(val: T);
+    abstract get value(): T | DeepReadonly<T>;
+
+    abstract update(val: T | ((prev: T) => T)): void;
 }
 
 type NormalSignal = boolean | string | number | undefined | null | Error;
@@ -224,17 +235,29 @@ export class PrimitiveSignal<T extends NormalSignal> extends BaseSignal<T> {
         return this._val;
     }
 
-    set value(val: T) {
-        if (!isPrimitive(val)) {
-            throw new Error(
-                "Invalid type for PrimitiveSignal. Valid types: [boolean, string, number, undefined, null]"
-            );
+    public update(val: T | ((prev: T) => T)) {
+        if (typeof val === "function") {
+            const newVal = val(this._val);
+            if (!isPrimitive(newVal)) {
+                throw new Error(
+                    "Invalid type for PrimitiveSignal. Valid types: [boolean, string, number, undefined, null]"
+                );
+            }
+            if (newVal === this._val) return;
+            this._val = newVal;
+            this.notify();
+        } else {
+            if (!isPrimitive(val)) {
+                throw new Error(
+                    "Invalid type for PrimitiveSignal. Valid types: [boolean, string, number, undefined, null]"
+                );
+            }
+            if (val === this._val) return;
+
+            this._val = val;
+
+            this.notify();
         }
-        if (val === this._val) return;
-
-        this._val = val;
-
-        this.notify();
     }
 }
 
@@ -242,6 +265,8 @@ export class PrimitiveSignal<T extends NormalSignal> extends BaseSignal<T> {
  * Signal for arrays.
  */
 export class ArraySignal<T extends any[]> extends BaseSignal<T> {
+    private updateCalled: boolean = false;
+
     constructor(val: T) {
         if (!Array.isArray(val)) {
             throw new Error(
@@ -258,8 +283,16 @@ export class ArraySignal<T extends any[]> extends BaseSignal<T> {
             get: (target, prop) => {
                 const value = target[prop as any];
                 // If a function is accessed, wrap it to trigger notifications on mutation.
+
                 if (typeof value === "function") {
-                    console.log(this.deps);
+                    if (
+                        !NonMutatingArrayMethods.includes(String(prop)) &&
+                        !this.updateCalled
+                    ) {
+                        throw new Error(
+                            "Cannot set a value on an array signal, use the update method for updating the array."
+                        );
+                    }
                     return (...args: any[]) => {
                         const result = value.apply(target, args);
                         // Notify if the method is mutating.
@@ -272,6 +305,11 @@ export class ArraySignal<T extends any[]> extends BaseSignal<T> {
                 return value;
             },
             set: (target, prop, newValue) => {
+                if (!this.updateCalled) {
+                    throw new Error(
+                        "Cannot set a value on an array signal, use the update method for updating the array."
+                    );
+                }
                 target[prop as any] = newValue;
                 this.notify();
                 return true;
@@ -279,7 +317,7 @@ export class ArraySignal<T extends any[]> extends BaseSignal<T> {
         });
     }
 
-    get value(): T {
+    get value(): DeepReadonly<T> {
         if (currentEffect) {
             this.deps.add(currentEffect);
             addSignalToEffect(this);
@@ -288,18 +326,38 @@ export class ArraySignal<T extends any[]> extends BaseSignal<T> {
             this.deps.add(currentReactiveFunction);
             addSignalToReactiveFunction(this);
         }
+
         return this._val;
     }
 
-    set value(val: T) {
-        if (!Array.isArray(val)) {
-            throw new Error(
-                "Invalid type for ArraySignal; value must be an array"
-            );
+    // set value(val: T) {
+    //     if (!Array.isArray(val)) {
+    //         throw new Error(
+    //             "Invalid type for ArraySignal; value must be an array"
+    //         );
+    //     }
+    //     if (val === this._val) return;
+    //     this._val = this.createProxy(val);
+    //     this.notify();
+    // }
+
+    public update(val: T | ((prev: T) => void)) {
+        this.updateCalled = true;
+        if (typeof val === "function") {
+            val(this._val);
+        } else {
+            if (!Array.isArray(val)) {
+                throw new Error(
+                    "Invalid type for ArraySignal; value must be an array"
+                );
+            }
+            if (val === this._val) return;
+
+            this._val = this.createProxy(val);
+
+            this.notify();
         }
-        if (val === this._val) return;
-        this._val = this.createProxy(val);
-        this.notify();
+        this.updateCalled = false;
     }
 }
 
@@ -307,6 +365,7 @@ export class ArraySignal<T extends any[]> extends BaseSignal<T> {
  * Signal for plain objects.
  */
 export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
+    private updateCalled: boolean = false;
     constructor(val: T) {
         if (!isPlainObject(val)) {
             throw new Error(
@@ -322,6 +381,14 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
                 const value = target[prop as any];
                 // If a function is accessed, wrap it to trigger notifications on mutation.
                 if (typeof value === "function") {
+                    if (
+                        !this.updateCalled &&
+                        !NonMutatingArrayMethods.includes(String(prop))
+                    ) {
+                        throw new Error(
+                            "Cannot set a value on an object signal, use the update method for updating the object."
+                        );
+                    }
                     return (...args: any[]) => {
                         const result = value.apply(target, args);
                         // Notify if the method is mutating.
@@ -334,6 +401,11 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
                 return value;
             },
             set: (target, prop, newValue) => {
+                if (!this.updateCalled) {
+                    throw new Error(
+                        "Cannot set a value on an object signal, use the update method for updating the object."
+                    );
+                }
                 target[prop as any] = newValue;
                 this.notify();
                 return true;
@@ -351,9 +423,15 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
 
                     return target[prop as any];
                 }
+                // console.log("get", target, prop, value);
                 return value;
             },
             set: (target, prop, newValue) => {
+                if (!this.updateCalled) {
+                    throw new Error(
+                        "Cannot set a value on an object signal, use the update method for updating the object."
+                    );
+                }
                 // Do not allow functions to be set as values.
                 if (typeof newValue === "function") return false;
                 // For nested objects, wrap them as well.
@@ -361,9 +439,12 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
                     newValue = this.createProxy(newValue);
                 }
                 if (newValue === target[prop as any]) return true;
+
                 // @ts-expect-error
                 target[prop as any] = newValue;
+
                 this.notify();
+
                 return true;
             },
             deleteProperty: (target, prop) => {
@@ -374,7 +455,7 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
         });
     }
 
-    get value(): T {
+    get value(): DeepReadonly<T> {
         if (currentEffect) {
             this.deps.add(currentEffect);
             addSignalToEffect(this);
@@ -386,15 +467,32 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
         return this._val;
     }
 
-    set value(val: T) {
-        if (!isPlainObject(val)) {
-            throw new Error(
-                "Invalid type for ObjectSignal; value must be a plain object"
-            );
+    // set value(val: T) {
+    //     if (!isPlainObject(val)) {
+    //         throw new Error(
+    //             "Invalid type for ObjectSignal; value must be a plain object"
+    //         );
+    //     }
+    //     if (val === this._val) return;
+    //     this._val = this.createProxy(val);
+    //     this.notify();
+    // }
+
+    public update(val: T | ((prev: T) => void)) {
+        this.updateCalled = true;
+        if (typeof val === "function") {
+            val(this._val);
+        } else {
+            if (!isPlainObject(val)) {
+                throw new Error(
+                    "Invalid type for ObjectSignal; value must be a plain object"
+                );
+            }
+            if (val === this._val) return;
+            this._val = this.createProxy(val);
+            this.notify();
         }
-        if (val === this._val) return;
-        this._val = this.createProxy(val);
-        this.notify();
+        this.updateCalled = false;
     }
 }
 

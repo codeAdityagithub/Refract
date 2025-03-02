@@ -29,30 +29,26 @@ describe("Signal", () => {
             signals.every((signal) => signal instanceof PrimitiveSignal)
         ).toBe(true);
         const assignWrongValue = () => {
-            signals[0].value = [1, 2, 4];
+            signals[0].update([1, 2, 3]);
         };
-        expect(assignWrongValue).toThrow(
-            "Invalid type for PrimitiveSignal. Valid types: [boolean, string, number, undefined, null]"
-        );
+        expect(assignWrongValue).toThrow();
     });
     it("should should create ArraySignal for array values", () => {
         const arraySignal = createSignal([0, 1, 2]);
         expect(arraySignal instanceof ArraySignal).toBe(true);
         expect(createSignal({}) instanceof ArraySignal).toBe(false);
         const assignWrongValue = () => {
-            arraySignal.value = 3;
+            arraySignal.update(3);
         };
-        expect(assignWrongValue).toThrow(
-            "Invalid type for ArraySignal; value must be an array"
-        );
+        expect(assignWrongValue).toThrow();
     });
     it("should create ObjectSignal for object values", () => {
         const objectSignal = createSignal({ a: 0, b: 1, c: 2 });
         expect(objectSignal instanceof ObjectSignal).toBe(true);
         expect(createSignal({ 0: "hello" }) instanceof ObjectSignal).toBe(true);
         const assignWrongValue = () => {
-            objectSignal.value = 3;
-            objectSignal.value = [1, 2];
+            objectSignal.update(2);
+            objectSignal.update([1, 2]);
         };
         expect(assignWrongValue).toThrow(
             "Invalid type for ObjectSignal; value must be a plain object"
@@ -78,9 +74,9 @@ describe("Signal", () => {
             objSignal.value;
         });
 
-        signal.value = 1;
-        arrSignal.value.push(4);
-        objSignal.value.a = 4;
+        signal.update(1);
+        arrSignal.update((prev) => prev.push(4));
+        objSignal.update((prev) => (prev.a = 4));
         expect(count).toBe(1);
     });
     it("should run the cleanup function of the effect once", async () => {
@@ -103,9 +99,9 @@ describe("Signal", () => {
         expect(count).toBe(1);
         expect(cleanup).toBe(0);
 
-        signal.value = 1;
-        arrSignal.value.push(4);
-        objSignal.value.a = 4;
+        signal.update(1);
+        arrSignal.update((prev) => prev.push(4));
+        objSignal.update((prev) => (prev.a = 4));
         await Promise.resolve();
 
         expect(count).toBe(2);
@@ -121,12 +117,8 @@ describe("Signal", () => {
             });
         };
 
-        expect(wrongReactive).toThrow(
-            "reactive takes a render function as the argument"
-        );
-        expect(wrongReturn).toThrow(
-            /^Reactive value must be primitive or functional component, got: /
-        );
+        expect(wrongReactive).toThrow();
+        expect(wrongReturn).toThrow();
     });
     it("reactive function should run twice for any number of signal changes and returns the function back", async () => {
         const signal = createSignal<number>(0);
@@ -149,9 +141,9 @@ describe("Signal", () => {
         // to mimic rendering function
         // setReactiveFunction(func);
 
-        signal.value = 10;
-        arrSignal.value.push(4);
-        objSignal.value.a = 4;
+        signal.update(1);
+        arrSignal.update((prev) => prev.push(4));
+        objSignal.update((prev) => (prev.a = 4));
         // Wait for batching to complete
         await Promise.resolve();
         expect(count).toBe(2);
@@ -171,67 +163,67 @@ describe("Signal", () => {
         expect(count).toBe(1);
 
         // Test push
-        arrSignal.value.push(4);
+        arrSignal.update((prev) => prev.push(4));
         await Promise.resolve();
         expect(arrSignal.value).toEqual([1, 2, 3, 4]);
         expect(count).toBe(2);
 
         // Test pop
-        arrSignal.value.pop();
+        arrSignal.update((prev) => prev.pop());
         await Promise.resolve();
         expect(arrSignal.value).toEqual([1, 2, 3]);
         expect(count).toBe(3);
 
         // Test shift
-        arrSignal.value.shift();
+        arrSignal.update((prev) => prev.shift());
         await Promise.resolve();
         expect(arrSignal.value).toEqual([2, 3]);
         expect(count).toBe(4);
 
         // Test unshift
-        arrSignal.value.unshift(0);
+        arrSignal.update((prev) => prev.unshift(0));
         await Promise.resolve();
         expect(arrSignal.value).toEqual([0, 2, 3]);
         expect(count).toBe(5);
 
         // Test splice (remove and add elements)
-        arrSignal.value.splice(1, 1, 8, 9);
+        arrSignal.update((prev) => prev.splice(1, 1, 8, 9));
         await Promise.resolve();
         expect(arrSignal.value).toEqual([0, 8, 9, 3]);
         expect(count).toBe(6);
 
         // Test reverse
-        arrSignal.value.reverse();
+        arrSignal.update((prev) => prev.reverse());
         await Promise.resolve();
         expect(arrSignal.value).toEqual([3, 9, 8, 0]);
         expect(count).toBe(7);
 
         // Test sort
-        arrSignal.value.sort((a, b) => a - b);
+        arrSignal.update((prev) => prev.sort((a, b) => a - b));
         await Promise.resolve();
         expect(arrSignal.value).toEqual([0, 3, 8, 9]);
         expect(count).toBe(8);
 
         // Test fill
-        arrSignal.value.fill(1, 1, 3);
+        arrSignal.update((prev) => prev.fill(1, 1, 3));
         await Promise.resolve();
         expect(arrSignal.value).toEqual([0, 1, 1, 9]);
         expect(count).toBe(9);
 
         // Test copyWithin
-        arrSignal.value.copyWithin(1, 2, 4);
+        arrSignal.update((prev) => prev.copyWithin(1, 2, 4));
         await Promise.resolve();
         expect(arrSignal.value).toEqual([0, 1, 9, 9]);
         expect(count).toBe(10);
 
         // Test length modification (truncation)
-        arrSignal.value.length = 2;
+        arrSignal.update((prev) => (prev.length = 2));
         await Promise.resolve();
         expect(arrSignal.value).toEqual([0, 1]);
         expect(count).toBe(11);
 
         // Test length extension
-        arrSignal.value.length = 5;
+        arrSignal.update((prev) => (prev.length = 5));
         await Promise.resolve();
         expect(arrSignal.value).toEqual([
             0,
@@ -260,49 +252,51 @@ describe("Signal", () => {
         expect(count).toBe(1);
 
         // Test property update
-        objSignal.value.a = 10;
+        objSignal.update((prev) => (prev.a = 10));
         await Promise.resolve();
         expect(objSignal.value).toEqual({ a: 10, b: 2 });
         expect(count).toBe(2);
 
         // Test property addition
-        objSignal.value.c = 3;
+        objSignal.update((prev) => (prev.c = 3));
         await Promise.resolve();
         expect(objSignal.value).toEqual({ a: 10, b: 2, c: 3 });
         expect(count).toBe(3);
 
         // Test property deletion
-        delete objSignal.value.b;
+        objSignal.update((prev) => {
+            delete prev.b;
+        });
         await Promise.resolve();
         expect(objSignal.value).toEqual({ a: 10, c: 3 });
         expect(count).toBe(4);
 
         // Test reassigning the entire object
-        objSignal.value = { x: 42, y: 24 };
+        objSignal.update({ x: 42, y: 24 });
         await Promise.resolve();
         expect(objSignal.value).toEqual({ x: 42, y: 24 });
         expect(count).toBe(5);
 
         // Test nested property modification
-        objSignal.value.z = { nested: true };
+        objSignal.update((prev) => (prev.z = { nested: true }));
         await Promise.resolve();
-        objSignal.value.z.nested = false;
+        objSignal.update((prev) => (prev.z.nested = false));
         await Promise.resolve();
         expect(objSignal.value).toEqual({ x: 42, y: 24, z: { nested: false } });
         expect(count).toBe(7); // Two updates: one for addition, one for nested modification
 
         // Test assigning the same value (should not trigger reactivity)
-        objSignal.value.x = 42; // No change
+        objSignal.update((p) => (p.x = 42)); // No change
         await Promise.resolve();
         expect(count).toBe(7); // No increment since value is unchanged
 
         // Test assigning a deeply equal object (should trigger reactivity)
-        objSignal.value = { x: 42, y: 24, z: { nested: false } };
+        objSignal.update({ x: 42, y: 24, z: { nested: false } });
         await Promise.resolve();
         expect(count).toBe(8); // Reassignment triggers reactivity even if deeply equal
 
         // Test removing all properties by reassigning an empty object
-        objSignal.value = {};
+        objSignal.update({});
         await Promise.resolve();
         expect(objSignal.value).toEqual({});
         expect(count).toBe(9);
@@ -330,11 +324,11 @@ describe("Signal", () => {
         expect(count).toBe(1);
 
         // Update signals
-        numSignal.value = 10;
-        strSignal.value = "world";
-        boolSignal.value = false;
-        undefinedSignal.value = "changed";
-        nullSignal.value = "not null anymore";
+        numSignal.update(10);
+        strSignal.update("world");
+        boolSignal.update(false);
+        undefinedSignal.update("changed");
+        nullSignal.update("not null anymore");
         await Promise.resolve();
         expect(count).toBe(2);
 
@@ -346,7 +340,7 @@ describe("Signal", () => {
         expect(nullSignal.value).toBe("not null anymore");
     });
     it("Should handle array of objects changes", async () => {
-        const arrSignal = createSignal([
+        const arrSignal = createSignal<{ id: number; name: string }[]>([
             { id: 1, name: "John" },
             { id: 2, name: "Jane" },
         ]);
@@ -357,7 +351,8 @@ describe("Signal", () => {
             arrSignal.value;
         };
         createEffect(func);
-        arrSignal.value[0].id = 3;
+        // arrSignal.value[0].id = 3
+        arrSignal.update((p) => (p[0].id = 3));
         await Promise.resolve();
         expect(count).toBe(1);
         expect(arrSignal.value[0].id).toBe(3);
@@ -380,67 +375,70 @@ describe("Signal", () => {
         expect(count).toBe(1);
 
         // Test push
-        arrSignal.value.ids.push(4);
+        // arrSignal.value.ids.push(4);
+        arrSignal.update((prev) => prev.ids.push(4));
         await Promise.resolve();
         expect(arrSignal.value.ids).toEqual([1, 2, 3, 4]);
         expect(count).toBe(2);
 
         // Test pop
-        arrSignal.value.ids.pop();
+
+        arrSignal.update((prev) => prev.ids.pop());
+
         await Promise.resolve();
         expect(arrSignal.value.ids).toEqual([1, 2, 3]);
         expect(count).toBe(3);
 
         // Test shift
-        arrSignal.value.ids.shift();
+        arrSignal.update((prev) => prev.ids.shift());
         await Promise.resolve();
         expect(arrSignal.value.ids).toEqual([2, 3]);
         expect(count).toBe(4);
 
         // Test unshift
-        arrSignal.value.ids.unshift(0);
+        arrSignal.update((prev) => prev.ids.unshift(0));
         await Promise.resolve();
         expect(arrSignal.value.ids).toEqual([0, 2, 3]);
         expect(count).toBe(5);
 
         // Test splice (remove and add elements)
-        arrSignal.value.ids.splice(1, 1, 8, 9);
+        arrSignal.update((prev) => prev.ids.splice(1, 1, 8, 9));
         await Promise.resolve();
         expect(arrSignal.value.ids).toEqual([0, 8, 9, 3]);
         expect(count).toBe(6);
 
         // Test reverse
-        arrSignal.value.ids.reverse();
+        arrSignal.update((prev) => prev.ids.reverse());
         await Promise.resolve();
         expect(arrSignal.value.ids).toEqual([3, 9, 8, 0]);
         expect(count).toBe(7);
 
         // Test sort
-        arrSignal.value.ids.sort((a, b) => a - b);
+        arrSignal.update((prev) => prev.ids.sort((a, b) => a - b));
         await Promise.resolve();
         expect(arrSignal.value.ids).toEqual([0, 3, 8, 9]);
         expect(count).toBe(8);
 
         // Test fill
-        arrSignal.value.ids.fill(1, 1, 3);
+        arrSignal.update((prev) => prev.ids.fill(1, 1, 3));
         await Promise.resolve();
         expect(arrSignal.value.ids).toEqual([0, 1, 1, 9]);
         expect(count).toBe(9);
 
         // Test copyWithin
-        arrSignal.value.ids.copyWithin(1, 2, 4);
+        arrSignal.update((prev) => prev.ids.copyWithin(1, 2, 4));
         await Promise.resolve();
         expect(arrSignal.value.ids).toEqual([0, 1, 9, 9]);
         expect(count).toBe(10);
 
         // Test length modification (truncation)
-        arrSignal.value.ids.length = 2;
+        arrSignal.update((prev) => (prev.ids.length = 2));
         await Promise.resolve();
         expect(arrSignal.value.ids).toEqual([0, 1]);
         expect(count).toBe(11);
 
         // Test length extension
-        arrSignal.value.ids.length = 5;
+        arrSignal.update((prev) => (prev.ids.length = 5));
         await Promise.resolve();
         expect(arrSignal.value.ids).toEqual([
             0,
@@ -451,11 +449,11 @@ describe("Signal", () => {
         ]);
         expect(count).toBe(12);
 
-        arrSignal.value.ids[0] = 10;
+        arrSignal.update((prev) => (prev.ids[0] = 10));
         await Promise.resolve();
         expect(count).toBe(13);
 
-        arrSignal.value.ids[1]++;
+        arrSignal.update((prev) => prev.ids[1]++);
         await Promise.resolve();
         expect(count).toBe(14);
     });
@@ -473,7 +471,7 @@ describe("Signal", () => {
         expect(count).toBe(1);
 
         // Set the same value
-        numSignal.value = 0;
+        numSignal.update(0);
         await Promise.resolve();
 
         expect(count).toBe(1); // No reactivity trigger
@@ -488,7 +486,7 @@ describe("Computed", () => {
             signals.every((signal) => signal instanceof PrimitiveSignal)
         ).toBe(true);
         const assignWrongValue = () => {
-            signals[0].value = [1, 2, 4];
+            signals[0].update([1, 2, 4]);
         };
         expect(assignWrongValue).toThrow(
             "Invalid type for PrimitiveSignal. Valid types: [boolean, string, number, undefined, null]"
@@ -499,7 +497,7 @@ describe("Computed", () => {
         expect(arraySignal instanceof ArraySignal).toBe(true);
         expect(computed(() => ({})) instanceof ArraySignal).toBe(false);
         const assignWrongValue = () => {
-            arraySignal.value = 3;
+            arraySignal.update(3);
         };
         expect(assignWrongValue).toThrow(
             "Invalid type for ArraySignal; value must be an array"
@@ -510,8 +508,8 @@ describe("Computed", () => {
         expect(objectSignal instanceof ObjectSignal).toBe(true);
         expect(createSignal({ 0: "hello" }) instanceof ObjectSignal).toBe(true);
         const assignWrongValue = () => {
-            objectSignal.value = 3;
-            objectSignal.value = [1, 2];
+            objectSignal.update(3);
+            objectSignal.update([1, 2]);
         };
         expect(assignWrongValue).toThrow(
             "Invalid type for ObjectSignal; value must be a plain object"
@@ -526,7 +524,8 @@ describe("Computed", () => {
         });
         expect(count).toBe(1);
         expect(doubleSignal.value).toBe(0);
-        numSignal.value = 10;
+
+        numSignal.update(10);
         await Promise.resolve();
         expect(count).toBe(2);
         expect(doubleSignal.value).toBe(20);

@@ -597,7 +597,7 @@ function reconcileList(prev: Fiber, next: Fiber) {
         | undefined;
     // Create newChildren array based on newFibers order.
     const fiberParent = findParentFiberWithDom(prev);
-    const fragment = document.createDocumentFragment();
+    // const fragment = document.createDocumentFragment();
 
     if (newFibers.length === 0) {
         prev.props.children.length = 0;
@@ -626,7 +626,11 @@ function reconcileList(prev: Fiber, next: Fiber) {
             if (newFiber) newFiber.parent = prev;
 
             updateNode(oldFiber, newFiber, i);
-            applyFiber(prev.props.children[i], fragment, referenceNode);
+            applyFiber(
+                prev.props.children[i],
+                fiberParent?.dom!,
+                referenceNode
+            );
         } else {
             // Otherwise, use the new fiber.
             // console.log(first)
@@ -634,7 +638,13 @@ function reconcileList(prev: Fiber, next: Fiber) {
             else prev.props.children.push(newFiber);
 
             newFiber.parent = prev;
-            commitFiber(newFiber, referenceNode, false, false, fragment);
+            commitFiber(
+                newFiber,
+                referenceNode,
+                false,
+                false,
+                fiberParent?.dom
+            );
         }
     }
     for (const key in oldMap) {
@@ -647,7 +657,7 @@ function reconcileList(prev: Fiber, next: Fiber) {
         prev.props.children.pop();
     }
 
-    fiberParent?.dom?.appendChild(fragment);
+    // fiberParent?.dom?.appendChild(fragment);
 }
 
 function applyFiber(fiber: Fiber, parent: Node, referenceNode?: Node) {
@@ -691,6 +701,7 @@ function updateChildren(prev: Fiber, next: Fiber) {
 
 function updateNonListChildren(prev: Fiber, next: Fiber) {
     let len = Math.max(prev.props.children.length, next.props.children.length);
+
     for (let i = 0; i < len; i++) {
         let prevChild = prev.props.children[i];
         let nextChild = next.props.children[i];
@@ -744,6 +755,7 @@ function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
     }
     if (count == 0) {
         updateNonListChildren(prev, next);
+        return;
     }
     const newMap: Record<
         string,

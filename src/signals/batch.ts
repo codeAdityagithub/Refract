@@ -33,6 +33,7 @@ export function batchUpdate(cb: Function) {
                 if (typeof val === "function") {
                     effectCleanup.push(val);
                 }
+                // console.log(dep, "dep");
                 if (reactiveFiberMap.has(dep)) {
                     // for updating reactive nodes
                     const fiber = reactiveFiberMap.get(dep);

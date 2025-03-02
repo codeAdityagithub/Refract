@@ -2,15 +2,20 @@ import { createSignal, createEffect, cleanUp } from "../index";
 
 function TimerComponent() {
     const seconds = createSignal<number>(0);
-    const other = createSignal([1, 2, 3]);
+    const other = createSignal({ a: [-1], b: 2, c: 3 });
 
     const interval = setInterval(() => {
-        seconds.value = seconds.value + 1;
+        // other.update((other) => other.a++);
+        seconds.update((seconds) => seconds + 1);
     }, 1000);
 
     createEffect(() => {
-        console.log("Effect");
-        // other.value.push(4);
+        // other.value.a += 1;
+        // seconds.value;
+        // other.update((other) => other.a.push(seconds.value));
+        // console.log(other.value.a);
+        // seconds.value;
+        // console.log(other.value);
         // Cleanup function to clear the interval when the component unmounts
         return () => {
             console.log("cleanup");
@@ -23,9 +28,17 @@ function TimerComponent() {
     });
 
     return (
-        <p>
-            Elapsed Time: {() => seconds.value}
-            {() => other.value.map((i) => i)} seconds
+        <p id="p">
+            {/* Elapsed Time: {() => seconds.value} */}
+            {() => other.value.a.map((i) => <p>{i}</p>)} seconds
+            <button
+                onClick={() => {
+                    other.update((other) => other.a.push(seconds.value));
+                    // other.value.a.push(seconds.value);
+                }}
+            >
+                Click
+            </button>
         </p>
     );
 }
