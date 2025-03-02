@@ -5,7 +5,7 @@ let fcMap = new WeakMap<
     Function,
     {
         signals: Set<BaseSignal<any>>;
-        cleanup: Function | null;
+        cleanup: Function[];
         effects: Set<Function>;
     }
 >();
@@ -26,16 +26,12 @@ export function cleanUp(fn: Function) {
         // console.log(currentFC, fcMap.has(currentFC));
         if (fcMap.has(currentFC)) {
             const fcData = fcMap.get(currentFC)!;
-            if (fcData.cleanup)
-                throw new Error(
-                    "A Functional Component can only have one cleanup function"
-                );
 
-            fcData.cleanup = fn;
+            fcData.cleanup.push(fn);
         } else {
             fcMap.set(currentFC, {
                 signals: new Set(),
-                cleanup: fn,
+                cleanup: [fn],
                 effects: new Set(),
             });
         }
@@ -52,7 +48,7 @@ export function addEffect(fn: Function) {
             effects.add(fn);
             fcMap.set(currentFC, {
                 signals: new Set(),
-                cleanup: null,
+                cleanup: [],
                 effects: effects,
             });
         }
@@ -68,7 +64,7 @@ export function addSignal(signal: BaseSignal<any>) {
             signals.add(signal);
             fcMap.set(currentFC, {
                 signals: signals,
-                cleanup: null,
+                cleanup: [],
                 effects: new Set(),
             });
         }
@@ -79,13 +75,17 @@ export function cleanUpFC(currentFC, props) {
     const fcData = fcMap.get(currentFC)!;
     if (fcData) {
         // console.log("Cleaning up FC", currentFC, fcData);
-        if (fcData.cleanup) fcData.cleanup();
+        if (fcData.cleanup) {
+            for (const fn of fcData.cleanup) {
+                fn();
+            }
+        }
 
-        fcData.cleanup = null;
+        fcData.cleanup = [];
 
         for (const effect of fcData.effects) {
             // @ts-expect-error
-            if (effect.__signals && Array.isArray(effect.__signals)) {
+            if (effect.__signals) {
                 // @ts-expect-error
                 for (const signal of effect.__signals) {
                     signal.removeDep(effect);

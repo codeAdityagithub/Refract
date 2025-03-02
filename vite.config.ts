@@ -16,18 +16,24 @@ export default defineConfig({
             output: {
                 preserveModules: false,
             },
+            input: "./index.html",
         },
-        lib: {
-            entry: ["src/index.ts"],
-            name: "Refract",
-            fileName: "refract",
-        },
+        // lib: {
+        //     entry: ["src/index.ts"],
+        //     name: "Refract",
+        //     fileName: "refract",
+        // },
     },
     resolve: {
         alias: {
             // @ts-expect-error
             "@": path.resolve(__dirname, "./"),
         },
+    },
+    esbuild: {
+        jsxFactory: "createElement", // Your custom JSX factory function
+        jsxFragment: '"FRAGMENT"', // Your custom fragment syntax,
+        jsxInject: `import { createElement } from "../index"`,
     },
     server: {
         port: 3000,
@@ -37,7 +43,7 @@ export default defineConfig({
             entryRoot: "src",
             exclude: ["**/*.test.ts", "src/tests/**/*", "examples/**/*"],
             insertTypesEntry: true,
-            rollupTypes: true,
+            // rollupTypes: true,
         }),
     ],
 });

@@ -67,7 +67,7 @@ export function clearReactiveAttributes(fn: any) {
     domAttributeMap.delete(fn);
 
     const signals = fn.__signals;
-    if (signals && Array.isArray(signals)) {
+    if (signals) {
         for (const signal of signals) {
             signal.removeDep(fn);
         }
@@ -79,7 +79,7 @@ export function clearReactiveFunction(fn: Function) {
     reactiveFiberMap.delete(fn);
     // @ts-expect-error
     const signals = fn.__signals;
-    if (signals && Array.isArray(signals)) {
+    if (signals) {
         for (const signal of signals) {
             signal.removeDep(fn);
         }

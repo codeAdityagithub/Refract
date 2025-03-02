@@ -1,4 +1,8 @@
-import { addEffect, addSignal } from "../rendering/functionalComponents";
+import {
+    addEffect,
+    addSignal,
+    cleanUp,
+} from "../rendering/functionalComponents";
 import { isPlainObject, isPrimitive } from "../utils/general";
 import { addEffectCleanup, batchUpdate } from "./batch";
 
@@ -6,13 +10,14 @@ let currentReactiveFunction: any = null;
 let currentEffect: any = null;
 
 function addSignalToReactiveFunction(signal: any) {
-    if (!currentReactiveFunction.__signals)
-        currentReactiveFunction.__signals = [signal];
-    else currentReactiveFunction.__signals.push(signal);
+    if (!currentReactiveFunction.__signals) {
+        currentReactiveFunction.__signals = new Set();
+    }
+    currentReactiveFunction.__signals.add(signal);
 }
 function addSignalToEffect(signal: any) {
-    if (!currentEffect.__signals) currentEffect.__signals = [signal];
-    else currentEffect.__signals.push(signal);
+    if (!currentEffect.__signals) currentEffect.__signals = new Set();
+    currentEffect.__signals.add(signal);
 }
 
 export function reactive(fn: Function) {
@@ -49,9 +54,18 @@ export function createEffect(fn: Function) {
     if (typeof fn !== "function")
         throw new Error("createEffect takes a effect function as the argument");
     currentEffect = fn;
+
     addEffect(fn);
     const effectCleanup = fn();
-    if (typeof effectCleanup === "function") addEffectCleanup(effectCleanup);
+
+    if (currentEffect.__signals && typeof effectCleanup === "function")
+        addEffectCleanup(effectCleanup);
+
+    if (!currentEffect.__signals) {
+        // which means this effect does not have any signals associated with so its just a cleanup function that we need to call when the component unmounts
+        cleanUp(effectCleanup);
+    }
+
     currentEffect = null;
 }
 
@@ -159,13 +173,14 @@ export abstract class BaseSignal<T> {
         if (this.isNotified) return;
         this.isNotified = true;
 
-        this.deps.forEach((dep) =>
+        this.deps.forEach((dep) => {
+            // console.log("notifying", dep.__signals);
             batchUpdate(() => {
                 // Reset the flag before calling the dependency
                 this.isNotified = false;
                 return dep;
-            })
-        );
+            });
+        });
     }
 
     public removeDep(fn: Function) {
@@ -216,7 +231,9 @@ export class PrimitiveSignal<T extends NormalSignal> extends BaseSignal<T> {
             );
         }
         if (val === this._val) return;
+
         this._val = val;
+
         this.notify();
     }
 }
@@ -242,6 +259,7 @@ export class ArraySignal<T extends any[]> extends BaseSignal<T> {
                 const value = target[prop as any];
                 // If a function is accessed, wrap it to trigger notifications on mutation.
                 if (typeof value === "function") {
+                    console.log(this.deps);
                     return (...args: any[]) => {
                         const result = value.apply(target, args);
                         // Notify if the method is mutating.

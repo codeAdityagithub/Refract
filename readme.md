@@ -17,13 +17,13 @@ This is a lightweight JSX framework designed to provide a simple, efficient, and
 To use this library, install it via npm:
 
 ```sh
-npm install custom-jsx-framework
+npm install refract-js
 ```
 
 Or with yarn:
 
 ```sh
-yarn add custom-jsx-framework
+yarn add refract-js
 ```
 
 ## Usage
@@ -31,7 +31,6 @@ yarn add custom-jsx-framework
 ### Creating a Component
 
 ```jsx
-/** @jsx createElement */
 import { render } from "refract-js";
 
 const App = () => {
@@ -47,21 +46,50 @@ render(<App />, document.getElementById("root"));
 
 ### State Management
 
-```jsx
-import { createSignal } from "custom-jsx-framework";
+In Refract-js, functions serve as an intuitive way to create dynamic nodes.  
+Functional components rerender only once; after that, signals handle the DOM reconciliation process efficiently.
 
-const Counter = () => {
-    const count = createSignal < number > 0;
+You can use
+`createSignal()`
+to create signals and access the signal's value using `signal.value`
+
+```jsx
+import { createSignal } from "refract-js";
+
+function Counter() {
+    const count = createSignal(0);
 
     return (
         <div>
+            {/* Functions for dynamic values that depend on signals */}
             <p>Count: {() => count.value}</p>
             <button onClick={() => count.value++}>Increment</button>
         </div>
     );
-};
+}
 
 export default Counter;
+```
+
+### Effects
+
+```jsx
+import { createSignal, createEffect } from "refract-js";
+
+function TimerComponent() {
+    const seconds = createSignal(0);
+
+    createEffect(() => {
+        const interval = setInterval(() => {
+            seconds.value++;
+        }, 1000);
+
+        // Cleanup function to clear the interval when the component unmounts
+        return () => clearInterval(interval);
+    });
+
+    return <p>Elapsed Time: {seconds} seconds</p>;
+}
 ```
 
 ## API Reference
