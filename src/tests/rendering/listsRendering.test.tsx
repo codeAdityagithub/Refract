@@ -55,7 +55,7 @@ describe("updateFiber - Update Lists Efficiently Inplace", () => {
 
         const prevNodes = fiber.props.children.map((item) => item.dom);
 
-        count.value.push(4);
+        count.update((prev) => prev.push(4));
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>3</p><p>4</p>");
@@ -88,7 +88,8 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         commitFiber(fiber);
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>3</p>");
 
-        count.value.push(4);
+        count.update((prev) => prev.push(4));
+
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>3</p><p>4</p>");
@@ -107,7 +108,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         commitFiber(fiber);
         expect(fiber.dom.innerHTML).toBe("<p>2</p><p>3</p><p>4</p>");
 
-        count.value.unshift(1);
+        count.update((prev) => prev.unshift(1));
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>3</p><p>4</p>");
@@ -126,7 +127,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         commitFiber(fiber);
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>3</p><p>4</p>");
 
-        count.value.pop();
+        count.update((prev) => prev.pop());
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>3</p>");
@@ -145,7 +146,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         commitFiber(fiber);
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>3</p><p>4</p>");
 
-        count.value.shift();
+        count.update((prev) => prev.shift());
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe("<p>2</p><p>3</p><p>4</p>");
@@ -165,7 +166,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>3</p><p>4</p>");
 
         // Insert 2 at index 1
-        count.value.splice(1, 0, 2);
+        count.update((prev) => prev.splice(1, 0, 2));
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>3</p><p>4</p>");
@@ -185,7 +186,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>3</p><p>4</p>");
 
         // Remove item at index 2 (the number 3)
-        count.value.splice(2, 1);
+        count.update((prev) => prev.splice(2, 1));
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>4</p>");
@@ -205,7 +206,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>3</p>");
 
         // Replace the second element by mutating the array directly.
-        count.value[1] = 20;
+        count.update((prev) => (prev[1] = 20));
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>20</p><p>3</p>");
@@ -225,7 +226,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>4</p><p>5</p>");
 
         // Insert 2 and 3 at index 1
-        count.value.splice(1, 0, 2, 3);
+        count.update((prev) => prev.splice(1, 0, 2, 3));
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe(
@@ -249,7 +250,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         );
 
         // Remove elements 2, 3, and 4 (from index 1, remove 3 items)
-        count.value.splice(1, 3);
+        count.update((prev) => prev.splice(1, 3));
         await Promise.resolve();
         // console.log(count.value);
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>5</p>");
@@ -271,7 +272,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         );
 
         // Replace elements at index 2 and 3 with 30 and 40
-        count.value.splice(2, 2, 30, 40);
+        count.update((prev) => prev.splice(2, 2, 30, 40));
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe(
@@ -292,7 +293,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         commitFiber(fiber);
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>3</p><p>4</p>");
 
-        count.value.reverse();
+        count.update((prev) => prev.reverse());
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe("<p>4</p><p>3</p><p>2</p><p>1</p>");
@@ -311,7 +312,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         commitFiber(fiber);
         expect(fiber.dom.innerHTML).toBe("<p>4</p><p>1</p><p>3</p><p>2</p>");
 
-        count.value.sort((a, b) => a - b);
+        count.update((prev) => prev.sort((a, b) => a - b));
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>3</p><p>4</p>");
@@ -335,11 +336,12 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         );
 
         // In-place Fisher-Yates shuffle
-        const arr = count.value;
-        for (let i = arr.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]];
-        }
+        count.update((arr) => {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+        });
         await Promise.resolve();
 
         // Check that all original items are present (order is likely changed)
@@ -350,7 +352,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
 
     // 14. EMPTY ARRAY: Update an empty array by pushing items
     it("handles updates on an initially empty array", async () => {
-        const count = createSignal([]);
+        const count = createSignal<number[]>([]);
         const fiber = (
             <div>
                 {() => count.value.map((item) => <p key={item}>{item}</p>)}
@@ -361,7 +363,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         commitFiber(fiber);
         expect(fiber.dom.innerHTML).toBe("");
 
-        count.value.push(1, 2, 3);
+        count.update((prev) => prev.push(1, 2, 3));
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>3</p>");
@@ -381,7 +383,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         expect(fiber.dom.innerHTML).toBe("<p>1</p><p>2</p><p>3</p>");
 
         // Remove all elements using splice
-        count.value.splice(0, count.value.length);
+        count.update((prev) => prev.splice(0, count.value.length));
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe("");
@@ -405,7 +407,7 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
         expect(fiber.dom.textContent).toContain("999,");
 
         // Mutate: remove 500 elements from the middle
-        count.value.splice(250, 500);
+        count.update((prev) => prev.splice(250, 500));
         await Promise.resolve();
 
         const result = fiber.dom.textContent;
@@ -430,9 +432,9 @@ describe("updateFiber - Array Mutations (In-Place)", () => {
 
         // Rapidly alternate push and pop 10 times
         for (let i = 0; i < 10; i++) {
-            count.value.push(100 + i);
+            count.update((prev) => prev.push(100 + i));
             await Promise.resolve();
-            count.value.pop();
+            count.update((prev) => prev.pop());
             await Promise.resolve();
         }
         // Final state should be unchanged.
@@ -473,7 +475,7 @@ describe("DOM Node Reuse Tests", () => {
         commitFiber(fiber);
         const initialNodes = captureKeyedNodes(fiber.props.children[0]);
 
-        count.value.push(4);
+        count.update((prev) => prev.push(4));
         await Promise.resolve();
 
         const newNodes = captureKeyedNodes(fiber.props.children[0]);
@@ -505,7 +507,7 @@ describe("DOM Node Reuse Tests", () => {
         commitFiber(fiber);
         const initialNodes = captureKeyedFC(fiber.props.children[0]);
 
-        count.value.push(4);
+        count.update((prev) => prev.push(4));
         await Promise.resolve();
 
         const newNodes = captureKeyedFC(fiber.props.children[0]);
@@ -530,7 +532,7 @@ describe("DOM Node Reuse Tests", () => {
         commitFiber(fiber);
         const initialNodes = captureKeyedNodes(fiber);
 
-        count.value.pop();
+        count.update((prev) => prev.pop());
         await Promise.resolve();
 
         const newNodes = captureKeyedNodes(fiber);
@@ -562,7 +564,7 @@ describe("DOM Node Reuse Tests", () => {
         commitFiber(fiber);
         const initialNodes = captureKeyedFC(fiber);
 
-        count.value.pop();
+        count.update((prev) => prev.pop());
         await Promise.resolve();
 
         const newNodes = captureKeyedFC(fiber);
@@ -587,7 +589,7 @@ describe("DOM Node Reuse Tests", () => {
         commitFiber(fiber);
         const initialNodes = captureKeyedNodes(fiber.props.children[0]);
 
-        count.value.unshift(1);
+        count.update((prev) => prev.unshift(1));
         await Promise.resolve();
 
         const newNodes = captureKeyedNodes(fiber.props.children[0]);
@@ -620,7 +622,7 @@ describe("DOM Node Reuse Tests", () => {
         commitFiber(fiber);
         const initialNodes = captureKeyedFC(fiber.props.children[0]);
 
-        count.value.unshift(1);
+        count.update((prev) => prev.unshift(1));
         await Promise.resolve();
 
         const newNodes = captureKeyedFC(fiber.props.children[0]);
@@ -644,7 +646,7 @@ describe("DOM Node Reuse Tests", () => {
         commitFiber(fiber);
         const initialNodes = captureKeyedNodes(fiber.props.children[0]);
 
-        count.value.shift();
+        count.update((prev) => prev.shift());
         await Promise.resolve();
 
         const newNodes = captureKeyedNodes(fiber.props.children[0]);
@@ -676,7 +678,7 @@ describe("DOM Node Reuse Tests", () => {
         commitFiber(fiber);
         const initialNodes = captureKeyedFC(fiber.props.children[0]);
 
-        count.value.shift();
+        count.update((prev) => prev.shift());
         await Promise.resolve();
 
         const newNodes = captureKeyedFC(fiber.props.children[0]);
@@ -700,7 +702,7 @@ describe("DOM Node Reuse Tests", () => {
         const initialNodes = captureKeyedNodes(fiber.props.children[0]);
 
         // Insert 2 at index 1.
-        count.value.splice(1, 0, 2);
+        count.update((prev) => prev.splice(1, 0, 2));
         await Promise.resolve();
 
         const newNodes = captureKeyedNodes(fiber.props.children[0]);
@@ -732,7 +734,7 @@ describe("DOM Node Reuse Tests", () => {
         const initialNodes = captureKeyedFC(fiber.props.children[0]);
 
         // Insert 2 at index 1.
-        count.value.splice(1, 0, 2);
+        count.update((prev) => prev.splice(1, 0, 2));
         await Promise.resolve();
 
         const newNodes = captureKeyedFC(fiber.props.children[0]);
@@ -756,7 +758,7 @@ describe("DOM Node Reuse Tests", () => {
         const initialNodes = captureKeyedNodes(fiber);
 
         // Remove items with keys 2, 3, and 4.
-        count.value.splice(1, 3);
+        count.update((prev) => prev.splice(1, 3));
         await Promise.resolve();
 
         const newNodes = captureKeyedNodes(fiber);
@@ -789,7 +791,7 @@ describe("DOM Node Reuse Tests", () => {
         const initialNodes = captureKeyedFC(fiber);
 
         // Remove items with keys 2, 3, and 4.
-        count.value.splice(1, 3);
+        count.update((prev) => prev.splice(1, 3));
         await Promise.resolve();
 
         const newNodes = captureKeyedFC(fiber);
@@ -836,7 +838,7 @@ describe("DOM Node Reuse Tests", () => {
         const initialNodes = captureKeyedNodes(fiber);
 
         // Mutate the array in a way that preserves existing keys.
-        count.value.push(4);
+        count.update((prev) => prev.push(4));
         await Promise.resolve();
         const newNodes = captureKeyedNodes(fiber);
 
@@ -860,7 +862,7 @@ describe("DOM Node Reuse Tests", () => {
         const initialNodes = Array.from(fiber.dom.children);
 
         // Reverse the array.
-        count.value.reverse();
+        count.update((prev) => prev.reverse());
         await Promise.resolve();
 
         const newNodes = Array.from(fiber.dom.children);
@@ -893,7 +895,7 @@ describe("DOM Node Reuse Tests", () => {
         const initialNodes = fiber.props.children.map((child) => child.dom);
 
         // Swap the order.
-        count.value.reverse();
+        count.update((prev) => prev.reverse());
         await Promise.resolve();
         const newNodes = fiber.props.children.map((child) => child.dom);
 
@@ -915,13 +917,13 @@ describe("DOM Node Reuse Tests", () => {
         const initialNodes = captureKeyedNodes(fiber);
 
         // Sequence of in-place mutations:
-        count.value.splice(2, 1); // remove item with key 3
+        count.update((prev) => prev.splice(2, 1)); // remove item with key 3
         await Promise.resolve();
-        count.value.push(6); // add new item with key 6
+        count.update((prev) => prev.push(6)); // add new item with key 6
         await Promise.resolve();
-        count.value.reverse();
+        count.update((prev) => prev.reverse());
         await Promise.resolve();
-        count.value.splice(1, 2, 7, 8); // replace two items in the middle
+        count.update((prev) => prev.splice(1, 2, 7, 8)); // replace two items in the middle
         await Promise.resolve();
 
         const finalNodes = captureKeyedNodes(fiber);
@@ -954,13 +956,13 @@ describe("DOM Node Reuse Tests", () => {
         const initialNodes = captureKeyedFC(fiber);
 
         // Sequence of in-place mutations:
-        count.value.splice(2, 1); // remove item with key 3
+        count.update((prev) => prev.splice(2, 1)); // remove item with key 3
         await Promise.resolve();
-        count.value.push(6); // add new item with key 6
+        count.update((prev) => prev.push(6)); // add new item with key 6
         await Promise.resolve();
-        count.value.reverse();
+        count.update((prev) => prev.reverse());
         await Promise.resolve();
-        count.value.splice(1, 2, 7, 8); // replace two items in the middle
+        count.update((prev) => prev.splice(1, 2, 7, 8)); // replace two items in the middle
         await Promise.resolve();
 
         const finalNodes = captureKeyedFC(fiber);
@@ -978,7 +980,7 @@ describe("Dom node reuse - edge cases", () => {
         const itemsSignal = createSignal([1, 2, 3]);
         function Test({ text }) {
             const signal = createSignal<boolean>(true);
-            const timeout = setTimeout(() => (signal.value = false), 1000);
+            const timeout = setTimeout(() => signal.update(false), 1000);
 
             cleanUp(() => {
                 clearTimeout(timeout);
@@ -1020,10 +1022,12 @@ describe("Dom node reuse - edge cases", () => {
             if (itemsSignal.value.length < 2) return;
 
             const temp = itemsSignal.value[swap % itemsSignal.value.length];
-            itemsSignal.value[swap] =
-                itemsSignal.value[(swap + 1) % itemsSignal.value.length];
-            itemsSignal.value[(swap + 1) % itemsSignal.value.length] = temp;
-            swap = (swap + 1) % itemsSignal.value.length;
+
+            itemsSignal.update((prev) => {
+                prev[swap] = prev[(swap + 1) % prev.length];
+                prev[(swap + 1) % prev.length] = temp;
+                swap = (swap + 1) % itemsSignal.value.length;
+            });
         }
 
         for (let i = 0; i < 6; i++) {
@@ -1034,7 +1038,7 @@ describe("Dom node reuse - edge cases", () => {
             );
         }
         for (let i = 0; i < 3; i++) {
-            itemsSignal.value.unshift(itemsSignal.value.pop());
+            itemsSignal.update((prev) => prev.unshift(prev.pop()!));
             await Promise.resolve();
             expect(fiber.dom.innerHTML).toBe(
                 `<p>${itemsSignal.value[0]}</p><p>${itemsSignal.value[1]}</p><p>${itemsSignal.value[2]}</p>`
@@ -1054,7 +1058,7 @@ describe("Dom node reuse - edge cases", () => {
         commitFiber(fiber);
         const initialNodes = captureKeyedNodes(fiber.props.children[0]);
 
-        count.value.reverse();
+        count.update((prev) => prev.reverse());
         await Promise.resolve();
 
         const newNodes = captureKeyedNodes(fiber.props.children[0]);
@@ -1084,7 +1088,7 @@ describe("Dom node reuse - edge cases", () => {
         const initialNodes = captureKeyedNodes(fiber.props.children[0]);
 
         // // Sort the array so that it becomes [1, 2, 3, 4].
-        count.value.sort((a, b) => a - b);
+        count.update((prev) => prev.sort((a, b) => a - b));
         await Promise.resolve();
 
         const newNodes = captureKeyedNodes(fiber.props.children[0]);

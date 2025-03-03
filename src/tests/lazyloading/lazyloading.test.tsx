@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 
 import * as rendering from "../../rendering/render";
-import { createSignal } from "../../signals/signal";
+import { BaseSignal, createSignal } from "../../signals/signal";
 // If the component takes no parameters, treat its props as {}
 type PropsOf<T extends (...args: any) => any> = Parameters<T> extends []
     ? {}
     : Parameters<T>[0];
 
-function lazy<T extends (props: any) => any>(
+export function lazy<T extends (props: any) => any>(
     importFn: () => Promise<{ default: T }>
 ): (
     props: PropsOf<T> & {
@@ -16,8 +16,11 @@ function lazy<T extends (props: any) => any>(
     }
 ) => ReturnType<T> {
     let Component: T | null = null;
-    // console.log(Component, "Component");
-    const load = (loading, error) => {
+
+    const load = (
+        loading: BaseSignal<boolean>,
+        error: BaseSignal<Error | null>
+    ) => {
         if (!Component) {
             importFn()
                 .then((mod) => {
@@ -28,21 +31,24 @@ function lazy<T extends (props: any) => any>(
                             );
                         }
                         Component = mod.default;
-                        loading.value = false;
-                        error.value = null;
+
+                        loading.update(false);
+                        error.update(null);
                     } else {
-                        error.value = new Error(
-                            "No default export found from lazy-loaded module"
+                        error.update(
+                            new Error(
+                                "No default export found from lazy-loaded module"
+                            )
                         );
                     }
                 })
                 .catch((err) => {
-                    error.value = err;
-                    loading.value = false;
+                    error.update(err);
+                    loading.update(false);
                 });
         } else {
-            loading.value = false;
-            error.value = null;
+            loading.update(false);
+            error.update(null);
         }
     };
 
@@ -54,6 +60,7 @@ function lazy<T extends (props: any) => any>(
     ): ReturnType<T> => {
         const loading = createSignal<boolean>(true);
         const error = createSignal<Error | null>(null);
+
         load(loading, error);
         // Validate fallback and errorFallback types
         const isValidNode = (val: any) =>
@@ -79,8 +86,8 @@ function lazy<T extends (props: any) => any>(
 
         return (
             <>
-                {() => {
-                    const value = loading.value
+                {() =>
+                    loading.value
                         ? props.fallback
                         : error.value !== null
                         ? props.errorFallback
@@ -88,9 +95,8 @@ function lazy<T extends (props: any) => any>(
                                 ? props.errorFallback(error.value)
                                 : props.errorFallback
                             : "Unknown error occurred while lazy loading component, use errorFallback prop to override"
-                        : Component && <Component {...props} />;
-                    return value;
-                }}
+                        : Component && <Component {...props} />
+                }
             </>
         ) as unknown as ReturnType<T>;
     };
@@ -129,7 +135,7 @@ describe("lazy component", () => {
         const FakeComponent = ({ text }) => <div>{text}</div>;
         const fakeImport = vi.fn(
             () =>
-                new Promise((resolve) =>
+                new Promise<{ default: typeof FakeComponent }>((resolve) =>
                     setTimeout(() => resolve({ default: FakeComponent }), 50)
                 )
         );
@@ -154,7 +160,10 @@ describe("lazy component", () => {
 
     it("renders error fallback on load failure", async () => {
         const failingImport = vi.fn(
-            () => new Promise((resolve, reject) => setTimeout(reject, 50))
+            () =>
+                new Promise<{ default: never }>((resolve, reject) =>
+                    setTimeout(reject, 50)
+                )
         );
         const LazyFailing = lazy(failingImport);
 
@@ -175,7 +184,7 @@ describe("lazy component", () => {
     it("renders error fallback with function on load failure", async () => {
         const failingImport = vi.fn(
             () =>
-                new Promise((resolve, reject) =>
+                new Promise<{ default: never }>((resolve, reject) =>
                     setTimeout(() => reject(new Error("ERROR")), 50)
                 )
         );

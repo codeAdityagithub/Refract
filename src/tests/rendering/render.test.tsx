@@ -256,7 +256,7 @@ describe("commitDeletion", () => {
         expect(container.dom.innerHTML).toBe("<div>0</div>");
         expect(fiber.props.children[0].renderFunction).toBeDefined();
 
-        count.value = 1;
+        count.update(1);
         await Promise.resolve();
 
         expect(container.dom.innerHTML).toBe("<div>1</div>");
@@ -266,7 +266,7 @@ describe("commitDeletion", () => {
         commitDeletion(fiber, true);
         expect(fiber.props.children[0].renderFunction).toBeUndefined();
 
-        count.value = 2;
+        count.update(2);
         await Promise.resolve();
 
         expect(count.deps.size).toBe(0);
@@ -294,7 +294,7 @@ describe("render FC returning array fragment", () => {
         expect(fiber.dom.innerHTML).toBe(
             "<div>1</div><div>2</div><div>3</div>"
         );
-        count.value.push(4);
+        count.update((prev) => prev.push(4));
         await Promise.resolve();
         expect(count.value[count.value.length - 1]).toBe(4);
 

@@ -57,7 +57,7 @@ describe("Functional Components life cycle", () => {
         expect(count).toBe(2);
         expect(computedCount).toBe(1);
 
-        propSignal.value = 1;
+        propSignal.update(1);
         await Promise.resolve();
 
         expect(count).toBe(3);
@@ -68,7 +68,7 @@ describe("Functional Components life cycle", () => {
         expect(count).toBe(3);
         expect(computedCount).toBe(2);
 
-        propSignal.value = 2;
+        propSignal.update(2);
         await Promise.resolve();
 
         expect(computedCount).toBe(2);

@@ -166,7 +166,7 @@ describe("createNode", () => {
             },
         };
         const dom = createNode(element);
-        console.log(dom.style.hover);
+        // console.log(dom.style.hover);
         expect(dom.style.color).toBe("red");
         expect(dom.style.fontSize).toBe("");
         expect(dom.style.hover).toBeUndefined();
@@ -184,7 +184,7 @@ describe("createNode", () => {
         };
         const dom = createNode(element);
         expect(dom.style.color).toBe("red");
-        signal.value = false;
+        signal.update(false);
         await Promise.resolve();
         expect(dom.style.color).toBe("blue");
     });

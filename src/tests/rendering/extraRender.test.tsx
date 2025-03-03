@@ -154,7 +154,7 @@ describe("Promises within components", () => {
             const testSignal = createSignal<string>("initial");
 
             setTimeout(() => {
-                testSignal.value = "updated";
+                testSignal.update("updated");
             }, 200);
 
             return (
@@ -301,7 +301,7 @@ describe("Refs", () => {
         expect(myRef.current?.tagName).toBe("SPAN");
 
         // Update the signal to unmount the <span>.
-        showSignal.value = false;
+        showSignal.update(false);
         await Promise.resolve();
 
         commitFiber(fiber);
@@ -312,7 +312,7 @@ describe("Refs", () => {
 
     it("should persist the same ref if the element remains after re-render", async () => {
         const myRef = createRef();
-        const countSignal = createSignal(0);
+        const countSignal = createSignal<number>(0);
 
         const FC = () => (
             <div>
@@ -324,7 +324,7 @@ describe("Refs", () => {
         const initialRef = myRef.current;
 
         // Trigger an update that does not remove the element.
-        countSignal.value++;
+        countSignal.update(prev=>prev++);
         await Promise.resolve();
 
         // The ref should remain the same across re-renders.
@@ -337,7 +337,7 @@ describe("Refs", () => {
 
         const FC = () => (
             <div>
-                <button onClick={() => (showSignal.value = !showSignal.value)}>
+                <button onClick={() => (showSignal.update(prev=>prev = !prev))}>
                     Toggle
                 </button>
                 {() =>
@@ -356,14 +356,14 @@ describe("Refs", () => {
         expect(myRef.current).toBe(null);
 
         // Toggle to mount the <input>.
-        showSignal.value = true;
+        showSignal.update(true);
         await Promise.resolve();
 
         expect(myRef.current).not.toBe(null);
         expect(myRef.current?.tagName).toBe("INPUT");
 
         // Toggle again to unmount the <input>.
-        showSignal.value = false;
+        showSignal.update(false);
         await Promise.resolve();
 
         // After unmounting, the ref should be reset to null.
@@ -396,8 +396,8 @@ describe("Extra Edge cases", () => {
                     <h2>This is {() => str.value}</h2>
                     <button
                         onClick={() => {
-                            clicked.value = !clicked.value;
-                            str.value = clicked.value ? "FC1 Clicked" : "FC1";
+                            clicked.update(prev=>prev=!prev);
+                            str.update(prev=>prev = clicked.value ? "FC1 Clicked" : "FC1");
                         }}
                     >
                         Click
@@ -435,14 +435,14 @@ describe("Extra Edge cases", () => {
             "This is FC1<h2>This is FC1</h2><button>Click</button>"
         );
 
-        showTextSignal.value = true;
+        showTextSignal.update(true);
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe(
             "<div>This is FC2<h2>This is FC2</h2></div>"
         );
 
-        showTextSignal.value = false;
+        showTextSignal.update(false);
         await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe(

@@ -348,9 +348,8 @@ describe("Static Rendering Tests", () => {
         expect(root.firstChild.children.length).toBe(totalChildren);
 
         const start2 = performance.now();
-        items.value = Array.from(
-            { length: totalChildren },
-            (_, i) => `Item ${i + 1}`
+        items.update(
+            Array.from({ length: totalChildren }, (_, i) => `Item ${i + 1}`)
         );
         await Promise.resolve();
         const end2 = performance.now();
