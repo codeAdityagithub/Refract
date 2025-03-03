@@ -6,12 +6,19 @@ import Test from "./Test.tsx";
 import TimerComponent from "./Timer.tsx";
 
 const App = (props: any) => {
-    const count = createSignal(1);
+    const visible = createSignal<boolean>(true);
     // const count2 = createSignal(1);
     // return <ReactiveComponent />;
     // return <NonReactiveComponent />;
     // return <Test />;
-    return <TimerComponent />;
+    return (
+        <>
+            <button onClick={() => visible.update((prev) => !prev)}>
+                Show/Hide
+            </button>
+            {() => (visible.value ? <TimerComponent /> : "Hidden")}
+        </>
+    );
     // return <StylesTest />;
     // return <ListsTest />;
     // return <PerformanceTest />;

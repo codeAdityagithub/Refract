@@ -198,21 +198,31 @@ function commitFiber(
     } else {
         if (!fiber.dom) fiber.dom = createNode(fiber);
 
-        let parentDom: Node | undefined = undefined;
-        if (customParent) {
-            parentDom = customParent;
-        } else {
-            let fiberParent: Fiber | undefined = fiber.parent;
-
-            while (fiberParent && !fiberParent.dom) {
-                fiberParent = fiberParent.parent;
-            }
-            parentDom = fiberParent?.dom;
-        }
         if (referenceNode) {
-            if (replace) parentDom?.replaceChild(fiber.dom, referenceNode);
-            else parentDom?.insertBefore(fiber.dom, referenceNode);
-        } else parentDom?.appendChild(fiber.dom);
+            if (replace)
+                referenceNode.parentElement?.replaceChild(
+                    fiber.dom,
+                    referenceNode
+                );
+            else
+                referenceNode.parentElement?.insertBefore(
+                    fiber.dom,
+                    referenceNode
+                );
+        } else {
+            let parentDom: Node | undefined = undefined;
+            if (customParent) {
+                parentDom = customParent;
+            } else {
+                let fiberParent: Fiber | undefined = fiber.parent;
+
+                while (fiberParent && !fiberParent.dom) {
+                    fiberParent = fiberParent.parent;
+                }
+                parentDom = fiberParent?.dom;
+            }
+            parentDom?.appendChild(fiber.dom);
+        }
         for (const child of fiber.props.children) {
             if (needCreation) child.parent = fiber;
 

@@ -324,7 +324,7 @@ describe("Refs", () => {
         const initialRef = myRef.current;
 
         // Trigger an update that does not remove the element.
-        countSignal.update(prev=>prev++);
+        countSignal.update((prev) => prev++);
         await Promise.resolve();
 
         // The ref should remain the same across re-renders.
@@ -337,7 +337,9 @@ describe("Refs", () => {
 
         const FC = () => (
             <div>
-                <button onClick={() => (showSignal.update(prev=>prev = !prev))}>
+                <button
+                    onClick={() => showSignal.update((prev) => (prev = !prev))}
+                >
                     Toggle
                 </button>
                 {() =>
@@ -396,8 +398,13 @@ describe("Extra Edge cases", () => {
                     <h2>This is {() => str.value}</h2>
                     <button
                         onClick={() => {
-                            clicked.update(prev=>prev=!prev);
-                            str.update(prev=>prev = clicked.value ? "FC1 Clicked" : "FC1");
+                            clicked.update((prev) => (prev = !prev));
+                            str.update(
+                                (prev) =>
+                                    (prev = clicked.value
+                                        ? "FC1 Clicked"
+                                        : "FC1")
+                            );
                         }}
                     >
                         Click
@@ -448,5 +455,80 @@ describe("Extra Edge cases", () => {
         expect(fiber.dom.innerHTML).toBe(
             "This is FC1<h2>This is FC1</h2><button>Click</button>"
         );
+    });
+    it("should not react if update is called inside it in a FC", async () => {
+        const fn = vi.fn();
+        const count = createSignal<number>(0);
+        const visible = createSignal<boolean>(true);
+
+        const FC = () => {
+            createEffect(() => {
+                count.update((prev) => prev + 1);
+                count.value;
+                return () => {
+                    fn();
+                };
+            });
+
+            return <div>{() => count.value}</div>;
+        };
+
+        const fiber = <div>{() => (visible.value ? <FC /> : "hidden")}</div>;
+
+        createFiber(fiber);
+        commitFiber(fiber);
+
+        expect(fn).toHaveBeenCalledTimes(0);
+        expect(fiber.dom.innerHTML).toBe("<div>1</div>");
+
+        visible.update(false);
+        await Promise.resolve();
+
+        expect(fn).toHaveBeenCalledTimes(1);
+        expect(fiber.dom.innerHTML).toBe("hidden");
+    });
+
+    it("Should not cause a infinite loop for effect being its own dependency, instead it should run twice as expected", async () => {
+        const count = createSignal<number>(0);
+
+        const FC = () => {
+            createEffect(() => {
+                count.update((prev) => prev + 1);
+                count.value;
+            });
+
+            return <div>{() => count.value}</div>;
+        };
+
+        const fiber = (
+            <div>
+                <FC />
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+
+        expect(fiber.dom.innerHTML).toBe("<div>1</div>");
+
+        count.update((prev) => prev + 1);
+        await Promise.resolve();
+
+        expect(fiber.dom.innerHTML).toBe("<div>3</div>");
+
+        // Safeguard against infinite loops
+        const timeout = new Promise((_, reject) =>
+            setTimeout(
+                () => reject(new Error("Effect ran more than twice")),
+                100
+            )
+        );
+
+        // Wait for the next tick and verify no further updates
+        const testUpdate = Promise.resolve().then(() =>
+            expect(fiber.dom.innerHTML).toBe("<div>3</div>")
+        );
+
+        await Promise.race([testUpdate, timeout]);
     });
 });

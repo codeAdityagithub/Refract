@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
     ArraySignal,
     computed,
@@ -605,4 +605,26 @@ describe("createPromise", () => {
             expect(() => createPromise(123)).toThrow();
         });
     });
+});
+
+describe("createEffect-edge cases", () => {
+    it("should run only once if it has no dependency", async () => {
+        const fn = vi.fn();
+        createEffect(() => {
+            fn();
+        });
+        await Promise.resolve();
+        expect(fn).toHaveBeenCalledTimes(1);
+    });
+    it("should not react if update is called inside it", async () => {
+        let count = createSignal<number>(0);
+
+        createEffect(() => {
+            count.update(1);
+        });
+        await Promise.resolve();
+
+        expect(count.value).toBe(1);
+    });
+    
 });
