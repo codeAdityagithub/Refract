@@ -69,9 +69,6 @@ export function createEffect(fn: Function) {
     currentEffect = null;
 }
 
-function computed<T extends NormalSignal>(val: () => T): PrimitiveSignal<T>;
-function computed<T extends any[]>(val: () => T): ArraySignal<T>;
-function computed<T extends Record<any, any>>(val: () => T): ObjectSignal<T>;
 function computed<T extends NormalSignal | any[] | Record<any, any>>(
     fn: () => T
 ) {
@@ -79,16 +76,25 @@ function computed<T extends NormalSignal | any[] | Record<any, any>>(
         throw new Error("computed takes a function as the argument");
 
     currentEffect = () => {
-        const newVal = fn();
-        signal.update(newVal);
+        let newVal = fn();
+        if (newVal !== signal.value) {
+            signal.update(newVal);
+        }
     };
-    addEffect(currentEffect);
-    const val = fn();
-    // @ts-expect-error
-    const signal = createSignal<T>(val);
-    currentEffect = null;
 
-    return signal;
+    addEffect(currentEffect);
+
+    const val = fn();
+
+    // @ts-expect-error - Type assertion for signal
+    const signal = createSignal<T>(val);
+
+    currentEffect = null;
+    return {
+        get value() {
+            return signal.value;
+        },
+    };
 }
 
 type PromiseOverload<T> =
@@ -126,7 +132,11 @@ export function createPromise<T>(fn: () => Promise<T>) {
             });
         });
 
-    return triggerSignal;
+    return {
+        get value() {
+            return triggerSignal.value;
+        },
+    };
 }
 
 export class Ref<T extends HTMLElement> {
@@ -141,30 +151,43 @@ export function createRef<T extends HTMLElement>() {
     return ref;
 }
 
-const NonMutatingArrayMethods = [
-    "concat",
-    "every",
-    "filter",
-    "find",
-    "findIndex",
-    "flat",
-    "flatMap",
-    "forEach",
-    "includes",
-    "indexOf",
-    "join",
-    "map",
-    "reduce",
-    "reduceRight",
-    "slice",
-    "some",
-    "toLocaleString",
-    "toString",
+// const NonMutatingArrayMethods = [
+//     "constructor",
+//     "concat",
+//     "every",
+//     "filter",
+//     "find",
+//     "findIndex",
+//     "flat",
+//     "flatMap",
+//     "forEach",
+//     "includes",
+//     "indexOf",
+//     "join",
+//     "map",
+//     "reduce",
+//     "reduceRight",
+//     "slice",
+//     "some",
+//     "toLocaleString",
+//     "toString",
+// ];
+const MutatingMethods = [
+    "push",
+    "pop",
+    "unshift",
+    "shift",
+    "splice",
+    "fill",
+    "copyWithin",
+    "sort",
+    "reverse",
 ];
 
 type DeepReadonly<T> = {
     readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K];
 };
+
 /**
  *
  * Base class for signals.
@@ -286,17 +309,18 @@ export class ArraySignal<T extends any[]> extends BaseSignal<T> {
 
                 if (typeof value === "function") {
                     if (
-                        !NonMutatingArrayMethods.includes(String(prop)) &&
+                        MutatingMethods.includes(String(prop)) &&
                         !this.updateCalled
                     ) {
                         throw new Error(
                             "Cannot set a value on an array signal, use the update method for updating the array."
                         );
                     }
+
                     return (...args: any[]) => {
                         const result = value.apply(target, args);
                         // Notify if the method is mutating.
-                        if (!NonMutatingArrayMethods.includes(String(prop))) {
+                        if (MutatingMethods.includes(String(prop))) {
                             this.notify();
                         }
                         return result;
@@ -329,17 +353,6 @@ export class ArraySignal<T extends any[]> extends BaseSignal<T> {
 
         return this._val;
     }
-
-    // set value(val: T) {
-    //     if (!Array.isArray(val)) {
-    //         throw new Error(
-    //             "Invalid type for ArraySignal; value must be an array"
-    //         );
-    //     }
-    //     if (val === this._val) return;
-    //     this._val = this.createProxy(val);
-    //     this.notify();
-    // }
 
     public update(val: T | ((prev: T) => void)) {
         this.updateCalled = true;
@@ -383,16 +396,17 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
                 if (typeof value === "function") {
                     if (
                         !this.updateCalled &&
-                        !NonMutatingArrayMethods.includes(String(prop))
+                        MutatingMethods.includes(String(prop))
                     ) {
                         throw new Error(
                             "Cannot set a value on an object signal, use the update method for updating the object."
                         );
                     }
+
                     return (...args: any[]) => {
                         const result = value.apply(target, args);
                         // Notify if the method is mutating.
-                        if (!NonMutatingArrayMethods.includes(String(prop))) {
+                        if (MutatingMethods.includes(String(prop))) {
                             this.notify();
                         }
                         return result;
@@ -467,17 +481,6 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
         return this._val;
     }
 
-    // set value(val: T) {
-    //     if (!isPlainObject(val)) {
-    //         throw new Error(
-    //             "Invalid type for ObjectSignal; value must be a plain object"
-    //         );
-    //     }
-    //     if (val === this._val) return;
-    //     this._val = this.createProxy(val);
-    //     this.notify();
-    // }
-
     public update(val: T | ((prev: T) => void)) {
         this.updateCalled = true;
         if (typeof val === "function") {
@@ -496,12 +499,27 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
     }
 }
 
+export interface PublicSignal<T> {
+    readonly value: DeepReadonly<T>;
+    update(val: T | ((prev: T) => T)): void;
+}
+
+export interface PublicArraySignal<T extends any[]> extends PublicSignal<T> {
+    update(val: T | ((prev: T) => void)): void; // Mutation allowed
+}
+
+export interface PublicObjectSignal<T extends Record<any, any>>
+    extends PublicSignal<T> {
+    update(val: T | ((prev: T) => void)): void; // Mutation allowed
+}
 /**
  * Overloaded factory function to create a signal.
  */
-function createSignal<T extends NormalSignal>(val: T): PrimitiveSignal<T>;
-function createSignal<T extends any[]>(val: T): ArraySignal<T>;
-function createSignal<T extends Record<any, any>>(val: T): ObjectSignal<T>;
+function createSignal<T extends NormalSignal>(val: T): PublicSignal<T>;
+function createSignal<T extends any[]>(val: T): PublicArraySignal<T>;
+function createSignal<T extends Record<any, any>>(
+    val: T
+): PublicObjectSignal<T>;
 
 function createSignal<T extends NormalSignal | any[] | Record<any, any>>(
     val: T
@@ -514,11 +532,21 @@ function createSignal<T extends NormalSignal | any[] | Record<any, any>>(
         if (Array.isArray(val)) {
             const signal = new ArraySignal(val);
             addSignal(signal);
-            return signal;
+            return {
+                get value() {
+                    return signal.value;
+                },
+                update: signal.update.bind(signal) as typeof signal.update,
+            };
         } else if (isPlainObject(val)) {
             const signal = new ObjectSignal(val);
             addSignal(signal);
-            return signal;
+            return {
+                get value() {
+                    return signal.value;
+                },
+                update: signal.update.bind(signal) as typeof signal.update,
+            };
         } else {
             throw new Error(
                 "Invalid type for signal initialization: " + typeof val
@@ -527,7 +555,12 @@ function createSignal<T extends NormalSignal | any[] | Record<any, any>>(
     } else if (isPrimitive(val)) {
         const signal = new PrimitiveSignal(val);
         addSignal(signal);
-        return signal;
+        return {
+            get value() {
+                return signal.value;
+            },
+            update: signal.update.bind(signal) as typeof signal.update,
+        };
     } else {
         throw new Error(
             "Invalid type for signal initialization: " + typeof val

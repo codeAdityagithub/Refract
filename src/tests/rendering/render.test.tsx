@@ -261,15 +261,13 @@ describe("commitDeletion", () => {
 
         expect(container.dom.innerHTML).toBe("<div>1</div>");
 
-        expect(count.deps.size).toBe(1);
-
         commitDeletion(fiber, true);
         expect(fiber.props.children[0].renderFunction).toBeUndefined();
+        expect(container.dom.innerHTML).toBe("");
 
         count.update(2);
         await Promise.resolve();
 
-        expect(count.deps.size).toBe(0);
         expect(container.dom.innerHTML).toBe("");
     });
 });

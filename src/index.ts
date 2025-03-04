@@ -14,6 +14,10 @@ import type {
     BaseSignal,
     ObjectSignal,
     PrimitiveSignal,
+    PublicArraySignal,
+    PublicObjectSignal,
+    PublicSignal,
+    Ref,
 } from "./signals/signal";
 
 export {
@@ -30,4 +34,8 @@ export {
     BaseSignal,
     ObjectSignal,
     PrimitiveSignal,
+    PublicArraySignal,
+    PublicObjectSignal,
+    PublicSignal,
+    Ref,
 };
