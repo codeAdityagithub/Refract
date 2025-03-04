@@ -3,8 +3,20 @@
     "type": "module",
     "version": "1.0.0",
     "description": "Simpler, Faster and Lighter JSX based rendering for Single-Page Applications",
-    "main": "src/index.ts",
-    "types": "src/index.d.ts",
+    "main": "build/refract.cjs.js",
+    "module": "build/refract.es.js",
+    "types": "build/index.d.ts",
+    "files": [
+        "build"
+    ],
+    "exports": {
+        "import": "./build/refract.es.js",
+        "require": "./build/refract.cjs.js",
+        "types": "./build/index.d.ts"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
     "scripts": {
         "test": "vitest",
         "build": "vite build",

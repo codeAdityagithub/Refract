@@ -1,4 +1,6 @@
-import { BaseSignal, createSignal, PrimitiveSignal } from "../index";
+import { createSignal, PublicSignal } from "../index";
+
+declare const FRAGMENT = "FRAGMENT";
 
 // If the component takes no parameters, treat its props as {}
 type PropsOf<T extends (...args: any) => any> = Parameters<T> extends []
@@ -16,8 +18,8 @@ export function lazy<T extends (props: any) => any>(
     let Component: T | null = null;
 
     const load = (
-        loading: PrimitiveSignal<boolean>,
-        error: PrimitiveSignal<Error | null>
+        loading: PublicSignal<boolean>,
+        error: PublicSignal<Error | null>
     ) => {
         if (!Component) {
             importFn()

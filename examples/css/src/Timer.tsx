@@ -5,12 +5,12 @@ function TimerComponent() {
     const other = createSignal([1, 2, 3]);
 
     const interval = setInterval(() => {
-        seconds.value = seconds.value + 1;
+        seconds.update((seconds) => seconds + 1);
     }, 1000);
 
     createEffect(() => {
         console.log("Effect");
-        other.value.push(4);
+        other.update((prev) => prev.push(4));
         // Cleanup function to clear the interval when the component unmounts
         return () => {
             console.log("cleanup");

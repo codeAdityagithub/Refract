@@ -1,16 +1,16 @@
 /**
  * Signal for arrays.
  */
-export declare const FRAGMENT = "FRAGMENT";
-
 export declare class ArraySignal<T extends any[]> extends BaseSignal<T> {
+    private updateCalled;
     constructor(val: T);
     private createProxy;
-    get value(): T;
-    set value(val: T);
+    get value(): DeepReadonly<T>;
+    update(val: T | ((prev: T) => void)): void;
 }
 
 /**
+ *
  * Base class for signals.
  */
 export declare abstract class BaseSignal<T> {
@@ -21,21 +21,19 @@ export declare abstract class BaseSignal<T> {
     protected notify(): void;
     removeDep(fn: Function): void;
     clearDeps(): void;
-    abstract get value(): T;
-    abstract set value(val: T);
+    abstract get value(): T | DeepReadonly<T>;
+    abstract update(val: T | ((prev: T) => T)): void;
 }
 
 export declare function cleanUp(fn: Function): void;
 
-export declare function computed<T extends NormalSignal>(
-    val: () => T
-): PrimitiveSignal<T>;
-
-export declare function computed<T extends any[]>(val: () => T): ArraySignal<T>;
-
-export declare function computed<T extends Record<any, any>>(
-    val: () => T
-): ObjectSignal<T>;
+export declare function computed<
+    T extends NormalSignal | any[] | Record<any, any>
+>(
+    fn: () => T
+): {
+    readonly value: DeepReadonly<T>;
+};
 
 export declare function createEffect(fn: Function): void;
 
@@ -45,9 +43,9 @@ export declare function createElement(
     ...children: any[]
 ): Fiber | FiberChildren;
 
-export declare function createPromise<T>(
-    fn: () => Promise<T>
-): ObjectSignal<PromiseOverload<T>>;
+export declare function createPromise<T>(fn: () => Promise<T>): {
+    readonly value: DeepReadonly<PromiseOverload<T>>;
+};
 
 export declare function createRef<T extends HTMLElement>(): Ref<T>;
 
@@ -56,13 +54,19 @@ export declare function createRef<T extends HTMLElement>(): Ref<T>;
  */
 export declare function createSignal<T extends NormalSignal>(
     val: T
-): PrimitiveSignal<T>;
+): PublicSignal<T>;
 
-export declare function createSignal<T extends any[]>(val: T): ArraySignal<T>;
+export declare function createSignal<T extends any[]>(
+    val: T
+): PublicArraySignal<T>;
 
 export declare function createSignal<T extends Record<any, any>>(
     val: T
-): ObjectSignal<T>;
+): PublicObjectSignal<T>;
+
+declare type DeepReadonly<T> = {
+    readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K];
+};
 
 declare type Fiber = {
     type: Type;
@@ -101,11 +105,12 @@ declare type NormalSignal =
 export declare class ObjectSignal<
     T extends Record<any, any>
 > extends BaseSignal<T> {
+    private updateCalled;
     constructor(val: T);
     private createInternalArrayProxy;
     private createProxy;
-    get value(): T;
-    set value(val: T);
+    get value(): DeepReadonly<T>;
+    update(val: T | ((prev: T) => void)): void;
 }
 
 /**
@@ -116,7 +121,7 @@ export declare class PrimitiveSignal<
 > extends BaseSignal<T> {
     constructor(val: T);
     get value(): T;
-    set value(val: T);
+    update(val: T | ((prev: T) => T)): void;
 }
 
 declare type PromiseOverload<T> =
@@ -151,7 +156,22 @@ declare type PropsOf<T extends (...args: any) => any> = Parameters<T> extends []
     ? {}
     : Parameters<T>[0];
 
-declare class Ref<T extends HTMLElement> {
+export declare interface PublicArraySignal<T extends any[]>
+    extends PublicSignal<T> {
+    update(val: T | ((prev: T) => void)): void;
+}
+
+export declare interface PublicObjectSignal<T extends Record<any, any>>
+    extends PublicSignal<T> {
+    update(val: T | ((prev: T) => void)): void;
+}
+
+export declare interface PublicSignal<T> {
+    readonly value: DeepReadonly<T>;
+    update(val: T | ((prev: T) => T)): void;
+}
+
+export declare class Ref<T extends HTMLElement> {
     current: T | null;
     constructor(val: T | null);
 }

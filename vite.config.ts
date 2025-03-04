@@ -1,39 +1,25 @@
 import { defineConfig } from "vite";
-// @ts-expect-error
-import path from "path";
+import dts from "vite-plugin-dts";
 
 // @ts-expect-error
 const isProd = process.env.NODE_ENV === "production";
-import dts from "vite-plugin-dts";
 
 export default defineConfig({
-    root: "./",
     build: {
         outDir: isProd ? "build" : "dist",
         minify: true,
         sourcemap: !isProd,
+        lib: {
+            entry: "src/index.ts",
+            name: "Refract",
+            fileName: (format) => `refract.${format}.js`,
+            formats: ["es", "cjs", "umd"], // Supports multiple module formats
+        },
         rollupOptions: {
             output: {
                 preserveModules: false,
             },
-            input: "./index.html",
         },
-        // lib: {
-        //     entry: ["src/index.ts"],
-        //     name: "Refract",
-        //     fileName: "refract",
-        // },
-    },
-    resolve: {
-        alias: {
-            // @ts-expect-error
-            "@": path.resolve(__dirname, "./"),
-        },
-    },
-    esbuild: {
-        jsxFactory: "createElement", // Your custom JSX factory function
-        jsxFragment: '"FRAGMENT"', // Your custom fragment syntax,
-        jsxInject: `import { createElement } from "../index"`,
     },
     server: {
         port: 3000,
@@ -41,9 +27,13 @@ export default defineConfig({
     plugins: [
         dts({
             entryRoot: "src",
-            exclude: ["**/*.test.ts", "src/tests/**/*", "examples/**/*"],
-            insertTypesEntry: true,
-            // rollupTypes: true,
+            outDir: isProd ? "build" : "dist",
+            exclude: [
+                "**/*.test.ts",
+                "src/tests/**/*",
+                "examples/**/*",
+                "src/components/**/*",
+            ],
         }),
     ],
 });

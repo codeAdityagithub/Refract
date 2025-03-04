@@ -9,7 +9,7 @@ const App = () => {
 
     return (
         <div>
-            <button onClick={() => (show.value = !show.value)}>
+            <button onClick={() => show.update((prev) => !prev)}>
                 Show/Hide
             </button>
             {() => (show.value ? <TimerComponent /> : "Hidden")}
