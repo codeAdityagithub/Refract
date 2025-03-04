@@ -38,6 +38,6 @@
     "homepage": "https://github.com/codeAdityagithub/Refract#readme",
     "repository": {
         "type": "git",
-        "url": "https://github.com/codeAdityagithub/Refract.git"
+        "url": "git+https://github.com/codeAdityagithub/Refract.git"
     }
 }
