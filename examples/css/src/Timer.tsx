@@ -1,4 +1,4 @@
-import { createSignal, createEffect, cleanUp } from "@/refract";
+import { createSignal, createEffect, cleanUp } from "refract-js";
 
 function TimerComponent() {
     const seconds = createSignal<number>(0);

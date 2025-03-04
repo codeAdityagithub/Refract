@@ -1,4 +1,4 @@
-import { createSignal } from "@/refract";
+import { createSignal } from "refract-js";
 import Emotion from "./Emotion";
 import Sass from "./Sass";
 import Tailwind from "./Tailwind";
