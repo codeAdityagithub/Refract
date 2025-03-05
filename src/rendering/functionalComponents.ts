@@ -1,8 +1,9 @@
-import { BaseSignal } from "../signals/signal";
+import { BaseSignal, runEffect } from "../signals/signal";
+import { Fiber } from "../types";
 
-let currentFC = null;
+let currentFC: Fiber | null = null;
 let fcMap = new WeakMap<
-    Function,
+    Fiber,
     {
         signals: Set<BaseSignal<any>>;
         cleanup: Function[];
@@ -10,7 +11,7 @@ let fcMap = new WeakMap<
     }
 >();
 
-export function setCurrentFC(fc) {
+export function setCurrentFC(fc: Fiber) {
     currentFC = fc;
 }
 
@@ -19,6 +20,16 @@ export function clearCurrentFC() {
 }
 export function getCurrentFC() {
     return currentFC;
+}
+
+export function runAllEffects(FC: Fiber) {
+    if (fcMap.has(FC)) {
+        const fcData = fcMap.get(FC)!;
+
+        for (const effect of fcData.effects) {
+            runEffect(effect, FC);
+        }
+    }
 }
 
 export function cleanUp(fn: Function) {
@@ -30,6 +41,22 @@ export function cleanUp(fn: Function) {
             fcData.cleanup.push(fn);
         } else {
             fcMap.set(currentFC, {
+                signals: new Set(),
+                cleanup: [fn],
+                effects: new Set(),
+            });
+        }
+    }
+}
+export function cleanUpWFiber(fn: Function, fiber: Fiber) {
+    if (fiber) {
+        // console.log(currentFC, fcMap.has(currentFC));
+        if (fcMap.has(fiber)) {
+            const fcData = fcMap.get(fiber)!;
+
+            fcData.cleanup.push(fn);
+        } else {
+            fcMap.set(fiber, {
                 signals: new Set(),
                 cleanup: [fn],
                 effects: new Set(),

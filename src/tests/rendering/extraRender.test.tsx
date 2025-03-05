@@ -464,7 +464,6 @@ describe("Extra Edge cases", () => {
         const FC = () => {
             createEffect(() => {
                 count.update((prev) => prev + 1);
-                count.value;
                 return () => {
                     fn();
                 };
@@ -479,11 +478,17 @@ describe("Extra Edge cases", () => {
         commitFiber(fiber);
 
         expect(fn).toHaveBeenCalledTimes(0);
+        await Promise.resolve();
+
+        expect(count.value).toBe(1);
+        await Promise.resolve();
+
         expect(fiber.dom.innerHTML).toBe("<div>1</div>");
 
         visible.update(false);
         await Promise.resolve();
 
+        expect(visible.value).toBe(false);
         expect(fn).toHaveBeenCalledTimes(1);
         expect(fiber.dom.innerHTML).toBe("hidden");
     });
@@ -493,8 +498,8 @@ describe("Extra Edge cases", () => {
 
         const FC = () => {
             createEffect(() => {
-                count.update((prev) => prev + 1);
                 count.value;
+                count.update((prev) => prev + 1);
             });
 
             return <div>{() => count.value}</div>;
@@ -508,6 +513,11 @@ describe("Extra Edge cases", () => {
 
         createFiber(fiber);
         commitFiber(fiber);
+
+        await Promise.resolve();
+        expect(count.value).toBe(1);
+
+        await Promise.resolve();
 
         expect(fiber.dom.innerHTML).toBe("<div>1</div>");
 

@@ -15,6 +15,7 @@ import {
 import {
     cleanUpFC,
     clearCurrentFC,
+    runAllEffects,
     setCurrentFC,
 } from "./functionalComponents";
 
@@ -50,10 +51,20 @@ let elements: Fiber[] = [];
 let rootContainer: HTMLElement | null = null;
 let rootFragment: DocumentFragment | null = null;
 let startTime = -1;
+let effectQueue: Fiber[] = [];
+
+function processEffectQueue() {
+    for (let i = 0; i < effectQueue.length; i++) {
+        const fiber = effectQueue[i];
+        runAllEffects(fiber);
+    }
+    effectQueue.length = 0;
+}
 
 function workLoop(deadline: IdleDeadline) {
     if (startTime === -1) startTime = performance.now();
 
+    processEffectQueue();
     let shouldYield = false;
     while (elements.length > 0 && !shouldYield) {
         const element = elements.pop();
@@ -62,6 +73,7 @@ function workLoop(deadline: IdleDeadline) {
     }
 
     if (elements.length == 0) {
+        processEffectQueue();
         commitRootFragment();
         return;
     }
@@ -94,7 +106,7 @@ function renderNode(fiber: Fiber) {
 
         const children = fiber.type(fiber.props);
         clearCurrentFC();
-        // fiber.type = "FRAGMENT";
+
         if (Array.isArray(children)) {
             // which means that the FC returned a fragment
             // console.log(children);
@@ -108,6 +120,8 @@ function renderNode(fiber: Fiber) {
             fiber.props.children.push(children);
             elements.push(children);
         }
+        // queue to run its effects
+        effectQueue.push(fiber);
     } else {
         if (!fiber.dom) fiber.dom = createNode(fiber);
         let fiberParent: Fiber | undefined = fiber.parent;
@@ -195,6 +209,10 @@ function commitFiber(
             fiber.props.children.push(children);
             commitFiber(children, referenceNode, replace, true, customParent);
         }
+        // queue to run its effects at the end of current stack
+        queueMicrotask(() => {
+            runAllEffects(fiber);
+        });
     } else {
         if (!fiber.dom) fiber.dom = createNode(fiber);
 

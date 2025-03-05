@@ -46,8 +46,9 @@ render(<App />, document.getElementById("root"));
 
 ### State Management
 
-In Refract-js, functions serve as an intuitive way to create dynamic nodes.  
-Functional components rerender only once; after that, signals handle the DOM reconciliation process efficiently.
+In Refract-js, functions serve as an intuitive way to create dynamic nodes.
+
+> Functional components rerender only once;after that, signals handle the DOM reconciliation process efficiently.
 
 You can use
 `createSignal()`
@@ -63,7 +64,11 @@ function Counter() {
         <div>
             {/* Functions for dynamic values that depend on signals */}
             <p>Count: {() => count.value}</p>
-            <button onClick={() => count.value++}>Increment</button>
+
+            {/* use the update function to update the count.value */}
+            <button onClick={() => count.update((prevCount) => prevCount + 1)}>
+                Increment
+            </button>
         </div>
     );
 }

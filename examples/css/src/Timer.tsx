@@ -1,33 +1,23 @@
-import { createSignal, createEffect, cleanUp } from "refract-js";
+import { createSignal, createEffect, cleanUp, createRef } from "refract-js";
 
 function TimerComponent() {
     const seconds = createSignal<number>(0);
-    const other = createSignal([1, 2, 3]);
-
-    const interval = setInterval(() => {
-        seconds.update((seconds) => seconds + 1);
-    }, 1000);
+    const ref = createRef();
 
     createEffect(() => {
-        console.log("Effect");
-        other.update((prev) => prev.push(4));
+        console.log(ref.current);
+        const interval = setInterval(() => {
+            seconds.update((seconds) => seconds + 1);
+        }, 1000);
+
         // Cleanup function to clear the interval when the component unmounts
         return () => {
             console.log("cleanup");
+            clearInterval(interval);
         };
     });
 
-    cleanUp(() => {
-        // console.log("FC cleanup");
-        clearInterval(interval);
-    });
-
-    return (
-        <p>
-            Elapsed Time: {() => seconds.value}
-            {() => other.value.map((i) => i)} seconds
-        </p>
-    );
+    return <p ref={ref}>Elapsed Time: {() => seconds.value}</p>;
 }
 
 export default TimerComponent;

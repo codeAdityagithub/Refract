@@ -1,11 +1,24 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
     cleanUp,
     cleanUpFC,
     clearCurrentFC,
     setCurrentFC,
 } from "../../rendering/functionalComponents";
+import * as rendering from "../../rendering/render";
+
 import { computed, createEffect, createSignal } from "../../signals/signal";
+
+vi.stubGlobal("requestIdleCallback", (cb) => {
+    queueMicrotask(() => cb({ timeRemaining: () => 2 }));
+});
+
+// @ts-expect-error
+const createFiber = rendering.createFiber;
+// @ts-expect-error
+const commitFiber = rendering.commitFiber;
+// @ts-expect-error
+const commitDeletion = rendering.commitDeletion;
 
 describe("Functional Components life cycle", () => {
     it("should be defined", () => {
@@ -15,6 +28,7 @@ describe("Functional Components life cycle", () => {
         let FC = () => {
             console.log("FC");
         };
+        // @ts-expect-error
         setCurrentFC(FC);
         let count = 0;
         let cleanup = () => {
@@ -48,11 +62,21 @@ describe("Functional Components life cycle", () => {
                 propSignal.value;
                 count++;
             });
+            return <div>Hello</div>;
         };
-        setCurrentFC(FC);
 
-        FC({ propSignal });
-        clearCurrentFC();
+        const fiber = (
+            <div>
+                <FC propSignal={propSignal} />
+            </div>
+        );
+
+        createFiber(fiber);
+        commitFiber(fiber);
+
+        expect(count).toBe(0);
+
+        await Promise.resolve();
 
         expect(count).toBe(2);
         expect(computedCount).toBe(1);
@@ -63,7 +87,7 @@ describe("Functional Components life cycle", () => {
         expect(count).toBe(3);
         expect(computedCount).toBe(2);
 
-        cleanUpFC(FC, { propSignal });
+        commitDeletion(fiber);
 
         expect(count).toBe(3);
         expect(computedCount).toBe(2);

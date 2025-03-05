@@ -2,7 +2,10 @@ import {
     addEffect,
     addSignal,
     cleanUp,
+    cleanUpWFiber,
+    getCurrentFC,
 } from "../rendering/functionalComponents";
+import { Fiber } from "../types";
 import { isPlainObject, isPrimitive } from "../utils/general";
 import { addEffectCleanup, batchUpdate } from "./batch";
 
@@ -53,17 +56,32 @@ export function reactiveAttribute(fn: Function) {
 export function createEffect(fn: Function) {
     if (typeof fn !== "function")
         throw new Error("createEffect takes a effect function as the argument");
-    currentEffect = fn;
 
     addEffect(fn);
-    const effectCleanup = fn();
+    if (!getCurrentFC()) runEffect(fn);
+}
+
+export function runEffect(effect: Function, fiber?: Fiber) {
+    if (typeof effect !== "function") return;
+
+    currentEffect = effect;
+
+    const effectCleanup = effect();
 
     if (currentEffect.__signals && typeof effectCleanup === "function")
         addEffectCleanup(effectCleanup);
 
-    if (!currentEffect.__signals) {
+    if (
+        !currentEffect.__signals &&
+        effectCleanup &&
+        typeof effectCleanup === "function"
+    ) {
         // which means this effect does not have any signals associated with so its just a cleanup function that we need to call when the component unmounts
-        cleanUp(effectCleanup);
+        if (!fiber) {
+            cleanUp(effectCleanup);
+        } else {
+            cleanUpWFiber(effectCleanup, fiber);
+        }
     }
 
     currentEffect = null;
@@ -75,11 +93,13 @@ function computed<T extends NormalSignal | any[] | Record<any, any>>(
     if (typeof fn !== "function")
         throw new Error("computed takes a function as the argument");
 
+    let firstRun = getCurrentFC() !== null;
     currentEffect = () => {
-        let newVal = fn();
-        if (newVal !== signal.value) {
-            signal.update(newVal);
+        if (firstRun) {
+            firstRun = false;
+            return;
         }
+        signal.update(fn());
     };
 
     addEffect(currentEffect);
