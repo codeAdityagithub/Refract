@@ -18,12 +18,12 @@ const PerformanceTest = () => {
 
             // Simulating add item after 1 second
             setTimeout(() => {
-                items.value.push(`Item ${items.value.length + 1}`);
+                items.update((items) => items.push(`Item ${items.length + 1}`));
                 console.timeEnd("Update 1");
                 console.time("Update 2");
                 // Simulating sort after another second
                 setTimeout(() => {
-                    sortAsc.value = !sortAsc.value;
+                    sortAsc.update((prev) => !prev);
                     console.timeEnd("Update 2");
                 }, 1000);
             }, 1000);
@@ -31,7 +31,7 @@ const PerformanceTest = () => {
     });
 
     setTimeout(() => {
-        items.value = [];
+        items.update([]);
         // items.value[0] = "item modified";
         // setTimeout(() => {
         //     items.value = Array.from({ length: 1000 }, (_, i) => `Item ${i}`);
@@ -40,7 +40,7 @@ const PerformanceTest = () => {
 
     // Sorting the list based on the selected order
     const sortedItems = computed(() => {
-        return items.value.sort((a, b) => {
+        return [...items.value].sort((a, b) => {
             if (sortAsc.value) return a.localeCompare(b);
             return b.localeCompare(a);
         });

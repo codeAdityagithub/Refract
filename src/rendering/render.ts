@@ -73,8 +73,9 @@ function workLoop(deadline: IdleDeadline) {
     }
 
     if (elements.length == 0) {
-        processEffectQueue();
         commitRootFragment();
+
+        processEffectQueue();
         return;
     }
     requestIdleCallback(workLoop);
