@@ -1,6 +1,8 @@
+import { Fiber } from '../types';
 export declare function reactive(fn: Function): any;
 export declare function reactiveAttribute(fn: Function): any;
 export declare function createEffect(fn: Function): void;
+export declare function runEffect(effect: Function, fiber?: Fiber): void;
 declare function computed<T extends NormalSignal | any[] | Record<any, any>>(fn: () => T): {
     readonly value: DeepReadonly<T>;
 };

@@ -1,6 +1,7 @@
 import { createSignal } from "../../src/index.ts";
 import ListsTest from "./ListsTest.tsx";
 import PerformanceTest from "./Performance.tsx";
+import Users from "./Promises.tsx";
 import StylesTest from "./StylesTest.tsx";
 import Test from "./Test.tsx";
 import TimerComponent from "./Timer.tsx";
@@ -16,7 +17,7 @@ const App = (props: any) => {
             <button onClick={() => visible.update((prev) => !prev)}>
                 Show/Hide
             </button>
-            {() => (visible.value ? <Test /> : "Hidden")}
+            {() => (visible.value ? <Users /> : "Hidden")}
         </>
     );
     // return <StylesTest />;

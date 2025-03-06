@@ -1,5 +1,4 @@
 import { Fiber } from '../types';
-export declare function addEffectCleanup(fn: Function): void;
 export declare function batchUpdate(cb: Function): void;
 export declare function setReactiveFunction(fn: Function, fiber: Fiber): void;
 export declare function setReactiveAttributes(fn: Function, dom: HTMLElement | Text): void;
