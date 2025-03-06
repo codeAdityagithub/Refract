@@ -112,6 +112,11 @@ export function cleanUpFC(currentFC, props) {
 
         for (const effect of fcData.effects) {
             // @ts-expect-error
+            if (effect.__cleanup && typeof effect.__cleanup === "function") {
+                // @ts-expect-error
+                effect.__cleanup();
+            }
+            // @ts-expect-error
             if (effect.__signals) {
                 // @ts-expect-error
                 for (const signal of effect.__signals) {
@@ -120,6 +125,8 @@ export function cleanUpFC(currentFC, props) {
             }
             // @ts-expect-error
             delete effect.__signals;
+            // @ts-expect-error
+            delete effect.__cleanup;
         }
 
         fcData.signals.forEach((signal) => signal.clearDeps());

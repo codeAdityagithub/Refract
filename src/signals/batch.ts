@@ -7,11 +7,6 @@ const batch = new Set<Function>();
 const depset = new Set();
 const reactiveFiberMap = new WeakMap();
 const domAttributeMap = new WeakMap<Function, HTMLElement | Text>();
-const effectCleanup: any[] = [];
-
-export function addEffectCleanup(fn: Function) {
-    effectCleanup.push(fn);
-}
 
 export function batchUpdate(cb: Function) {
     batch.add(cb);
@@ -19,8 +14,7 @@ export function batchUpdate(cb: Function) {
         scheduled = true;
         queueMicrotask(() => {
             // console.log("Current batch has: ", batch.size, " Functions");
-            effectCleanup.forEach((fn) => fn());
-            effectCleanup.length = 0;
+
             batch.forEach((fn) => {
                 const dep = fn();
                 if (depset.has(dep)) {
@@ -28,10 +22,15 @@ export function batchUpdate(cb: Function) {
                 }
                 depset.add(dep);
                 // effects and reactive nodes
+                if (dep.__cleanup && typeof dep.__cleanup === "function") {
+                    dep.__cleanup();
+                    dep.__cleanup = null;
+                }
+
                 const val = dep();
 
                 if (typeof val === "function") {
-                    effectCleanup.push(val);
+                    dep.__cleanup = val;
                 }
                 // console.log(dep, "dep");
                 if (reactiveFiberMap.has(dep)) {

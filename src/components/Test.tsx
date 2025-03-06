@@ -9,16 +9,20 @@ import {
 const LazyFC1 = lazy(() => import("./FC1.jsx"));
 const LazyFC2 = lazy(() => import("./FC2.jsx"));
 
-const showTextSignal = createSignal<boolean>(true);
 export const textSignal = createSignal<string>("Initial Text");
 
 const Test = () => {
+    const showTextSignal = createSignal<boolean>(true);
     createEffect(() => {
-        console.log(showTextSignal.value);
+        console.log(showTextSignal.value, "Effect");
+
+        return () => {
+            console.log("cleanup");
+        };
     });
 
     const h1ref = createRef<HTMLHeadingElement>();
-
+    // console.log("hello");
     return (
         <div>
             {/* Static content with reactivity */}
@@ -26,7 +30,7 @@ const Test = () => {
                 <>{() => textSignal.value}</>
             </h1>
 
-            {() =>
+            {/* {() =>
                 showTextSignal.value ? (
                     <LazyFC2
                         fallback={<h2>Loading...</h2>}
@@ -38,17 +42,15 @@ const Test = () => {
                         errorFallback={(error) => <h2>{error.message}</h2>}
                     />
                 )
-            }
-            <button
-                onClick={() => (showTextSignal.value = !showTextSignal.value)}
-            >
+            } */}
+            <button onClick={() => showTextSignal.update((prev) => !prev)}>
                 Toggle
             </button>
 
-            {/* Event handlers with reactivity */}
+            {/* Event handlers with reactivity
             <button onClick={() => (textSignal.value = "Updated Text")}>
                 Update Text
-            </button>
+            </button> */}
         </div>
     );
 };

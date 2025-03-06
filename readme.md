@@ -78,6 +78,13 @@ export default Counter;
 
 ### Effects
 
+Effects can be created using the `createEffect` function.
+
+-   Effect runs after the components has been mounted to the dom.
+-   You don't need to declare dependency array as dependencies are automatically tracked.
+-   Effect re-runs whenever the signals used inside the effect are updated using the update function.
+-   The cleanup function that is returned from the effect will run when the component unmounts or when the effect is rerun.
+
 ```jsx
 import { createSignal, createEffect } from "refract-js";
 
@@ -86,11 +93,19 @@ function TimerComponent() {
 
     createEffect(() => {
         const interval = setInterval(() => {
-            seconds.value++;
+            seconds.update((prev) => prev + 1);
         }, 1000);
 
-        // Cleanup function to clear the interval when the component unmounts
+        // Cleanup function to clear the interval when the component unmounts or the seconds.value is updated
         return () => clearInterval(interval);
+    });
+
+    createEffect(() => {
+        // This effect only runs once after the component mounts.
+
+        return () => {
+            // this cleanup will only run when the component mounts
+        };
     });
 
     return <p>Elapsed Time: {seconds} seconds</p>;

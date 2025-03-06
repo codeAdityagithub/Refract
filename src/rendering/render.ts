@@ -42,15 +42,15 @@ export function render(element: Fiber, container: HTMLElement) {
 function commitRootFragment() {
     if (rootFragment && rootContainer) {
         rootContainer.appendChild(rootFragment);
-        const endTime = performance.now();
-        console.log(`Render time: ${endTime - startTime}ms`);
+        // const endTime = performance.now();
+        // console.log(`Render time: ${endTime - startTime}ms`);
     }
 }
 
 let elements: Fiber[] = [];
 let rootContainer: HTMLElement | null = null;
 let rootFragment: DocumentFragment | null = null;
-let startTime = -1;
+// let startTime = -1;
 let effectQueue: Fiber[] = [];
 
 function processEffectQueue() {
@@ -62,7 +62,7 @@ function processEffectQueue() {
 }
 
 function workLoop(deadline: IdleDeadline) {
-    if (startTime === -1) startTime = performance.now();
+    // if (startTime === -1) startTime = performance.now();
 
     processEffectQueue();
     let shouldYield = false;
@@ -293,7 +293,7 @@ function setRenderFunction(fiber: Fiber) {
 
 export function updateFiber(prevFiber: Fiber, newValue) {
     // console.log("Prev value", prevFiber, newValue);
-    startTime = performance.now();
+    // startTime = performance.now();
     if (isPrimitive(newValue)) {
         // console.log(fiber, newValue);
         const newFragment: Fiber = {
@@ -323,8 +323,8 @@ export function updateFiber(prevFiber: Fiber, newValue) {
         // console.log("New Node Fiber", newFragment);
         updateNode(prevFiber, newFragment);
     }
-    const endTime = performance.now();
-    console.log("Update Time:", (endTime - startTime).toFixed(2), "ms");
+    // const endTime = performance.now();
+    // console.log("Update Time:", (endTime - startTime).toFixed(2), "ms");
 }
 
 function replaceRenderFunction(prev: Fiber, next: Fiber) {
@@ -525,7 +525,7 @@ function updateNode(
             )
                 next.dom = prev.dom;
             if (node === undefined) {
-                console.error("no node found", prev, next);
+                // console.error("no node found", prev, next);
                 return;
             }
             // console.log(prev);

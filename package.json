@@ -1,7 +1,7 @@
 {
     "name": "refract-js",
     "type": "module",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Simpler, Faster and Lighter JSX based rendering for Single-Page Applications",
     "main": "build/refract.cjs.js",
     "module": "build/refract.es.js",

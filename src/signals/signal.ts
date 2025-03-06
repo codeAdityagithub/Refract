@@ -7,7 +7,7 @@ import {
 } from "../rendering/functionalComponents";
 import { Fiber } from "../types";
 import { isPlainObject, isPrimitive } from "../utils/general";
-import { addEffectCleanup, batchUpdate } from "./batch";
+import { batchUpdate } from "./batch";
 
 let currentReactiveFunction: any = null;
 let currentEffect: any = null;
@@ -68,8 +68,9 @@ export function runEffect(effect: Function, fiber?: Fiber) {
 
     const effectCleanup = effect();
 
-    if (currentEffect.__signals && typeof effectCleanup === "function")
-        addEffectCleanup(effectCleanup);
+    if (currentEffect.__signals && typeof effectCleanup === "function") {
+        currentEffect.__cleanup = effectCleanup;
+    }
 
     if (
         !currentEffect.__signals &&

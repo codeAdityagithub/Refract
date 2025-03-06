@@ -16,7 +16,7 @@ const App = (props: any) => {
             <button onClick={() => visible.update((prev) => !prev)}>
                 Show/Hide
             </button>
-            {() => (visible.value ? <PerformanceTest /> : "Hidden")}
+            {() => (visible.value ? <Test /> : "Hidden")}
         </>
     );
     // return <StylesTest />;
