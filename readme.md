@@ -17,15 +17,11 @@ This is a lightweight JSX framework designed to provide a simple, efficient, and
 To use this library, install it via npm:
 
 ```sh
-npm install refract-js
+git clone https://github.com/codeAdityagithub/refract-starter.git your-project-name
+cd your-project-name
+npm install
+npm run dev
 ```
-
-Or with yarn:
-
-```sh
-yarn add refract-js
-```
-
 ## Usage
 
 ### Creating a Component
