@@ -1,0 +1,26 @@
+name: Run Vitest before PR
+
+on:
+    pull_request:
+        branches: ["main", "dev"]
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20.11.0 # Change this to your preferred Node.js version
+                  cache: npm # Change to yarn or pnpm if you use those
+
+            - name: Install dependencies
+              run: npm ci # Change to yarn or pnpm if applicable
+
+            - name: Run Vitest tests
+              run: npm run test # Ensure this script runs all tests
+
