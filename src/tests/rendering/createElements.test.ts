@@ -150,7 +150,6 @@ describe("createNode", () => {
             props: { onClick: clickHandler, children: [] },
         };
         const dom = createNode(element);
-        console.log(dom, "dom ");
         dom.click();
         expect(count).toBe(1);
     });

@@ -6,6 +6,7 @@ import {
 import { BaseSignal, Ref } from "../signals/signal";
 import { Fiber, FiberChildren } from "../types";
 import { isPrimitive } from "../utils/general";
+import { CAPTURE_REGEX } from "./constants";
 import {
     FRAGMENT_SYMBOL,
     createChildren,
@@ -263,11 +264,18 @@ function commitDeletion(fiber: Fiber, toClearReactiveFunction?: boolean) {
         delete fiber.renderFunction;
     }
     if (fiber.dom) {
-        for (const prop of Object.keys(fiber.props)) {
+        for (const prop in fiber.props) {
             if (isEvent(prop)) {
-                const eventName = prop.toLowerCase().substring(2);
+                let eventName = prop.toLowerCase().substring(2);
+                const useCapture =
+                    eventName !=
+                    (eventName = eventName.replace(CAPTURE_REGEX, "$1"));
 
-                fiber.dom.removeEventListener(eventName, fiber.props[prop]);
+                fiber.dom.removeEventListener(
+                    eventName,
+                    fiber.props[prop],
+                    useCapture
+                );
                 delete fiber.props[prop];
             } else if (typeof fiber.props[prop] === "function") {
                 clearReactiveAttributes(fiber.props[prop]);
@@ -348,7 +356,8 @@ function replaceChildFromParent(prev: Fiber, next: Fiber, index?: number) {
     });
 }
 
-export const isEvent = (key: string) => key.startsWith("on");
+export const isEvent = (key: string) =>
+    key.startsWith("on") || key == "onFocusOut" || key == "onFocusIn";
 export const isProperty = (key: string) =>
     key !== "children" && !isEvent(key) && key !== "key" && key !== "ref";
 const isNew = (prev: any, next: any, key: string) => prev[key] !== next[key];
@@ -400,7 +409,7 @@ function deepEqual(objA: any, objB: any): boolean {
 
     for (let key of keysA) {
         if (key === "children") continue;
-        if (!keysB.includes(key)) return false; // Missing key in one of them
+        if (!objB.hasOwnProperty(key)) return false; // Missing key in one of them
         if (!deepEqual(objA[key], objB[key])) return false; // Recurse for nested objects/arrays
     }
 
@@ -540,7 +549,7 @@ function updateNode(
             } else {
                 // console.log("Node-Node");
                 // remove old properties and event listeners from NODE
-                for (const prop of Object.keys(prevProps)) {
+                for (const prop in prevProps) {
                     if (
                         isProperty(prop) &&
                         isGone(prevProps, nextProps, prop)
@@ -552,9 +561,19 @@ function updateNode(
                         (!(prop in nextProps) ||
                             isNew(prevProps, nextProps, prop))
                     ) {
-                        const eventName = prop.toLowerCase().substring(2);
+                        let eventName = prop.toLowerCase().substring(2);
+                        const useCapture =
+                            eventName !=
+                            (eventName = eventName.replace(
+                                CAPTURE_REGEX,
+                                "$1"
+                            ));
 
-                        node.removeEventListener(eventName, prevProps[prop]);
+                        node.removeEventListener(
+                            eventName,
+                            prevProps[prop],
+                            useCapture
+                        );
                         // console.log("event listener removed", prop);
                     }
                 }
@@ -573,7 +592,7 @@ function updateNode(
                     // add new properties
                     // console.log("same type", prev, next);
 
-                    for (const prop of Object.keys(nextProps)) {
+                    for (const prop in nextProps) {
                         if (
                             isProperty(prop) &&
                             isNew(prevProps, nextProps, prop)
@@ -589,9 +608,18 @@ function updateNode(
                             isEvent(prop) &&
                             isNew(prevProps, nextProps, prop)
                         ) {
-                            const eventName = prop.toLowerCase().substring(2);
-                            // console.log("event listener added", prop);
-                            node.addEventListener(eventName, nextProps[prop]);
+                            let eventName = prop.toLowerCase().substring(2);
+                            const useCapture =
+                                eventName !=
+                                (eventName = eventName.replace(
+                                    CAPTURE_REGEX,
+                                    "$1"
+                                ));
+                            node.addEventListener(
+                                eventName,
+                                nextProps[prop],
+                                useCapture
+                            );
                             prevProps[prop] = nextProps[prop];
                         }
                     }

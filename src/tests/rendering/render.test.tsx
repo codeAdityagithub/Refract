@@ -771,7 +771,7 @@ describe("Key-based node swap reconciliation", () => {
         updateFiber(fiber, newFiber);
 
         expect(fiber.dom.innerHTML).toBe("<p>A</p><p>Hello</p>");
-        console.log(fiber.props.children[0].dom, keyedNode);
+        // console.log(fiber.props.children[0].dom, keyedNode);
         expect(fiber.props.children[0].dom).toBe(keyedNode);
     });
 

@@ -137,7 +137,6 @@ export function setReactiveAttribute(
     reactiveFunction.__propName = name;
     // registers the function in corresponding signal
     const val = reactiveAttribute(reactiveFunction);
-
     if (val === null || val === undefined || val === false) {
         return;
     }
@@ -147,6 +146,8 @@ export function setReactiveAttribute(
     if (reactiveFunction.__signals)
         setReactiveAttributes(reactiveFunction, dom);
 }
+
+const CAPTURE_REGEX = /(PointerCapture)$|Capture$/i;
 
 export function setAttribute(
     name: string,
@@ -159,16 +160,20 @@ export function setAttribute(
         return;
     }
 
-    if (name[0] === "o" && name[1] === "n") {
+    if (name[0] === "o" && name[1] === "n" && typeof value === "function") {
+        const useCapture = name != (name = name.replace(CAPTURE_REGEX, "$1"));
+
         if (
             name.toLowerCase() in dom ||
             name == "onFocusOut" ||
-            name == "onFocusIn"
+            name == "onFocusIn" ||
+            name === "onGotPointerCapture" ||
+            name === "onLostPointerCapture"
         )
             name = name.toLowerCase().slice(2);
         else name = name.slice(2);
         // handle eventListeners
-        dom.addEventListener(name, value);
+        dom.addEventListener(name, value, useCapture);
         return;
     }
 
@@ -204,6 +209,7 @@ export function setAttribute(
     if (value != null && (value !== false || name[4] === "-")) {
         // For most attributes, if the value is valid, set the attribute.
         // Special case: for "popover", if value is true, set attribute to an empty string.
+
         dom.setAttribute(
             name,
             name === "popover" && value === true ? "" : value

@@ -118,7 +118,7 @@ function isProperty(key: string) {
     return key !== "children" && key !== "key" && key !== "ref";
 }
 
-export function createNode(element: Fiber) {
+export function createNode(element: Fiber): HTMLElement | Text {
     let namespace: string | null = null;
 
     if (SVG_TAGS.has(element.type as string)) namespace = SVG_NAMESPACE;
@@ -137,7 +137,7 @@ export function createNode(element: Fiber) {
             : // @ts-expect-error
               document.createElement(element.type);
 
-    if (!element.props) return dom;
+    if (!element.props) return dom as HTMLElement | Text;
 
     if (
         element.props.ref &&
@@ -161,7 +161,7 @@ export function createNode(element: Fiber) {
         }
     }
 
-    return dom;
+    return dom as HTMLElement | Text;
 }
 
 export function updateDomProp(

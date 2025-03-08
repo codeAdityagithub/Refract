@@ -984,7 +984,7 @@ describe("Dom node reuse - edge cases", () => {
 
             cleanUp(() => {
                 clearTimeout(timeout);
-                console.log("unmounted");
+                // console.log("unmounted");
             });
             return (
                 <p>
@@ -1092,7 +1092,7 @@ describe("Dom node reuse - edge cases", () => {
         await Promise.resolve();
 
         const newNodes = captureKeyedNodes(fiber.props.children[0]);
-        console.log(initialNodes, newNodes, newNodes[2]);
+        // console.log(initialNodes, newNodes, newNodes[2]);
         expect(newNodes[1]).toBe(initialNodes[1]);
         expect(newNodes[2]).toBe(initialNodes[2]);
         expect(newNodes[3]).toBe(initialNodes[3]);

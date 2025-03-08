@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-import * as rendering from "../../rendering/render";
 import {
     createEffect,
     createPromise,
@@ -8,6 +7,7 @@ import {
     createSignal,
 } from "../../signals/signal";
 import { cleanUp } from "../../rendering/functionalComponents";
+import * as rendering from "../../rendering/render";
 
 vi.stubGlobal("requestIdleCallback", (cb) => {
     queueMicrotask(() => cb({ timeRemaining: () => 2 }));
@@ -380,16 +380,16 @@ describe("Extra Edge cases", () => {
             const clicked = createSignal<boolean>(false);
             let value = 0;
             createEffect(() => {
-                console.log("Effect", value);
+                // console.log("Effect", value);
                 textSignal.value;
                 str.value;
                 return () => {
-                    console.log("Cleanup", value);
+                    // console.log("Cleanup", value);
                     value++;
                 };
             });
             cleanUp(() => {
-                console.log("Cleanup FC1");
+                // console.log("Cleanup FC1");
             });
             // const compText = computed(() => "FC1" + str.value);
             return (
