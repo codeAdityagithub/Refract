@@ -3,12 +3,19 @@ import { isPlainObject } from "./utils/general";
 export function styleObjectToString(
     style: Record<string, string | number>
 ): string {
-    return Object.entries(style)
-        .map(([key, value]) => {
-            const cssKey = key.replace(/([A-Z])/g, "-$1").toLowerCase(); // CamelCase to kebab-case
-            return `${cssKey}: ${value};`;
-        })
-        .join(" ");
+    const newStyles: string[] = [];
+
+    for (const key in style) {
+        const value = style[key];
+        const cssKey = key.replace(/([A-Z])/g, "-$1").toLowerCase(); // CamelCase to kebab-case
+
+        if (typeof value === "number") {
+            newStyles.push(`${cssKey}: ${value}px;`); // Convert numbers to strings with px suffix
+        } else {
+            newStyles.push(`${cssKey}: ${value};`); // Convert numbers to strings with px suffix
+        }
+    }
+    return newStyles.join(" ");
 }
 
 export function preprocessStyle(
@@ -16,7 +23,8 @@ export function preprocessStyle(
 ): Record<string, string | number> {
     const processedStyle: Record<string, string | number> = {};
 
-    for (const [key, value] of Object.entries(style)) {
+    for (const key in style) {
+        const value = style[key];
         // Handle nested styles
         if (typeof value === "object" && value !== null) {
             console.warn(`Nested styles not allowed for ${key}`);

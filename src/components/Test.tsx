@@ -21,7 +21,7 @@ const Test = () => {
         };
     });
 
-    const h1ref = createRef<HTMLHeadingElement>();
+    const h1ref = createRef();
     // console.log("hello");
     return (
         <div>
@@ -29,6 +29,20 @@ const Test = () => {
             <h1 ref={h1ref}>
                 <>{() => textSignal.value}</>
             </h1>
+
+            <svg
+                width="100"
+                height="100"
+            >
+                <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    stroke="green"
+                    stroke-width="4"
+                    fill="yellow"
+                />
+            </svg>
 
             {/* {() =>
                 showTextSignal.value ? (

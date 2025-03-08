@@ -14,10 +14,13 @@ const App = (props: any) => {
     // return <Test />;
     return (
         <>
-            <button onClick={() => visible.update((prev) => !prev)}>
+            <button
+                style={{ margin: 10 }}
+                onClick={() => visible.update((prev) => !prev)}
+            >
                 Show/Hide
             </button>
-            {() => (visible.value ? <Users /> : "Hidden")}
+            {() => (visible.value ? <Test /> : "Hidden")}
         </>
     );
     // return <StylesTest />;

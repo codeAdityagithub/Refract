@@ -10,6 +10,8 @@ import {
     RenderFunction,
 } from "../types";
 import { isPrimitive } from "../utils/general";
+import { MATH_NAMESPACE, SVG_NAMESPACE, SVG_TAGS } from "./constants";
+import { setAttribute, setReactiveAttribute } from "./props";
 export const FRAGMENT_SYMBOL = Symbol("FRAGMENT");
 
 export function createElement(
@@ -115,12 +117,26 @@ function createSignalChild(
 function isProperty(key: string) {
     return key !== "children" && key !== "key" && key !== "ref";
 }
+
 export function createNode(element: Fiber) {
+    let namespace: string | null = null;
+
+    if (SVG_TAGS.has(element.type as string)) namespace = SVG_NAMESPACE;
+    else if (element.type == "math") namespace = MATH_NAMESPACE;
+
     const dom =
         element.type === "TEXT_CHILD"
             ? document.createTextNode("")
+            : namespace
+            ? document.createElementNS(
+                  namespace,
+                  // @ts-expect-error
+                  element.type,
+                  element.props.is && element.props
+              )
             : // @ts-expect-error
               document.createElement(element.type);
+
     if (!element.props) return dom;
 
     if (
@@ -131,132 +147,32 @@ export function createNode(element: Fiber) {
         element.props.ref.current = dom;
     }
 
-    Object.keys(element.props)
-        .filter(isProperty)
-        .forEach((name) => {
-            if (
-                name.startsWith("on") &&
-                typeof element.props[name] === "function"
-            ) {
-                dom.addEventListener(
-                    name.slice(2).toLowerCase(),
-                    element.props[name]
-                );
-            } else if (
-                typeof element.props[name] === "function" &&
-                !name.startsWith("on")
-            ) {
-                const func = element.props[name];
-                func.__propName = name;
-                // registers the function in corresponding signal
-                const val = reactiveAttribute(func);
+    for (const name in element.props) {
+        if (!isProperty(name)) {
+            continue;
+        }
+        const value = element.props[name];
+        if (typeof value === "function" && name[0] !== "o" && name[1] !== "n") {
+            // @ts-expect-error
+            setReactiveAttribute(value, name, dom, namespace);
+        } else {
+            // @ts-expect-error
+            setAttribute(name, value, dom, namespace);
+        }
+    }
 
-                if (val === null || val === undefined || val === false) {
-                    return;
-                }
-                if (
-                    name === "style" &&
-                    typeof val !== "string" &&
-                    dom instanceof HTMLElement
-                ) {
-                    if (!isValidStyle(val))
-                        throw new Error(
-                            "Style attribute must be a plain object or a string"
-                        );
-                    const processedStyle = preprocessStyle(val);
-                    dom.setAttribute(
-                        "style",
-                        styleObjectToString(processedStyle)
-                    );
-                } else {
-                    if (
-                        dom instanceof HTMLElement &&
-                        (name in dom || name.startsWith("data-"))
-                    ) {
-                        dom.setAttribute(
-                            name === "className" ? "class" : name,
-                            String(val)
-                        );
-                    } else {
-                        dom[name] = String(val);
-                    }
-                }
-                // this is a reactive attribute
-                if (func.__signals) setReactiveAttributes(func, dom);
-            } else {
-                if (
-                    element.props[name] === null ||
-                    element.props[name] === undefined ||
-                    element.props[name] === false
-                ) {
-                    return;
-                }
-
-                if (
-                    name === "style" &&
-                    typeof element.props[name] !== "string" &&
-                    dom instanceof HTMLElement
-                ) {
-                    const style = element.props[name];
-                    if (!isValidStyle(style))
-                        throw new Error(
-                            "Style attribute must be a plain object or a string"
-                        );
-                    const processedStyle = preprocessStyle(style);
-                    dom.setAttribute(
-                        "style",
-                        styleObjectToString(processedStyle)
-                    );
-                } else {
-                    if (
-                        dom instanceof HTMLElement &&
-                        (name in dom || name.startsWith("data-"))
-                    ) {
-                        dom.setAttribute(
-                            name === "className" ? "class" : name,
-                            String(element.props[name])
-                        );
-                    } else {
-                        dom[name] = String(element.props[name]);
-                    }
-                }
-            }
-        });
     return dom;
 }
 
-export function updateDomProp(prop: string, dom: HTMLElement | Text, value) {
-    if (
-        value === null ||
-        value === undefined ||
-        value === false ||
-        prop === "key"
-    )
-        return;
-    if (
-        prop === "style" &&
-        typeof value !== "string" &&
-        dom instanceof HTMLElement
-    ) {
-        if (!isValidStyle(value))
-            throw new Error(
-                "Style attribute must be a plain object or a string"
-            );
+export function updateDomProp(
+    prop: string,
+    dom: HTMLElement | Text,
+    value: any
+) {
+    if (value == null || prop === "key") return;
 
-        const processedStyle = preprocessStyle(value);
-        dom.setAttribute("style", styleObjectToString(processedStyle));
-    } else {
-        if (
-            dom instanceof HTMLElement &&
-            (prop in dom || prop.startsWith("data-"))
-        ) {
-            if (prop === "className") prop = "class";
-
-            dom.setAttribute(prop, String(value));
-        } else {
-            dom[prop] = String(value);
-        }
-    }
+    // @ts-expect-error
+    setAttribute(prop, value, dom);
 }
 
 export const FRAGMENT = "FRAGMENT";

@@ -160,14 +160,14 @@ export function createPromise<T>(fn: () => Promise<T>) {
     };
 }
 
-export class Ref<T extends HTMLElement> {
+export class Ref<T extends EventTarget> {
     current: T | null;
     constructor(val: T | null) {
         this.current = val;
     }
 }
 
-export function createRef<T extends HTMLElement>() {
+export function createRef<T extends EventTarget>() {
     const ref = new Ref<T>(null);
     return ref;
 }
