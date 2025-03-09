@@ -20,7 +20,9 @@ const Test = () => {
             console.log("cleanup");
         };
     });
-
+    setTimeout(() => {
+        showTextSignal.update((prev) => !prev);
+    }, 2000);
     const h1ref = createRef();
     // console.log("hello");
     return (
@@ -30,7 +32,7 @@ const Test = () => {
                 <>{() => textSignal.value}</>
             </h1>
 
-            <svg
+            {/* <svg
                 width="100"
                 height="100"
             >
@@ -42,8 +44,13 @@ const Test = () => {
                     stroke-width="4"
                     fill="yellow"
                 />
-            </svg>
+            </svg> */}
 
+            {/* <select value="B">
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+            </select> */}
             {/* {() =>
                 showTextSignal.value ? (
                     <LazyFC2
@@ -57,6 +64,19 @@ const Test = () => {
                     />
                 )
             } */}
+            {() =>
+                showTextSignal.value ? (
+                    <LazyFC2
+                        fallback={<h2>Loading...</h2>}
+                        errorFallback={(error) => <h2>{error.message}</h2>}
+                    />
+                ) : (
+                    <LazyFC1
+                        fallback={"Loading..."}
+                        errorFallback={(error) => <h2>{error.message}</h2>}
+                    />
+                )
+            }
             <button onClick={() => showTextSignal.update((prev) => !prev)}>
                 Toggle
             </button>

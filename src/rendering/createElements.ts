@@ -10,7 +10,12 @@ import {
     RenderFunction,
 } from "../types";
 import { isPrimitive } from "../utils/general";
-import { MATH_NAMESPACE, SVG_NAMESPACE, SVG_TAGS } from "./constants";
+import {
+    MATH_NAMESPACE,
+    MATH_TAGS,
+    SVG_NAMESPACE,
+    SVG_TAGS,
+} from "./constants";
 import { setAttribute, setReactiveAttribute } from "./props";
 export const FRAGMENT_SYMBOL = Symbol("FRAGMENT");
 
@@ -122,7 +127,7 @@ export function createNode(element: Fiber): HTMLElement | Text {
     let namespace: string | null = null;
 
     if (SVG_TAGS.has(element.type as string)) namespace = SVG_NAMESPACE;
-    else if (element.type == "math") namespace = MATH_NAMESPACE;
+    else if (MATH_TAGS.has(element.type as string)) namespace = MATH_NAMESPACE;
 
     const dom =
         element.type === "TEXT_CHILD"

@@ -1,4 +1,6 @@
 import { isPlainObject } from "./utils/general";
+export const IS_NON_DIMENSIONAL =
+    /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|itera/i;
 
 export function styleObjectToString(
     style: Record<string, string | number>
@@ -9,10 +11,10 @@ export function styleObjectToString(
         const value = style[key];
         const cssKey = key.replace(/([A-Z])/g, "-$1").toLowerCase(); // CamelCase to kebab-case
 
-        if (typeof value === "number") {
-            newStyles.push(`${cssKey}: ${value}px;`); // Convert numbers to strings with px suffix
-        } else {
+        if (typeof value != "number" || IS_NON_DIMENSIONAL.test(cssKey)) {
             newStyles.push(`${cssKey}: ${value};`); // Convert numbers to strings with px suffix
+        } else {
+            newStyles.push(`${cssKey}: ${value}px;`); // Convert numbers to strings with px suffix
         }
     }
     return newStyles.join(" ");
