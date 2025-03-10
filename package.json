@@ -10,9 +10,15 @@
         "build"
     ],
     "exports": {
-        "types": "./build/index.d.ts",
-        "import": "./build/refract.es.js",
-        "require": "./build/refract.cjs.js"
+        ".": {
+            "types": "./build/index.d.ts",
+            "import": "./build/refract.es.js",
+            "require": "./build/refract.cjs.js"
+        },
+        "./jsx-runtime": {
+            "types": "./build/jsx.d.ts",
+            "import": "./build/jsx.d.ts"
+        }
     },
     "publishConfig": {
         "access": "public"

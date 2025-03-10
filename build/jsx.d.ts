@@ -53,6 +53,7 @@ interface CommandEventInit extends EventInit {
 export interface ComponentType<P = {}> {
     (props: RenderableProps<P>): ComponentChildren;
 }
+export declare const FRAGMENT: "FRAGMENT";
 export declare namespace JSXInternal {
     export type LibraryManagedAttributes<Component, Props> = Component extends {
         defaultProps: infer Defaults;

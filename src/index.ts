@@ -21,6 +21,11 @@ import type {
 } from "./signals/signal";
 
 export * from "./jsx";
+import { JSXInternal } from "./jsx";
+declare global {
+    // @ts-expect-error
+    export import JSX = JSXInternal;
+}
 export * from "./types";
 export {
     cleanUp,
