@@ -20,6 +20,8 @@ import type {
     Ref,
 } from "./signals/signal";
 
+export * from "./jsx";
+export * from "./types";
 export {
     cleanUp,
     createEffect,

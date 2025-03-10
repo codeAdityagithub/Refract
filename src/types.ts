@@ -18,26 +18,7 @@ export type Props =
           children: [];
           [key: string]: any;
       };
-export type ElementProps =
-    | {
-          [key: string]: any;
-          children: Element[];
-      }
-    | {
-          nodeValue: string;
-          children: [];
-          [key: string]: any;
-      };
 
-export type Element = {
-    type: Type;
-    props: Props;
-    renderFunction?: RenderFunction;
-};
-export type NodeElement = {
-    type: NodeType;
-    props: Props;
-};
 export type FiberChildren = Fiber[];
 
 export type Fiber = {

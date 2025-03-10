@@ -22,11 +22,11 @@ type PromiseOverload<T> = {
 export declare function createPromise<T>(fn: () => Promise<T>): {
     readonly value: DeepReadonly<PromiseOverload<T>>;
 };
-export declare class Ref<T extends HTMLElement> {
+export declare class Ref<T extends EventTarget> {
     current: T | null;
     constructor(val: T | null);
 }
-export declare function createRef<T extends HTMLElement>(): Ref<T>;
+export declare function createRef<T extends EventTarget>(): Ref<T>;
 type DeepReadonly<T> = {
     readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K];
 };

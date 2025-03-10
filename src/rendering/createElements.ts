@@ -2,7 +2,6 @@ import { isValidStyle, preprocessStyle, styleObjectToString } from "../lib";
 import { setReactiveAttributes } from "../signals/batch";
 import { reactive, reactiveAttribute, Ref } from "../signals/signal";
 import {
-    Element,
     Fiber,
     FiberChildren,
     NodeType,
@@ -94,7 +93,8 @@ export function createChildren(children: FiberChildren): FiberChildren {
         .flat();
 }
 
-export function createTextChildren(text: any): Element {
+export function createTextChildren(text: any): Fiber {
+    // @ts-expect-error
     return {
         type: "TEXT_CHILD",
         props: {
