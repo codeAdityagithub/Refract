@@ -21,19 +21,19 @@ const FC1 = () => {
     });
     // const compText = computed(() => "FC1" + str.value);
     return (
-        <>
+        <div>
             This is FC1 {() => textSignal.value + str.value}
             <h2>This is {() => str.value}</h2>
             <button
                 onClick={() => {
-                    clicked.value = !clicked.value;
-                    str.value = clicked.value ? "FC1 Clicked" : "FC1";
+                    clicked.update((prev) => !prev);
+                    str.update(clicked.value ? "FC1 Clicked" : "FC1");
                 }}
                 className={() => (textSignal.value ? "clicked" : "")}
             >
                 Click
             </button>
-        </>
+        </div>
     );
 };
 export default FC1;

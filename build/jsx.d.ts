@@ -1,5 +1,4 @@
 import { Ref } from './index';
-import { Fiber } from './types';
 type Defaultize<Props, Defaults> = Props extends any ? Partial<Pick<Props, Extract<keyof Props, keyof Defaults>>> & // Include the remaining properties from Props
 Pick<Props, Exclude<keyof Props, keyof Defaults>> : never;
 type Booleanish = boolean | "true" | "false";
@@ -64,7 +63,7 @@ export declare namespace JSXInternal {
     export type ElementType<P = any> = {
         [K in keyof IntrinsicElements]: P extends IntrinsicElements[K] ? K : never;
     }[keyof IntrinsicElements] | ComponentType<P>;
-    export type Element = Fiber;
+    export type Element = ComponentChild;
     export type ElementClass = ComponentType<any>;
     export interface ElementAttributesProperty {
         props: any;
@@ -81,13 +80,7 @@ export declare namespace JSXInternal {
     export interface CSSProperties extends AllCSSProperties, DOMCSSProperties {
         cssText?: string | null;
     }
-    export interface SignalLike<T> {
-        value: T;
-        peek(): T;
-        subscribe(fn: (value: T) => void): () => void;
-    }
-    export type Signalish<T> = T | SignalLike<T>;
-    export type UnpackSignal<T> = T extends SignalLike<infer V> ? V : T;
+    export type Signalish<T> = T | (() => T);
     export interface SVGAttributes<Target extends EventTarget = SVGElement> extends HTMLAttributes<Target> {
         accentHeight?: Signalish<number | string | undefined>;
         accumulate?: Signalish<"none" | "sum" | undefined>;

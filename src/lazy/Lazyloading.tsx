@@ -1,4 +1,4 @@
-import { createSignal, PublicSignal } from "../index";
+import { ComponentChildren, createSignal, Fiber, PublicSignal } from "../index";
 
 declare const FRAGMENT = "FRAGMENT";
 
@@ -11,8 +11,10 @@ export function lazy<T extends (props: any) => any>(
     importFn: () => Promise<{ default: T }>
 ): (
     props: PropsOf<T> & {
-        fallback?: string | Node;
-        errorFallback?: string | Node | ((error: Error) => Node);
+        fallback?: ComponentChildren;
+        errorFallback?:
+            | ComponentChildren
+            | ((error: Error) => ComponentChildren);
     }
 ) => ReturnType<T> {
     let Component: T | null = null;
@@ -95,7 +97,8 @@ export function lazy<T extends (props: any) => any>(
                                 ? props.errorFallback(error.value)
                                 : props.errorFallback
                             : "Unknown error occurred while lazy loading component, use errorFallback prop to override"
-                        : Component && <Component {...props} />
+                        : // @ts-expect-error
+                          Component && <Component {...props} />
                 }
             </>
         ) as unknown as ReturnType<T>;

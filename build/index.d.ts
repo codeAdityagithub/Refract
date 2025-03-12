@@ -7,6 +7,7 @@ import { JSXInternal } from './jsx';
 export * from './jsx';
 declare global {
     export import JSX = JSXInternal;
+    const FRAGMENT = "FRAGMENT";
 }
 export * from './types';
 export { cleanUp, createEffect, createSignal, render, createPromise, createRef, computed, createElement, lazy, ArraySignal, BaseSignal, ObjectSignal, PrimitiveSignal, PublicArraySignal, PublicObjectSignal, PublicSignal, Ref, };

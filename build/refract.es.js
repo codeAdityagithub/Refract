@@ -1208,7 +1208,10 @@ function ot(e) {
       throw new Error(
         "Invalid errorFallback: Expected a string, a valid JSX node, or a function returning a JSX node."
       );
-    return /* @__PURE__ */ oe("FRAGMENT", null, () => o.value ? r.fallback : l.value !== null ? r.errorFallback ? typeof r.errorFallback == "function" ? r.errorFallback(l.value) : r.errorFallback : "Unknown error occurred while lazy loading component, use errorFallback prop to override" : t && /* @__PURE__ */ oe(t, { ...r }));
+    return /* @__PURE__ */ oe("FRAGMENT", null, () => o.value ? r.fallback : l.value !== null ? r.errorFallback ? typeof r.errorFallback == "function" ? r.errorFallback(l.value) : r.errorFallback : "Unknown error occurred while lazy loading component, use errorFallback prop to override" : (
+      // @ts-expect-error
+      t && /* @__PURE__ */ oe(t, { ...r })
+    ));
   };
 }
 export {

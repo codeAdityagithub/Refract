@@ -21,10 +21,12 @@ import type {
 } from "./signals/signal";
 
 export * from "./jsx";
-import { JSXInternal } from "./jsx";
+import { JSXInternal, FRAGMENT as Fragment } from "./jsx";
 declare global {
     // @ts-expect-error
     export import JSX = JSXInternal;
+    // @ts-expect-error
+    const FRAGMENT = "FRAGMENT";
 }
 export * from "./types";
 export {
