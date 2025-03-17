@@ -9,7 +9,11 @@
         "jsxFactory": "createElement", // Match your jsxFactory in esbuild
         "jsxFragmentFactory": "FRAGMENT",
         "moduleResolution": "bundler",
-        "strictNullChecks": true
+        "strictNullChecks": true,
+        "declaration": true,
+        "declarationMap": false,
+        "emitDeclarationOnly": true,
+        "removeComments": true
     },
     "exclude": ["node_modules", "dist"] // Exclude generated and third-party files
 }

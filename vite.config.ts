@@ -7,17 +7,29 @@ const isProd = process.env.NODE_ENV === "production";
 export default defineConfig({
     build: {
         outDir: isProd ? "build" : "dist",
-        minify: true,
-        sourcemap: !isProd,
+        minify: "terser",
+        sourcemap: true,
         lib: {
             entry: "src/index.ts",
             name: "Refract",
             fileName: (format) => `refract.${format}.js`,
-            formats: ["es", "cjs", "umd"], // Supports multiple module formats
+            formats: ["es", "cjs"], // Supports multiple module formats
         },
         rollupOptions: {
             output: {
                 preserveModules: false,
+            },
+        },
+        terserOptions: {
+            compress: {
+                drop_console: true,
+                drop_debugger: true,
+                ecma: 2020,
+                passes: 3, // Runs multiple passes for more optimization
+                pure_funcs: ["console.log"],
+            },
+            output: {
+                comments: false,
             },
         },
     },
