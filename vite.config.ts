@@ -7,8 +7,8 @@ const isProd = process.env.NODE_ENV === "production";
 export default defineConfig({
     build: {
         outDir: isProd ? "build" : "dist",
-        minify: "terser",
-        sourcemap: true,
+        minify: "esbuild",
+        sourcemap: false,
         lib: {
             entry: "src/index.ts",
             name: "Refract",
@@ -19,19 +19,9 @@ export default defineConfig({
             output: {
                 preserveModules: false,
             },
+            treeshake: true,
         },
-        terserOptions: {
-            compress: {
-                drop_console: true,
-                drop_debugger: true,
-                ecma: 2020,
-                passes: 3, // Runs multiple passes for more optimization
-                pure_funcs: ["console.log"],
-            },
-            output: {
-                comments: false,
-            },
-        },
+        target: "esnext",
     },
     esbuild: {
         jsxFactory: "createElement", // Your custom JSX factory function

@@ -1,14 +1,13 @@
-function isPlainObject(variable) {
-  return typeof variable === "object" && // Must be an object
-  variable !== null && // Cannot be null
-  !Array.isArray(variable) && // Cannot be an array
-  Object.prototype.toString.call(variable) === "[object Object]";
+function N(e) {
+  return typeof e == "object" && // Must be an object
+  e !== null && // Cannot be null
+  !Array.isArray(e) && // Cannot be an array
+  Object.prototype.toString.call(e) === "[object Object]";
 }
-function isPrimitive(val) {
-  return ["boolean", "string", "number", "undefined"].includes(typeof val) || val === null || val instanceof Error;
+function M(e) {
+  return ["boolean", "string", "number", "undefined"].includes(typeof e) || e === null || e instanceof Error;
 }
-const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
-const SVG_TAGS = /* @__PURE__ */ new Set([
+const ce = "http://www.w3.org/2000/svg", ke = /* @__PURE__ */ new Set([
   "svg",
   "a",
   "circle",
@@ -68,8 +67,7 @@ const SVG_TAGS = /* @__PURE__ */ new Set([
   "tspan",
   "use",
   "view"
-]);
-const MATH_TAGS = /* @__PURE__ */ new Set([
+]), Ae = /* @__PURE__ */ new Set([
   "math",
   "maction",
   "maligngroup",
@@ -109,1094 +107,650 @@ const MATH_TAGS = /* @__PURE__ */ new Set([
   "mtr",
   "munder",
   "munderover"
-]);
-const MATH_NAMESPACE = "http://www.w3.org/1998/Math/MathML";
-const CAPTURE_REGEX$1 = /(PointerCapture)$|Capture$/i;
-const IS_NON_DIMENSIONAL = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|itera/i;
-function styleObjectToString(style) {
-  const newStyles = [];
-  for (const key in style) {
-    const value = style[key];
-    const cssKey = key.replace(/([A-Z])/g, "-$1").toLowerCase();
-    if (typeof value != "number" || IS_NON_DIMENSIONAL.test(cssKey)) {
-      newStyles.push(`${cssKey}: ${value};`);
-    } else {
-      newStyles.push(`${cssKey}: ${value}px;`);
-    }
+]), Me = "http://www.w3.org/1998/Math/MathML", j = /(PointerCapture)$|Capture$/i, Te = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|itera/i;
+function Ne(e) {
+  const t = [];
+  for (const n in e) {
+    const r = e[n], o = n.replace(/([A-Z])/g, "-$1").toLowerCase();
+    typeof r != "number" || Te.test(o) ? t.push(`${o}: ${r};`) : t.push(`${o}: ${r}px;`);
   }
-  return newStyles.join(" ");
+  return t.join(" ");
 }
-function preprocessStyle(style) {
-  const processedStyle = {};
-  for (const key in style) {
-    const value = style[key];
-    if (typeof value === "object" && value !== null) {
-      console.warn(`Nested styles not allowed for ${key}`);
+function Pe(e) {
+  const t = {};
+  for (const n in e) {
+    const r = e[n];
+    if (typeof r == "object" && r !== null) {
+      console.warn(`Nested styles not allowed for ${n}`);
       continue;
     }
-    if (value === null || value === void 0 || value === false || value === "") {
-      continue;
-    }
-    processedStyle[key] = value;
+    r == null || r === !1 || r === "" || (t[n] = r);
   }
-  return processedStyle;
+  return t;
 }
-function isValidStyle(style) {
-  return isPlainObject(style) || typeof style === "string";
+function Le(e) {
+  return N(e) || typeof e == "string";
 }
-function setStyle(style, dom) {
-  if (!isValidStyle(style))
+function Re(e, t) {
+  if (!Le(e))
     throw new Error("Style attribute must be a plain object or a string");
-  if (typeof style === "string") {
-    dom.setAttribute("style", style);
-  } else {
-    const processedStyle = preprocessStyle(style);
-    dom.setAttribute("style", styleObjectToString(processedStyle));
+  if (typeof e == "string")
+    t.setAttribute("style", e);
+  else {
+    const n = Pe(e);
+    t.setAttribute("style", Ne(n));
   }
 }
-function setReactiveAttribute(reactiveFunction, name, dom, namespace) {
-  reactiveFunction.__propName = name;
-  const val = reactiveAttribute(reactiveFunction);
-  if (val === null || val === void 0 || val === false) {
-    return;
-  }
-  setAttribute(name, val, dom, namespace);
-  if (reactiveFunction.__signals)
-    setReactiveAttributes(reactiveFunction, dom);
+function De(e, t, n, r) {
+  e.__propName = t;
+  const o = ve(e);
+  o == null || o === !1 || (ee(t, o, n, r), e.__signals && Ye(e, n));
 }
-const CAPTURE_REGEX = /(PointerCapture)$|Capture$/i;
-function setAttribute(name, value, dom, namespace) {
-  if (name == "style") {
-    setStyle(value, dom);
+const Ge = /(PointerCapture)$|Capture$/i;
+function ee(e, t, n, r) {
+  if (e == "style") {
+    Re(t, n);
     return;
   }
-  if (name[0] === "o" && name[1] === "n" && typeof value === "function") {
-    const useCapture = name != (name = name.replace(CAPTURE_REGEX, "$1"));
-    if (name.toLowerCase() in dom || name == "onFocusOut" || name == "onFocusIn" || name === "onGotPointerCapture" || name === "onLostPointerCapture")
-      name = name.toLowerCase().slice(2);
-    else name = name.slice(2);
-    dom.addEventListener(name, value, useCapture);
+  if (e[0] === "o" && e[1] === "n" && typeof t == "function") {
+    const o = e != (e = e.replace(Ge, "$1"));
+    e.toLowerCase() in n || e == "onFocusOut" || e == "onFocusIn" || e === "onGotPointerCapture" || e === "onLostPointerCapture" ? e = e.toLowerCase().slice(2) : e = e.slice(2), n.addEventListener(e, t, o);
     return;
   }
-  if (namespace === SVG_NAMESPACE) {
-    name = name.replace(/xlink(H|:h)/, "h").replace(/sName$/, "s");
-  } else if (name !== "width" && name !== "height" && name !== "href" && name !== "list" && name !== "form" && name !== "tabIndex" && name !== "download" && name !== "rowSpan" && name !== "colSpan" && name !== "role" && name !== "popover" && name in dom) {
+  if (r === ce)
+    e = e.replace(/xlink(H|:h)/, "h").replace(/sName$/, "s");
+  else if (e !== "width" && e !== "height" && e !== "href" && e !== "list" && e !== "form" && e !== "tabIndex" && e !== "download" && e !== "rowSpan" && e !== "colSpan" && e !== "role" && e !== "popover" && e in n)
     try {
-      if (name === "value" && dom.tagName === "SELECT") {
-        setTimeout(() => {
-          dom[name] = value == null ? "" : value;
-        });
-      } else {
-        dom[name] = value == null ? "" : value;
-      }
+      e === "value" && n.tagName === "SELECT" ? setTimeout(() => {
+        n[e] = t ?? "";
+      }) : n[e] = t ?? "";
       return;
-    } catch (e) {
+    } catch {
     }
-  }
-  if (value != null && (value !== false || name[4] === "-")) {
-    dom.setAttribute(
-      name,
-      name === "popover" && value === true ? "" : value
-    );
-  }
+  t != null && (t !== !1 || e[4] === "-") && n.setAttribute(
+    e,
+    e === "popover" && t === !0 ? "" : t
+  );
 }
-const FRAGMENT_SYMBOL = Symbol("FRAGMENT");
-function createElement(type, props, ...children) {
-  if (type === "FRAGMENT") {
-    const fragments = createChildren(children);
-    fragments[FRAGMENT_SYMBOL] = true;
-    return fragments;
+const h = Symbol("FRAGMENT");
+function ne(e, t, ...n) {
+  if (e === "FRAGMENT") {
+    const r = P(n);
+    return r[h] = !0, r;
   }
   return {
-    type,
+    type: e,
     props: {
-      ...props,
-      children: createChildren(children)
+      ...t,
+      children: P(n)
     }
   };
 }
-function createChildren(children) {
-  return children.map((child) => {
-    if (typeof child === "object") {
-      if (Array.isArray(child)) {
-        return createChildren(child);
-      }
-      if (child === null) {
-        return createTextChildren("");
-      }
-      if (!child.type || !child.props) {
+function P(e) {
+  return e.map((t) => {
+    if (typeof t == "object") {
+      if (Array.isArray(t))
+        return P(t);
+      if (t === null)
+        return B("");
+      if (!t.type || !t.props)
         throw new Error(
-          "Invalid type for a dom node, found " + child
+          "Invalid type for a dom node, found " + t
         );
-      }
-      return child;
-    } else if (typeof child === "function") {
-      const val = reactive(child);
-      if (isPrimitive(val)) {
-        return createSignalChild(
+      return t;
+    } else if (typeof t == "function") {
+      const n = xe(t);
+      if (M(n))
+        return q(
           "TEXT_CHILD",
           {
-            nodeValue: val !== void 0 && val !== null && val !== false ? String(val) : "",
+            nodeValue: n != null && n !== !1 ? String(n) : "",
             children: []
           },
-          child
+          t
         );
-      } else if (Array.isArray(val)) {
-        const isFragment = val[FRAGMENT_SYMBOL];
-        return createSignalChild(
+      if (Array.isArray(n)) {
+        const r = n[h];
+        return q(
           "FRAGMENT",
-          { children: isFragment ? val : createChildren(val) },
-          child
+          { children: r ? n : P(n) },
+          t
         );
-      } else if (!val.type || !val.props) {
+      } else if (!n.type || !n.props)
         throw new Error(
-          "Invalid type for a dom node, found " + val
+          "Invalid type for a dom node, found " + n
         );
-      }
-      return createSignalChild(val.type, val.props, child);
-    } else {
-      return createTextChildren(child);
-    }
+      return q(n.type, n.props, t);
+    } else
+      return B(t);
   }).flat();
 }
-function createTextChildren(text) {
+function B(e) {
   return {
     type: "TEXT_CHILD",
     props: {
-      nodeValue: text !== null && text !== void 0 && text !== false ? String(text) : "",
+      nodeValue: e != null && e !== !1 ? String(e) : "",
       children: []
     }
   };
 }
-function createSignalChild(type, props, renderFunction) {
+function q(e, t, n) {
   return {
-    type,
-    renderFunction,
-    props
+    type: e,
+    renderFunction: n,
+    props: t
   };
 }
-function isProperty$1(key) {
-  return key !== "children" && key !== "key" && key !== "ref";
+function Ie(e) {
+  return e !== "children" && e !== "key" && e !== "ref";
 }
-function createNode(element) {
-  let namespace = null;
-  if (SVG_TAGS.has(element.type)) namespace = SVG_NAMESPACE;
-  else if (MATH_TAGS.has(element.type)) namespace = MATH_NAMESPACE;
-  const dom = element.type === "TEXT_CHILD" ? document.createTextNode("") : namespace ? document.createElementNS(
-    namespace,
+function ue(e) {
+  let t = null;
+  ke.has(e.type) ? t = ce : Ae.has(e.type) && (t = Me);
+  const n = e.type === "TEXT_CHILD" ? document.createTextNode("") : t ? document.createElementNS(
+    t,
     // @ts-expect-error
-    element.type,
-    element.props.is && element.props
+    e.type,
+    e.props.is && e.props
   ) : (
     // @ts-expect-error
-    document.createElement(element.type)
+    document.createElement(e.type)
   );
-  if (!element.props) return dom;
-  if (element.props.ref && element.props.ref instanceof Ref && dom instanceof HTMLElement) {
-    element.props.ref.current = dom;
-  }
-  for (const name in element.props) {
-    if (!isProperty$1(name)) {
+  if (!e.props) return n;
+  e.props.ref && e.props.ref instanceof te && n instanceof HTMLElement && (e.props.ref.current = n);
+  for (const r in e.props) {
+    if (!Ie(r))
       continue;
+    const o = e.props[r];
+    typeof o == "function" && r[0] !== "o" && r[1] !== "n" ? De(o, r, n, t) : ee(r, o, n, t);
+  }
+  return n;
+}
+function $e(e, t, n) {
+  n == null || e === "key" || ee(e, n, t);
+}
+function ae(e, t) {
+  return e === t ? !0 : e.type !== t.type || e.props?.key !== t.props?.key ? !1 : T(e.props, t.props);
+}
+function T(e, t) {
+  if (e === t) {
+    if (e instanceof L && t instanceof L)
+      return T(e.value, t.value);
+    if (Array.isArray(e) && Array.isArray(t)) {
+      if (e.length !== t.length) return !1;
+      for (let n = 0; n < e.length; n++)
+        if (!T(e[n], t[n])) return !1;
     }
-    const value = element.props[name];
-    if (typeof value === "function" && name[0] !== "o" && name[1] !== "n") {
-      setReactiveAttribute(value, name, dom, namespace);
-    } else {
-      setAttribute(name, value, dom, namespace);
+    return !0;
+  }
+  if (M(e) && M(t))
+    return e === t;
+  if (typeof e != typeof t) return !1;
+  for (let n in e)
+    if (n !== "children" && (!(n in t) || !T(e[n], t[n])))
+      return !1;
+  for (let n in t)
+    if (n !== "children" && !(n in e))
+      return !1;
+  return !0;
+}
+function x(e) {
+  if (e) {
+    if (e.dom) return e.dom;
+    for (const t of e.props.children) {
+      const n = x(t);
+      if (n) return n;
     }
   }
-  return dom;
 }
-function updateDomProp(prop, dom, value) {
-  if (value == null || prop === "key") return;
-  setAttribute(prop, value, dom);
+function W(e) {
+  if (!e) return;
+  let t = e.parent;
+  for (; t && !t.dom; )
+    t = t.parent;
+  return t;
 }
-function render(element, container) {
-  rootContainer = container;
-  const fragment = document.createDocumentFragment();
-  rootFragment = fragment;
-  const rootFiber = {
+function Oe(e) {
+  if (e)
+    return e.dom ? e : W(e);
+}
+function it(e, t) {
+  v = t;
+  const n = document.createDocumentFragment();
+  b = n;
+  const r = {
     type: "div",
     props: {
-      children: [element]
+      children: [e]
     },
     // @ts-expect-error
-    dom: fragment
+    dom: n
   };
-  element.parent = rootFiber;
-  elements.push(element);
-  requestIdleCallback(workLoop);
+  e.parent = r, w.push(e), requestIdleCallback(fe);
 }
-function commitRootFragment() {
-  if (rootFragment && rootContainer) {
-    rootContainer.appendChild(rootFragment);
-  }
+function He() {
+  b && v && v.appendChild(b);
 }
-let elements = [];
-let rootContainer = null;
-let rootFragment = null;
-let effectQueue = [];
-function processEffectQueue() {
-  for (let i = 0; i < effectQueue.length; i++) {
-    const fiber = effectQueue[i];
-    runAllEffects(fiber);
+let w = [], v = null, b = null, D = [];
+function re() {
+  for (let e = 0; e < D.length; e++) {
+    const t = D[e];
+    Ce(t);
   }
-  effectQueue.length = 0;
+  D.length = 0;
 }
-function workLoop(deadline) {
-  processEffectQueue();
-  let shouldYield = false;
-  while (elements.length > 0 && !shouldYield) {
-    const element = elements.pop();
-    renderNode(element);
-    shouldYield = deadline.timeRemaining() < 1;
+function fe(e) {
+  re();
+  let t = !1;
+  for (; w.length > 0 && !t; ) {
+    const n = w.pop();
+    We(n), t = e.timeRemaining() < 1;
   }
-  if (elements.length == 0) {
-    commitRootFragment();
-    processEffectQueue();
+  if (w.length == 0) {
+    He(), re();
     return;
   }
-  requestIdleCallback(workLoop);
+  requestIdleCallback(fe);
 }
-function renderNode(fiber) {
-  var _a;
-  if (fiber.type === "FRAGMENT") {
-    const isArray = !fiber.props.children[FRAGMENT_SYMBOL];
-    let noKey = false;
-    for (let i = fiber.props.children.length - 1; i >= 0; i--) {
-      fiber.props.children[i].parent = fiber;
-      if (isArray && fiber.props.children[i].props.key === void 0 && fiber.renderFunction) {
-        noKey = true;
-      }
-      elements.push(fiber.props.children[i]);
-    }
-    if (noKey) {
-      console.error("Array children must have a key attribute");
-    }
-  } else if (typeof fiber.type === "function") {
-    setCurrentFC(fiber);
-    const children = fiber.type(fiber.props);
-    clearCurrentFC();
-    if (Array.isArray(children)) {
-      for (let i = children.length - 1; i >= 0; i--) {
-        children[i].parent = fiber;
-        elements.push(children[i]);
-      }
-      fiber.props.children = children;
-    } else {
-      children.parent = fiber;
-      fiber.props.children.push(children);
-      elements.push(children);
-    }
-    effectQueue.push(fiber);
+function We(e) {
+  if (e.type === "FRAGMENT") {
+    const t = !e.props.children[h];
+    let n = !1;
+    for (let r = e.props.children.length - 1; r >= 0; r--)
+      e.props.children[r].parent = e, t && e.props.children[r].props.key === void 0 && e.renderFunction && (n = !0), w.push(e.props.children[r]);
+    n && console.error("Array children must have a key attribute");
+  } else if (typeof e.type == "function") {
+    _e(e);
+    const t = e.type(e.props);
+    if (Ee(), Array.isArray(t)) {
+      for (let n = t.length - 1; n >= 0; n--)
+        t[n].parent = e, w.push(t[n]);
+      e.props.children = t;
+    } else
+      t.parent = e, e.props.children.push(t), w.push(t);
+    D.push(e);
   } else {
-    if (!fiber.dom) fiber.dom = createNode(fiber);
-    let fiberParent = fiber.parent;
-    while (fiberParent && !fiberParent.dom) {
-      fiberParent = fiberParent.parent;
-    }
-    if (fiberParent) {
-      (_a = fiberParent.dom) == null ? void 0 : _a.appendChild(fiber.dom);
-    }
-    for (let i = fiber.props.children.length - 1; i >= 0; i--) {
-      fiber.props.children[i].parent = fiber;
-      elements.push(fiber.props.children[i]);
-    }
+    e.dom || (e.dom = ue(e));
+    let t = W(e);
+    t && t.dom?.appendChild(e.dom);
+    for (let n = e.props.children.length - 1; n >= 0; n--)
+      e.props.children[n].parent = e, w.push(e.props.children[n]);
   }
-  setRenderFunction(fiber);
+  U(e);
 }
-function createFiber(fiber) {
-  if (fiber.type === "FRAGMENT") {
-    const isFragment = fiber.props.children[FRAGMENT_SYMBOL];
-    if (isFragment) {
-      for (const child of fiber.props.children) {
-        child.parent = fiber;
-        createFiber(child);
-      }
-    } else {
-      let noKey = false;
-      for (const child of fiber.props.children) {
-        child.parent = fiber;
-        if (child.props.key === void 0) {
-          noKey = true;
-        }
-        createFiber(child);
-      }
-      if (noKey) {
-        console.error("Array children must have a key attribute");
-      }
+function F(e) {
+  if (e.type === "FRAGMENT")
+    if (e.props.children[h])
+      for (const n of e.props.children)
+        n.parent = e, F(n);
+    else {
+      let n = !1;
+      for (const r of e.props.children)
+        r.parent = e, r.props.key === void 0 && (n = !0), F(r);
+      n && console.error("Array children must have a key attribute");
     }
-  } else if (typeof fiber.type !== "function") {
-    for (const child of fiber.props.children) {
-      child.parent = fiber;
-      createFiber(child);
-    }
-  }
-  setRenderFunction(fiber);
+  else if (typeof e.type != "function")
+    for (const t of e.props.children)
+      t.parent = e, F(t);
+  U(e);
 }
-function commitFiber(fiber, referenceNode, replace, needCreation, customParent) {
-  var _a, _b;
-  if (fiber.type === "FRAGMENT") {
-    for (const child of fiber.props.children) {
-      if (needCreation) child.parent = fiber;
-      commitFiber(
-        child,
-        referenceNode,
-        replace,
-        needCreation,
-        customParent
+function p(e, t, n, r, o) {
+  if (e.type === "FRAGMENT")
+    for (const i of e.props.children)
+      r && (i.parent = e), p(
+        i,
+        t,
+        n,
+        r,
+        o
       );
-    }
-  } else if (typeof fiber.type === "function") {
-    setCurrentFC(fiber);
-    const children = fiber.type(fiber.props);
-    clearCurrentFC();
-    if (Array.isArray(children)) {
-      for (const child of children) {
-        child.parent = fiber;
-        commitFiber(child, referenceNode, replace, true, customParent);
-      }
-      fiber.props.children = children;
-    } else {
-      children.parent = fiber;
-      fiber.props.children.push(children);
-      commitFiber(children, referenceNode, replace, true, customParent);
-    }
+  else if (typeof e.type == "function") {
+    _e(e);
+    const i = e.type(e.props);
+    if (Ee(), Array.isArray(i)) {
+      for (const s of i)
+        s.parent = e, p(s, t, n, !0, o);
+      e.props.children = i;
+    } else
+      i.parent = e, e.props.children.push(i), p(i, t, n, !0, o);
     queueMicrotask(() => {
-      runAllEffects(fiber);
+      Ce(e);
     });
   } else {
-    if (!fiber.dom) fiber.dom = createNode(fiber);
-    if (referenceNode) {
-      if (replace)
-        (_a = referenceNode.parentElement) == null ? void 0 : _a.replaceChild(
-          fiber.dom,
-          referenceNode
-        );
-      else
-        (_b = referenceNode.parentElement) == null ? void 0 : _b.insertBefore(
-          fiber.dom,
-          referenceNode
-        );
-    } else {
-      let parentDom = void 0;
-      if (customParent) {
-        parentDom = customParent;
-      } else {
-        let fiberParent = fiber.parent;
-        while (fiberParent && !fiberParent.dom) {
-          fiberParent = fiberParent.parent;
-        }
-        parentDom = fiberParent == null ? void 0 : fiberParent.dom;
-      }
-      parentDom == null ? void 0 : parentDom.appendChild(fiber.dom);
+    if (e.dom || (e.dom = ue(e)), t)
+      n ? t.parentElement?.replaceChild(
+        e.dom,
+        t
+      ) : t.parentElement?.insertBefore(
+        e.dom,
+        t
+      );
+    else {
+      let i;
+      o ? i = o : i = W(e)?.dom, i?.appendChild(e.dom);
     }
-    for (const child of fiber.props.children) {
-      if (needCreation) child.parent = fiber;
-      commitFiber(child, void 0, void 0, needCreation, fiber.dom);
-    }
+    for (const i of e.props.children)
+      r && (i.parent = e), p(i, void 0, void 0, r, e.dom);
   }
-  if (needCreation) {
-    setRenderFunction(fiber);
+  r && U(e);
+}
+let G = !0;
+function _(e, t) {
+  if (!(!e || !G)) {
+    if (e.renderFunction && (t && Je(e.renderFunction), delete e.renderFunction), e.dom) {
+      for (const n in e.props)
+        if (I(n)) {
+          let r = n.toLowerCase().substring(2);
+          const o = r != (r = r.replace(j, "$1"));
+          e.dom.removeEventListener(
+            r,
+            e.props[n],
+            o
+          ), delete e.props[n];
+        } else typeof e.props[n] == "function" ? Ze(e.props[n]) : n === "ref" && e.props[n] instanceof te && (e.props[n].current = null);
+      e.dom.remove();
+    }
+    typeof e.type == "function" && (ot(e, e.props), delete e.type), e.props.children.forEach((n) => _(n, !0));
   }
 }
-let ToCommitDeletion = true;
-function commitDeletion(fiber, toClearReactiveFunction) {
-  if (!fiber || !ToCommitDeletion) return;
-  if (fiber.renderFunction) {
-    if (toClearReactiveFunction)
-      clearReactiveFunction(fiber.renderFunction);
-    delete fiber.renderFunction;
-  }
-  if (fiber.dom) {
-    for (const prop in fiber.props) {
-      if (isEvent(prop)) {
-        let eventName = prop.toLowerCase().substring(2);
-        const useCapture = eventName != (eventName = eventName.replace(CAPTURE_REGEX$1, "$1"));
-        fiber.dom.removeEventListener(
-          eventName,
-          fiber.props[prop],
-          useCapture
-        );
-        delete fiber.props[prop];
-      } else if (typeof fiber.props[prop] === "function") {
-        clearReactiveAttributes(fiber.props[prop]);
-      } else if (prop === "ref" && fiber.props[prop] instanceof Ref) {
-        fiber.props[prop].current = null;
-      }
-    }
-    fiber.dom.remove();
-  }
-  if (typeof fiber.type === "function") {
-    cleanUpFC(fiber, fiber.props);
-    delete fiber.type;
-  }
-  fiber.props.children.forEach((child) => commitDeletion(child, true));
+function U(e) {
+  e.renderFunction && Qe(e.renderFunction, e);
 }
-function setRenderFunction(fiber) {
-  if (!fiber.renderFunction) return;
-  setReactiveFunction(fiber.renderFunction, fiber);
-}
-function updateFiber(prevFiber, newValue) {
-  if (isPrimitive(newValue)) {
-    const newFragment = {
-      ...createTextChildren(newValue),
-      parent: prevFiber.parent
+function pe(e, t) {
+  if (M(t)) {
+    const n = {
+      ...B(t),
+      parent: e.parent
     };
-    createFiber(newFragment);
-    updateNode(prevFiber, newFragment);
-  } else if (Array.isArray(newValue)) {
-    const isFragment = newValue[FRAGMENT_SYMBOL];
-    const newFragment = {
+    F(n), y(e, n);
+  } else if (Array.isArray(t)) {
+    const r = {
       type: "FRAGMENT",
       props: {
-        children: isFragment ? newValue : createChildren(newValue)
+        children: t[h] ? t : P(t)
       },
-      parent: prevFiber.parent
+      parent: e.parent
     };
-    createFiber(newFragment);
-    updateNode(prevFiber, newFragment);
+    F(r), y(e, r);
   } else {
-    const newFragment = { ...newValue, parent: prevFiber.parent };
-    createFiber(newFragment);
-    updateNode(prevFiber, newFragment);
+    const n = { ...t, parent: e.parent };
+    F(n), y(e, n);
   }
 }
-function replaceRenderFunction(prev, next) {
-  if (prev.renderFunction) {
-    next.renderFunction = prev.renderFunction;
-    setRenderFunction(next);
-  }
+function Ue(e, t) {
+  e.renderFunction && (t.renderFunction = e.renderFunction, U(t));
 }
-function replaceChildFromParent(prev, next, index) {
-  var _a;
-  if (index !== void 0) {
-    prev.parent.props.children[index] = next;
+function Xe(e, t, n) {
+  if (n !== void 0) {
+    e.parent.props.children[n] = t;
     return;
   }
-  (_a = prev.parent) == null ? void 0 : _a.props.children.forEach((child, i) => {
-    if (child === prev) {
-      prev.parent.props.children[i] = next;
-    }
-  });
+  for (let r = 0; r < e.parent.props.children.length; r++)
+    e.parent.props.children[r] === e && (e.parent.props.children[r] = t);
 }
-const isEvent = (key) => key.startsWith("on") || key == "onFocusOut" || key == "onFocusIn";
-const isProperty = (key) => key !== "children" && !isEvent(key) && key !== "key" && key !== "ref";
-const isNew = (prev, next, key) => prev[key] !== next[key];
-const isGone = (prev, next, key) => !(key in next);
-function deepCompareFibers(fiberA, fiberB) {
-  var _a, _b;
-  if (fiberA === fiberB) {
-    return true;
-  }
-  if (fiberA.type !== fiberB.type) {
-    return false;
-  }
-  if (((_a = fiberA.props) == null ? void 0 : _a.key) !== ((_b = fiberB.props) == null ? void 0 : _b.key)) {
-    return false;
-  }
-  return deepEqual(fiberA.props, fiberB.props);
+function R(e, t, n) {
+  Ue(e, t), _(e), Xe(e, t, n);
 }
-function deepEqual(objA, objB) {
-  if (objA === objB) {
-    if (objA instanceof BaseSignal && objB instanceof BaseSignal)
-      return deepEqual(objA.value, objB.value);
-    if (Array.isArray(objA) && Array.isArray(objB)) {
-      if (objA.length !== objB.length) return false;
-      for (let i = 0; i < objA.length; i++) {
-        if (!deepEqual(objA[i], objB[i])) return false;
-      }
-    }
-    return true;
-  }
-  if (isPrimitive(objA) && isPrimitive(objB)) {
-    return objA === objB;
-  }
-  if (typeof objA !== typeof objB) return false;
-  const keysA = Object.keys(objA);
-  const keysB = Object.keys(objB);
-  if (keysA.length !== keysB.length) return false;
-  for (let key of keysA) {
-    if (key === "children") continue;
-    if (!objB.hasOwnProperty(key)) return false;
-    if (!deepEqual(objA[key], objB[key])) return false;
-  }
-  return true;
-}
-function findFirstDom(fiber) {
-  if (!fiber) return;
-  if (fiber.dom) return fiber.dom;
-  for (const child of fiber.props.children) {
-    const dom = findFirstDom(child);
-    if (dom) return dom;
-  }
-}
-function findLastDom(fiber) {
-  if (!fiber) return;
-  if (fiber.dom) return fiber.dom;
-  for (let i = fiber.props.children.length - 1; i >= 0; i--) {
-    const child = fiber.props.children[i];
-    const dom = findLastDom(child);
-    if (dom) return dom;
-  }
-}
-function findLastChildDom(fiber) {
-  if (!fiber) return;
-  for (let i = fiber.props.children.length - 1; i >= 0; i--) {
-    const child = fiber.props.children[i];
-    const dom = findLastDom(child);
-    if (dom) return dom;
-  }
-}
-function findParentFiberWithDom(fiber) {
-  if (!fiber) return;
-  let fiberParent = fiber.parent;
-  while (fiberParent && !fiberParent.dom) {
-    fiberParent = fiberParent.parent;
-  }
-  return fiberParent;
-}
-function findNearestParentWithDom(fiber) {
-  if (!fiber) return;
-  if (fiber.dom) return fiber;
-  let fiberParent = fiber.parent;
-  while (fiberParent && !fiberParent.dom) {
-    fiberParent = fiberParent.parent;
-  }
-  return fiberParent;
-}
-function updateNode(prev, next, index) {
-  if (!prev && !next) return;
-  if (prev && !next) {
-    commitDeletion(prev, true);
-    prev.parent.props.children = prev.parent.props.children.filter(
-      (child) => child !== prev
-    );
-  } else if (prev && next) {
-    const prevProps = prev.props;
-    const nextProps = next.props;
-    if (prev.type === "FRAGMENT" || typeof prev.type === "function") {
-      if (next.type === "FRAGMENT" || typeof next.type === "function") {
-        if (typeof prev.type === typeof next.type && typeof prev.type === "function") {
-          const areSame = deepCompareFibers(prev, next);
-          if (!areSame) {
-            commitFiber(next, findFirstDom(prev), void 0, true);
-            replaceRenderFunction(prev, next);
-            commitDeletion(prev);
-            replaceChildFromParent(prev, next, index);
-          }
-        } else {
-          updateChildren(prev, next);
+const I = (e) => e.startsWith("on") || e == "onFocusOut" || e == "onFocusIn", oe = (e) => e !== "children" && !I(e) && e !== "key" && e !== "ref", z = (e, t, n) => e[n] !== t[n], qe = (e, t, n) => !(n in t);
+function y(e, t, n) {
+  if (!(!e && !t)) {
+    if (e && !t)
+      _(e, !0), e.parent.props.children = e.parent.props.children.filter(
+        (r) => r !== e
+      );
+    else if (e && t) {
+      const r = e.props, o = t.props;
+      if (e.type === "FRAGMENT" || typeof e.type == "function")
+        if (t.type === "FRAGMENT" || typeof t.type == "function")
+          typeof e.type == typeof t.type && typeof e.type == "function" ? ae(e, t) || (p(t, x(e), void 0, !0), R(e, t, n)) : ie(e, t);
+        else {
+          t.parent = e.parent;
+          let i = x(e.props.children[0]);
+          p(t, i), R(e, t, n);
         }
-      } else {
-        next.parent = prev.parent;
-        let firstChild = prev.props.children[0];
-        while (firstChild && !firstChild.dom)
-          firstChild = firstChild.props.children[0];
-        commitFiber(next, firstChild == null ? void 0 : firstChild.dom);
-        replaceRenderFunction(prev, next);
-        commitDeletion(prev);
-        replaceChildFromParent(prev, next, index);
-      }
-    } else {
-      const node = prev.dom;
-      if (prev.type === "TEXT_CHILD" && next.type === "TEXT_CHILD" && !next.dom)
-        next.dom = prev.dom;
-      if (node === void 0) {
-        return;
-      }
-      if (next.type === "FRAGMENT" || typeof next.type === "function") {
-        next.parent = prev.parent;
-        replaceRenderFunction(prev, next);
-        commitFiber(next, node);
-        commitDeletion(prev);
-        replaceChildFromParent(prev, next, index);
-      } else {
-        for (const prop in prevProps) {
-          if (isProperty(prop) && isGone(prevProps, nextProps, prop)) {
-            node[prop] = "";
-          } else if (isEvent(prop) && (!(prop in nextProps) || isNew(prevProps, nextProps, prop))) {
-            let eventName = prop.toLowerCase().substring(2);
-            const useCapture = eventName != (eventName = eventName.replace(
-              CAPTURE_REGEX$1,
-              "$1"
-            ));
-            node.removeEventListener(
-              eventName,
-              prevProps[prop],
-              useCapture
-            );
-          }
-        }
-        if (prev.type !== next.type) {
-          next.parent = prev.parent;
-          replaceRenderFunction(prev, next);
-          commitFiber(next, node, true);
-          commitDeletion(prev);
-          replaceChildFromParent(prev, next, index);
-        } else {
-          for (const prop in nextProps) {
-            if (isProperty(prop) && isNew(prevProps, nextProps, prop)) {
-              node[prop] = nextProps[prop];
-              prevProps[prop] = nextProps[prop];
-            } else if (isEvent(prop) && isNew(prevProps, nextProps, prop)) {
-              let eventName = prop.toLowerCase().substring(2);
-              const useCapture = eventName != (eventName = eventName.replace(
-                CAPTURE_REGEX$1,
+      else {
+        const i = e.dom;
+        if (e.type === "TEXT_CHILD" && t.type === "TEXT_CHILD" && !t.dom && (t.dom = e.dom), i === void 0)
+          return;
+        if (t.type === "FRAGMENT" || typeof t.type == "function")
+          t.parent = e.parent, p(t, i), R(e, t, n);
+        else {
+          for (const s in r)
+            if (oe(s) && qe(r, o, s))
+              i[s] = "";
+            else if (I(s) && (!(s in o) || z(r, o, s))) {
+              let c = s.toLowerCase().substring(2);
+              const l = c != (c = c.replace(
+                j,
                 "$1"
               ));
-              node.addEventListener(
-                eventName,
-                nextProps[prop],
-                useCapture
+              i.removeEventListener(
+                c,
+                r[s],
+                l
               );
-              prevProps[prop] = nextProps[prop];
             }
+          if (e.type !== t.type)
+            t.parent = e.parent, p(t, i, !0), R(e, t, n);
+          else {
+            for (const s in o)
+              if (oe(s) && z(r, o, s))
+                i[s] = o[s], r[s] = o[s];
+              else if (I(s) && z(r, o, s)) {
+                let c = s.toLowerCase().substring(2);
+                const l = c != (c = c.replace(
+                  j,
+                  "$1"
+                ));
+                i.addEventListener(
+                  c,
+                  o[s],
+                  l
+                ), r[s] = o[s];
+              }
+            ie(e, t);
           }
-          updateChildren(prev, next);
         }
       }
     }
   }
 }
-function reconcileList(prev, next) {
-  var _a;
-  const oldFibers = prev.props.children;
-  const newFibers = next.props.children;
-  const oldMap = {};
-  for (let i = 0; i < oldFibers.length; i++) {
-    const key = oldFibers[i].props.key;
-    if (key === null || key === void 0 || oldMap.hasOwnProperty(String(key))) {
-      return false;
-    }
-    oldMap[String(key)] = oldFibers[i];
+function ze(e, t) {
+  const n = e.props.children, r = t.props.children, o = {};
+  for (let l = 0; l < n.length; l++) {
+    const u = n[l].props.key;
+    if (u == null || String(u) in o)
+      return !1;
+    o[String(u)] = n[l];
   }
-  const referenceNode = (_a = findLastChildDom(prev)) == null ? void 0 : _a.nextSibling;
-  const fiberParent = findParentFiberWithDom(prev);
-  if (newFibers.length === 0) {
-    prev.props.children.length = 0;
-    if ((fiberParent == null ? void 0 : fiberParent.dom) instanceof HTMLElement)
-      fiberParent.dom.innerHTML = "";
+  const i = W(e);
+  if (r.length === 0) {
+    e.props.children.length = 0, i?.dom instanceof HTMLElement && (i.dom.innerHTML = "");
     return;
   }
-  const prevLen = prev.props.children.length;
-  for (let i = 0; i < newFibers.length; i++) {
-    const newFiber = newFibers[i];
-    const key = newFiber.props.key;
-    const keyStr = String(key);
-    if (oldMap.hasOwnProperty(keyStr)) {
-      const oldFiber = oldMap[keyStr];
-      if (prevLen > i) prev.props.children[i] = oldFiber;
-      else prev.props.children.push(oldFiber);
-      delete oldMap[keyStr];
-      const newFiber2 = next.props.children[i];
-      if (newFiber2) newFiber2.parent = prev;
-      updateNode(oldFiber, newFiber2, i);
-      applyFiber(
-        prev.props.children[i],
-        fiberParent == null ? void 0 : fiberParent.dom,
-        referenceNode
-      );
-    } else {
-      if (prevLen > i) prev.props.children[i] = newFiber;
-      else prev.props.children.push(newFiber);
-      newFiber.parent = prev;
-      commitFiber(
-        newFiber,
-        referenceNode,
-        false,
-        false,
-        fiberParent == null ? void 0 : fiberParent.dom
-      );
-    }
+  const s = document.createDocumentFragment(), c = e.props.children.length;
+  for (let l = 0; l < r.length; l++) {
+    const u = r[l], E = u.props.key, S = String(E);
+    if (S in o) {
+      const g = o[S];
+      c > l ? e.props.children[l] = g : e.props.children.push(g), delete o[S];
+      const k = t.props.children[l];
+      k && (k.parent = e), y(g, k, l), A(e.props.children[l], s);
+    } else
+      c > l ? e.props.children[l] = u : e.props.children.push(u), u.parent = e, p(u, void 0, !1, !1, s);
   }
-  for (const key in oldMap) {
-    if (oldMap.hasOwnProperty(key)) {
-      const fiber = oldMap[key];
-      commitDeletion(fiber, true);
-    }
+  for (const l in o) {
+    const u = o[l];
+    _(u, !0);
   }
-  while (prev.props.children.length > next.props.children.length) {
-    prev.props.children.pop();
-  }
+  for (; e.props.children.length > t.props.children.length; )
+    e.props.children.pop();
+  i?.dom?.appendChild(s);
 }
-function applyFiber(fiber, parent, referenceNode) {
-  if (fiber.dom) {
-    if (fiber.dom === parent || fiber.dom === referenceNode) return;
-    if (referenceNode) {
-      parent.insertBefore(fiber.dom, referenceNode);
-    } else parent.appendChild(fiber.dom);
-  } else {
-    for (const child of fiber.props.children) {
-      applyFiber(child, parent, referenceNode);
+function A(e, t, n) {
+  if (e.dom) {
+    if (e.dom === t || e.dom === n) return;
+    t.appendChild(e.dom);
+  } else
+    for (const r of e.props.children)
+      A(r, t, n);
+}
+function ie(e, t) {
+  const n = t.type === "FRAGMENT" && !t.props.children[h], r = e.type === "FRAGMENT" && !e.props.children[h];
+  n && r ? ze(e, t) === !1 && se(e, t) : se(e, t), t.type === "FRAGMENT" && t.props.children[h] ? e.props.children[h] = !0 : e.props.children[h] = !1, e.type = t.type;
+}
+function K(e, t) {
+  let n = Math.max(e.props.children.length, t.props.children.length);
+  for (let r = 0; r < n; r++) {
+    let o = e.props.children[r], i = t.props.children[r];
+    if (i && (i.parent = e), !o && i)
+      p(i), e.props.children.push(i);
+    else if (!i && o)
+      _(o, !0), e.props.children.splice(r, 1), n = e.props.children.length, r--;
+    else {
+      y(o, i, r);
+      const s = Math.max(
+        e.props.children.length,
+        t.props.children.length
+      );
+      s < n && (n = s, r--);
     }
   }
 }
-function updateChildren(prev, next) {
-  const isList = next.type === "FRAGMENT" && !next.props.children[FRAGMENT_SYMBOL];
-  const wasList = prev.type === "FRAGMENT" && !prev.props.children[FRAGMENT_SYMBOL];
-  if (isList && wasList) {
-    const result = reconcileList(prev, next);
-    if (result === false) {
-      updateNonListChildrenWithKeys(prev, next);
-    }
-  } else {
-    updateNonListChildrenWithKeys(prev, next);
-  }
-  if (next.type === "FRAGMENT" && next.props.children[FRAGMENT_SYMBOL]) {
-    prev.props.children[FRAGMENT_SYMBOL] = true;
-  } else {
-    prev.props.children[FRAGMENT_SYMBOL] = false;
-  }
-  prev.type = next.type;
-}
-function updateNonListChildren(prev, next) {
-  var _a;
-  let len = Math.max(prev.props.children.length, next.props.children.length);
-  for (let i = 0; i < len; i++) {
-    let prevChild = prev.props.children[i];
-    let nextChild = next.props.children[i];
-    if (nextChild) nextChild.parent = prev;
-    if (!prevChild && nextChild) {
-      commitFiber(
-        nextChild,
-        // @ts-expect-error
-        (_a = findLastDom(prev.props.children.at(-1))) == null ? void 0 : _a.nextSibling
-      );
-      prev.props.children.push(nextChild);
-    } else if (!nextChild && prevChild) {
-      commitDeletion(prevChild, true);
-      prev.props.children.splice(i, 1);
-      len = prev.props.children.length;
-      i--;
-    } else {
-      updateNode(prevChild, nextChild, i);
-      const newLen = Math.max(
-        prev.props.children.length,
-        next.props.children.length
-      );
-      if (newLen < len) {
-        len = newLen;
-        i--;
-      }
-    }
-  }
-}
-function updateNonListChildrenWithKeys(prev, next) {
-  let len = Math.max(prev.props.children.length, next.props.children.length);
-  const oldMap = {};
-  let count = 0;
-  for (let i = 0; i < prev.props.children.length; i++) {
-    const key = prev.props.children[i].props.key;
-    if (key === null || key === void 0) {
-      continue;
-    }
-    count++;
-    if (oldMap.hasOwnProperty(String(key))) {
-      console.warn("Found two children with the same key", key);
-      console.warn(
-        "When two fibers are found having same key the whole children will default to manual updates, which can be slower than with key based reconciliation"
-      );
-      updateNonListChildren(prev, next);
-      return;
-    }
-    oldMap[String(key)] = { fiber: prev.props.children[i], index: i };
-  }
-  if (count == 0) {
-    updateNonListChildren(prev, next);
-    return;
-  }
-  const newMap = {};
-  for (let i = 0; i < next.props.children.length; i++) {
-    const key = next.props.children[i].props.key;
-    if (key === null || key === void 0) {
-      continue;
-    }
-    const oldFiber = oldMap[String(key)];
-    if (oldFiber) {
-      if (newMap.hasOwnProperty(String(key))) {
-        console.warn("Found two children with the same key", key);
-        console.warn(
+function se(e, t) {
+  let n = Math.max(e.props.children.length, t.props.children.length);
+  const r = {};
+  let o = 0;
+  for (let c = 0; c < e.props.children.length; c++) {
+    const l = e.props.children[c].props.key;
+    if (l != null) {
+      if (o++, String(l) in r) {
+        console.warn("Found two children with the same key", l), console.warn(
           "When two fibers are found having same key the whole children will default to manual updates, which can be slower than with key based reconciliation"
-        );
-        updateNonListChildren(prev, next);
+        ), K(e, t);
         return;
       }
-      newMap[String(key)] = {
-        fiber: oldFiber.fiber,
-        newIndex: i,
-        oldIndex: oldFiber.index
+      r[String(l)] = { fiber: e.props.children[c], index: c };
+    }
+  }
+  if (o == 0) {
+    K(e, t);
+    return;
+  }
+  const i = {};
+  for (let c = 0; c < t.props.children.length; c++) {
+    const l = t.props.children[c].props.key;
+    if (l == null)
+      continue;
+    const u = r[String(l)];
+    if (u) {
+      if (String(l) in i) {
+        console.warn("Found two children with the same key", l), console.warn(
+          "When two fibers are found having same key the whole children will default to manual updates, which can be slower than with key based reconciliation"
+        ), K(e, t);
+        return;
+      }
+      i[String(l)] = {
+        fiber: u.fiber,
+        newIndex: c,
+        oldIndex: u.index
       };
     }
   }
-  const parent = findNearestParentWithDom(prev);
-  for (let i = 0; i < len; i++) {
-    let prevChild = prev.props.children[i];
-    let nextChild = next.props.children[i];
-    const nextKey = (nextChild == null ? void 0 : nextChild.props.key) ? String(nextChild.props.key) : "";
-    const isReused = newMap.hasOwnProperty(nextKey);
-    let prevKey = (prevChild == null ? void 0 : prevChild.props.key) ? String(prevChild.props.key) : "";
-    if (prevKey && nextKey && prevKey === nextKey) {
-      updateNode(prevChild, nextChild, i);
-      if (parent == null ? void 0 : parent.dom) applyFiber(prev.props.children[i], parent.dom);
+  const s = Oe(e);
+  for (let c = 0; c < n; c++) {
+    let l = e.props.children[c], u = t.props.children[c];
+    const E = u?.props.key ? String(u.props.key) : "", S = E in i;
+    let g = l?.props.key ? String(l.props.key) : "";
+    if (g && E && g === E) {
+      y(l, u, c), s?.dom && A(e.props.children[c], s.dom);
       continue;
     }
-    const isUsedLater = newMap.hasOwnProperty(prevKey) && newMap[prevKey].newIndex > i;
-    const isUsedPreviously = newMap.hasOwnProperty(prevKey) && newMap[prevKey].newIndex < i;
-    if (isUsedLater || isUsedPreviously) {
-      ToCommitDeletion = false;
+    const k = g in i && i[g].newIndex !== c;
+    if (k && (G = !1), u && (u.parent = e), !l && u)
+      if (S) {
+        const { fiber: m } = i[E];
+        e.props.children.push(m), y(m, u, c), s?.dom && A(e.props.children[c], s.dom);
+      } else
+        s?.dom && p(u, void 0, !1, !1, s.dom), e.props.children.push(u);
+    else if (!u && l)
+      _(l, !0), e.props.children.splice(c, 1), n = e.props.children.length, c--;
+    else if (S) {
+      const { fiber: m } = i[E];
+      _(l, !0), G = !0, e.props.children[c] = m, y(m, u, c), s?.dom && A(e.props.children[c], s.dom);
+    } else if (k)
+      s?.dom && p(
+        u,
+        void 0,
+        !1,
+        !1,
+        s.dom
+      ), e.props.children[c] = u;
+    else {
+      y(l, u, c), s?.dom && A(e.props.children[c], s.dom);
+      const m = Math.max(
+        e.props.children.length,
+        t.props.children.length
+      );
+      m < n && (n = m, c--);
     }
-    if (nextChild) nextChild.parent = prev;
-    if (!prevChild && nextChild) {
-      if (isReused) {
-        const { fiber } = newMap[nextKey];
-        prev.props.children.push(fiber);
-        updateNode(fiber, nextChild, i);
-        if (parent == null ? void 0 : parent.dom) applyFiber(prev.props.children[i], parent.dom);
-      } else {
-        if (parent == null ? void 0 : parent.dom)
-          commitFiber(nextChild, void 0, false, false, parent.dom);
-        prev.props.children.push(nextChild);
+    G = !0;
+  }
+}
+typeof process < "u" && process.env.NODE_ENV === "test" && (module.exports = {
+  createFiber: F,
+  commitDeletion: _,
+  commitFiber: p,
+  updateFiber: pe,
+  deepCompareFibers: ae,
+  deepEqual: T
+});
+let Q = !1;
+const Y = /* @__PURE__ */ new Set(), Z = /* @__PURE__ */ new Set(), $ = /* @__PURE__ */ new WeakMap(), O = /* @__PURE__ */ new WeakMap();
+function Ke(e) {
+  Y.add(e), Q || (Q = !0, queueMicrotask(() => {
+    Y.forEach((t) => {
+      const n = t();
+      if (Z.has(n))
+        return;
+      Z.add(n), n.__cleanup && typeof n.__cleanup == "function" && (n.__cleanup(), n.__cleanup = null);
+      const r = n();
+      if (typeof r == "function" && (n.__cleanup = r), $.has(n)) {
+        const o = $.get(n);
+        o && pe(o, r);
       }
-    } else if (!nextChild && prevChild) {
-      commitDeletion(prevChild, true);
-      prev.props.children.splice(i, 1);
-      len = prev.props.children.length;
-      i--;
-    } else {
-      if (isReused) {
-        const { fiber } = newMap[nextKey];
-        commitDeletion(prevChild, true);
-        ToCommitDeletion = true;
-        prev.props.children[i] = fiber;
-        updateNode(fiber, nextChild, i);
-        if (parent == null ? void 0 : parent.dom) applyFiber(prev.props.children[i], parent.dom);
-      } else {
-        if (isUsedLater || isUsedPreviously) {
-          if (parent == null ? void 0 : parent.dom)
-            commitFiber(
-              nextChild,
-              void 0,
-              false,
-              false,
-              parent.dom
-            );
-          prev.props.children[i] = nextChild;
-        } else {
-          updateNode(prevChild, nextChild, i);
-          if (parent == null ? void 0 : parent.dom)
-            applyFiber(prev.props.children[i], parent.dom);
-          const newLen = Math.max(
-            prev.props.children.length,
-            next.props.children.length
-          );
-          if (newLen < len) {
-            len = newLen;
-            i--;
-          }
-        }
+      if (O.has(n)) {
+        const o = O.get(n);
+        o && n.__propName && $e(n.__propName, o, r);
       }
-    }
-    ToCommitDeletion = true;
+    }), Z.clear(), Y.clear(), Q = !1;
+  }));
+}
+function Qe(e, t) {
+  $.set(e, t);
+}
+function Ye(e, t) {
+  O.set(e, t);
+}
+function Ze(e) {
+  O.delete(e);
+  const t = e.__signals;
+  if (t) {
+    for (const n of t)
+      n.removeDep(e);
+    e.__signals = null;
   }
 }
-if (typeof process !== "undefined" && process.env.NODE_ENV === "test") {
-  module.exports = {
-    createFiber,
-    commitDeletion,
-    commitFiber,
-    updateFiber,
-    deepCompareFibers,
-    deepEqual
-  };
-}
-let scheduled = false;
-const batch = /* @__PURE__ */ new Set();
-const depset = /* @__PURE__ */ new Set();
-const reactiveFiberMap = /* @__PURE__ */ new WeakMap();
-const domAttributeMap = /* @__PURE__ */ new WeakMap();
-function batchUpdate(cb) {
-  batch.add(cb);
-  if (!scheduled) {
-    scheduled = true;
-    queueMicrotask(() => {
-      batch.forEach((fn) => {
-        const dep = fn();
-        if (depset.has(dep)) {
-          return;
-        }
-        depset.add(dep);
-        if (dep.__cleanup && typeof dep.__cleanup === "function") {
-          dep.__cleanup();
-          dep.__cleanup = null;
-        }
-        const val = dep();
-        if (typeof val === "function") {
-          dep.__cleanup = val;
-        }
-        if (reactiveFiberMap.has(dep)) {
-          const fiber = reactiveFiberMap.get(dep);
-          if (fiber) {
-            updateFiber(fiber, val);
-          }
-        }
-        if (domAttributeMap.has(dep)) {
-          const dom = domAttributeMap.get(dep);
-          if (dom && dep.__propName) {
-            updateDomProp(dep.__propName, dom, val);
-          }
-        }
-      });
-      depset.clear();
-      batch.clear();
-      scheduled = false;
-    });
+function Je(e) {
+  $.delete(e);
+  const t = e.__signals;
+  if (t) {
+    for (const n of t)
+      n.removeDep(e);
+    e.__signals = null;
   }
 }
-function setReactiveFunction(fn, fiber) {
-  reactiveFiberMap.set(fn, fiber);
-}
-function setReactiveAttributes(fn, dom) {
-  domAttributeMap.set(fn, dom);
-}
-function clearReactiveAttributes(fn) {
-  domAttributeMap.delete(fn);
-  const signals = fn.__signals;
-  if (signals) {
-    for (const signal of signals) {
-      signal.removeDep(fn);
-    }
-    fn.__signals = null;
-  }
-}
-function clearReactiveFunction(fn) {
-  reactiveFiberMap.delete(fn);
-  const signals = fn.__signals;
-  if (signals) {
-    for (const signal of signals) {
-      signal.removeDep(fn);
-    }
-    fn.__signals = null;
-  }
-}
-let currentReactiveFunction = null;
-let currentEffect = null;
-function addSignalToReactiveFunction(signal) {
-  if (!currentReactiveFunction.__signals) {
-    currentReactiveFunction.__signals = /* @__PURE__ */ new Set();
-  }
-  currentReactiveFunction.__signals.add(signal);
-}
-function addSignalToEffect(signal) {
-  if (!currentEffect.__signals) currentEffect.__signals = /* @__PURE__ */ new Set();
-  currentEffect.__signals.add(signal);
-}
-function reactive(fn) {
-  var _a;
-  if (typeof fn !== "function")
-    throw new Error("reactive takes a render function as the argument");
-  currentReactiveFunction = fn;
-  const retVal = fn();
-  currentReactiveFunction = null;
-  if (!isPrimitive(retVal) && isPlainObject(retVal) && !retVal.type && !retVal.props && !((_a = retVal.props) == null ? void 0 : _a.children))
-    throw new Error(
-      "Reactive value must be primitive or functional component, got: " + typeof retVal
-    );
-  return retVal;
-}
-function reactiveAttribute(fn) {
-  if (typeof fn !== "function")
-    throw new Error("reactive takes a render function as the argument");
-  currentReactiveFunction = fn;
-  const retVal = fn();
-  currentReactiveFunction = null;
-  return retVal;
-}
-function createEffect(fn) {
-  if (typeof fn !== "function")
-    throw new Error("createEffect takes a effect function as the argument");
-  addEffect(fn);
-  if (!getCurrentFC()) runEffect(fn);
-}
-function runEffect(effect, fiber) {
-  if (typeof effect !== "function") return;
-  currentEffect = effect;
-  const effectCleanup = effect();
-  if (currentEffect.__signals && typeof effectCleanup === "function") {
-    currentEffect.__cleanup = effectCleanup;
-  }
-  if (!currentEffect.__signals && effectCleanup && typeof effectCleanup === "function") {
-    if (!fiber) {
-      cleanUp(effectCleanup);
-    } else {
-      cleanUpWFiber(effectCleanup, fiber);
-    }
-  }
-  currentEffect = null;
-}
-function computed(fn) {
-  if (typeof fn !== "function")
-    throw new Error("computed takes a function as the argument");
-  let firstRun = getCurrentFC() !== null;
-  currentEffect = () => {
-    if (firstRun) {
-      firstRun = false;
-      return;
-    }
-    signal.update(fn());
-  };
-  addEffect(currentEffect);
-  const val = fn();
-  const signal = createSignal(val);
-  currentEffect = null;
-  return {
-    get value() {
-      return signal.value;
-    }
-  };
-}
-function createPromise(fn) {
-  if (typeof fn !== "function")
-    throw new Error("createPromise takes a function as the argument");
-  const promise = fn();
-  if (!(promise instanceof Promise)) {
-    throw new Error(
-      "createPromise takes a function that returns a promise"
-    );
-  }
-  const triggerSignal = createSignal({
-    status: "pending",
-    data: null,
-    error: null
-  });
-  promise.then((val) => {
-    triggerSignal.update((prev) => {
-      prev.data = val;
-      prev.status = "resolved";
-    });
-  }).catch((err) => {
-    triggerSignal.update((prev) => {
-      prev.error = err;
-      prev.status = "rejected";
-    });
-  });
-  return {
-    get value() {
-      return triggerSignal.value;
-    }
-  };
-}
-class Ref {
-  constructor(val) {
-    this.current = val;
-  }
-}
-function createRef() {
-  const ref = new Ref(null);
-  return ref;
-}
-const MutatingMethods = [
+const Ve = [
   "push",
   "pop",
   "unshift",
@@ -1207,454 +761,351 @@ const MutatingMethods = [
   "sort",
   "reverse"
 ];
-class BaseSignal {
-  constructor(val) {
-    this.isNotified = false;
-    this._val = val;
-    this.deps = /* @__PURE__ */ new Set();
+function le(e) {
+  return Ve.includes(String(e));
+}
+// @ts-expect-error
+process.env.NODE_ENV;
+function J(e) {
+  return {
+    get value() {
+      return e.value;
+    },
+    update: e.update.bind(e)
+  };
+}
+const de = (e, t) => new Proxy(e, {
+  get: (n, r) => {
+    const o = n[r];
+    if (typeof o == "function") {
+      if (le(r) && !t.updateCalled)
+        throw new Error(
+          "Cannot set a value on an array signal, use the update method for updating the array."
+        );
+      return (...i) => {
+        const s = o.apply(n, i);
+        return le(r) && t.notify(), s;
+      };
+    }
+    return o;
+  },
+  set: (n, r, o) => {
+    if (!t.updateCalled)
+      throw new Error(
+        "Cannot set a value on an array signal, use the update method for updating the array."
+      );
+    return n[r] = o, t.notify(), !0;
+  }
+});
+let C = null, d = null;
+function he(e) {
+  d = e;
+}
+function ye() {
+  d = null;
+}
+function ge(e) {
+  C = e;
+}
+function me() {
+  C = null;
+}
+function je(e) {
+  C.__signals || (C.__signals = /* @__PURE__ */ new Set()), C.__signals.add(e);
+}
+function Be(e) {
+  d.__signals || (d.__signals = /* @__PURE__ */ new Set()), d.__signals.add(e);
+}
+function xe(e) {
+  if (typeof e != "function")
+    throw new Error("reactive takes a render function as the argument");
+  ge(e);
+  const t = e();
+  if (me(), !M(t) && N(t) && !t.type && !t.props && !t.props?.children)
+    throw new Error(
+      "Reactive value must be primitive or functional component, got: " + typeof t
+    );
+  return t;
+}
+function ve(e) {
+  if (typeof e != "function")
+    throw new Error("reactive takes a render function as the argument");
+  ge(e);
+  const t = e();
+  return me(), t;
+}
+function st(e) {
+  if (typeof e != "function")
+    throw new Error("createEffect takes a effect function as the argument");
+  Se(e), Fe() || we(e);
+}
+function we(e, t) {
+  if (typeof e != "function") return;
+  he(e);
+  const n = e();
+  d.__signals && typeof n == "function" && (d.__cleanup = n), !d.__signals && n && typeof n == "function" && (t ? rt(n, t) : nt(n)), ye();
+}
+function lt(e) {
+  if (typeof e != "function")
+    throw new Error("computed takes a function as the argument");
+  let t = Fe() !== null;
+  he(() => {
+    if (t) {
+      t = !1;
+      return;
+    }
+    r.update(e());
+  }), Se(d);
+  const n = e(), r = H(n);
+  return ye(), {
+    get value() {
+      return r.value;
+    }
+  };
+}
+function ct(e) {
+  if (typeof e != "function")
+    throw new Error("createPromise takes a function as the argument");
+  const t = e();
+  if (!(t instanceof Promise))
+    throw new Error(
+      "createPromise takes a function that returns a promise"
+    );
+  const n = H({
+    status: "pending",
+    data: null,
+    error: null
+  });
+  return t.then((r) => {
+    n.update((o) => {
+      o.data = r, o.status = "resolved";
+    });
+  }).catch((r) => {
+    n.update((o) => {
+      o.error = r, o.status = "rejected";
+    });
+  }), {
+    get value() {
+      return n.value;
+    }
+  };
+}
+class te {
+  constructor(t) {
+    this.current = t;
+  }
+}
+function ut() {
+  return new te(null);
+}
+class L {
+  constructor(t) {
+    this.isNotified = !1, this._val = t, this.deps = /* @__PURE__ */ new Set();
   }
   notify() {
-    if (this.isNotified) return;
-    if (this.deps.size !== 0) this.isNotified = true;
-    this.deps.forEach((dep) => {
-      batchUpdate(() => {
-        this.isNotified = false;
-        return dep;
-      });
-    });
+    this.isNotified || (this.deps.size !== 0 && (this.isNotified = !0), this.deps.forEach((t) => {
+      Ke(() => (this.isNotified = !1, t));
+    }));
   }
-  removeDep(fn) {
-    this.deps.delete(fn);
+  removeDep(t) {
+    this.deps.delete(t);
   }
   clearDeps() {
     this.deps.clear();
   }
-}
-class PrimitiveSignal extends BaseSignal {
-  constructor(val) {
-    if (!isPrimitive(val)) {
-      throw new Error(
-        "Invalid type for PrimitiveSignal. Valid types: [boolean, string, number, undefined, null]"
-      );
-    }
-    super(val);
-  }
   get value() {
-    if (currentEffect) {
-      this.deps.add(currentEffect);
-      addSignalToEffect(this);
-    }
-    if (currentReactiveFunction) {
-      this.deps.add(currentReactiveFunction);
-      addSignalToReactiveFunction(this);
-    }
-    return this._val;
+    return d && (this.deps.add(d), Be(this)), C && (this.deps.add(C), je(this)), this._val;
   }
-  update(val) {
-    if (typeof val === "function") {
-      const newVal = val(this._val);
-      if (!isPrimitive(newVal)) {
-        throw new Error(
-          "Invalid type for PrimitiveSignal. Valid types: [boolean, string, number, undefined, null]"
-        );
-      }
-      if (newVal === this._val) return;
-      this._val = newVal;
-      this.notify();
+}
+class be extends L {
+  constructor(t) {
+    super(t);
+  }
+  update(t) {
+    if (typeof t == "function") {
+      const n = t(this._val);
+      if (n === this._val) return;
+      this._val = n, this.notify();
     } else {
-      if (!isPrimitive(val)) {
-        throw new Error(
-          "Invalid type for PrimitiveSignal. Valid types: [boolean, string, number, undefined, null]"
-        );
-      }
-      if (val === this._val) return;
-      this._val = val;
-      this.notify();
+      if (t === this._val) return;
+      this._val = t, this.notify();
     }
   }
 }
-class ArraySignal extends BaseSignal {
-  constructor(val) {
-    if (!Array.isArray(val)) {
-      throw new Error(
-        "Invalid type for ArraySignal; value must be an array"
-      );
-    }
-    super(val);
-    this.updateCalled = false;
-    this._val = this.createProxy(val);
+class et extends L {
+  constructor(t) {
+    super(t), this.updateCalled = !1, this._val = this.createProxy(t);
   }
-  createProxy(val) {
-    return new Proxy(val, {
-      get: (target, prop) => {
-        const value = target[prop];
-        if (typeof value === "function") {
-          if (MutatingMethods.includes(String(prop)) && !this.updateCalled) {
-            throw new Error(
-              "Cannot set a value on an array signal, use the update method for updating the array."
-            );
-          }
-          return (...args) => {
-            const result = value.apply(target, args);
-            if (MutatingMethods.includes(String(prop))) {
-              this.notify();
-            }
-            return result;
-          };
-        }
-        return value;
+  createProxy(t) {
+    return de(t, this);
+  }
+  update(t) {
+    if (this.updateCalled = !0, typeof t == "function")
+      t(this._val);
+    else {
+      if (t === this._val) return;
+      this._val = this.createProxy(t), this.notify();
+    }
+    this.updateCalled = !1;
+  }
+}
+class tt extends L {
+  constructor(t) {
+    N(t), super(t), this.updateCalled = !1, this._val = this.createProxy(t);
+  }
+  createInternalArrayProxy(t) {
+    return de(t, this);
+  }
+  createProxy(t) {
+    return new Proxy(t, {
+      get: (n, r) => {
+        const o = n[r];
+        return Array.isArray(o) ? (n[r] = this.createInternalArrayProxy(o), n[r]) : o;
       },
-      set: (target, prop, newValue) => {
-        if (!this.updateCalled) {
-          throw new Error(
-            "Cannot set a value on an array signal, use the update method for updating the array."
-          );
-        }
-        target[prop] = newValue;
-        this.notify();
-        return true;
+      set: (n, r, o) => (this.updateCalled, typeof o == "function" ? !1 : (typeof o == "object" && o !== null && (o = this.createProxy(o)), o === n[r] || (n[r] = o, this.notify()), !0)),
+      deleteProperty: (n, r) => {
+        const o = delete n[r];
+        return this.notify(), o;
       }
     });
   }
-  get value() {
-    if (currentEffect) {
-      this.deps.add(currentEffect);
-      addSignalToEffect(this);
+  update(t) {
+    if (this.updateCalled = !0, typeof t == "function")
+      t(this._val);
+    else {
+      if (N(t), t === this._val) return;
+      this._val = this.createProxy(t), this.notify();
     }
-    if (currentReactiveFunction) {
-      this.deps.add(currentReactiveFunction);
-      addSignalToReactiveFunction(this);
-    }
-    return this._val;
-  }
-  update(val) {
-    this.updateCalled = true;
-    if (typeof val === "function") {
-      val(this._val);
-    } else {
-      if (!Array.isArray(val)) {
-        throw new Error(
-          "Invalid type for ArraySignal; value must be an array"
-        );
-      }
-      if (val === this._val) return;
-      this._val = this.createProxy(val);
-      this.notify();
-    }
-    this.updateCalled = false;
+    this.updateCalled = !1;
   }
 }
-class ObjectSignal extends BaseSignal {
-  constructor(val) {
-    if (!isPlainObject(val)) {
-      throw new Error(
-        "Invalid type for ObjectSignal; value must be a plain object"
-      );
+function H(e) {
+  if (typeof e == "object" && e !== null) {
+    if (Array.isArray(e)) {
+      const t = new et(e);
+      return V(t), J(t);
+    } else if (N(e)) {
+      const t = new tt(e);
+      return V(t), J(t);
     }
-    super(val);
-    this.updateCalled = false;
-    this._val = this.createProxy(val);
-  }
-  createInternalArrayProxy(val) {
-    return new Proxy(val, {
-      get: (target, prop) => {
-        const value = target[prop];
-        if (typeof value === "function") {
-          if (!this.updateCalled && MutatingMethods.includes(String(prop))) {
-            throw new Error(
-              "Cannot set a value on an object signal, use the update method for updating the object."
-            );
-          }
-          return (...args) => {
-            const result = value.apply(target, args);
-            if (MutatingMethods.includes(String(prop))) {
-              this.notify();
-            }
-            return result;
-          };
-        }
-        return value;
-      },
-      set: (target, prop, newValue) => {
-        if (!this.updateCalled) {
-          throw new Error(
-            "Cannot set a value on an object signal, use the update method for updating the object."
-          );
-        }
-        target[prop] = newValue;
-        this.notify();
-        return true;
-      }
-    });
-  }
-  createProxy(val) {
-    return new Proxy(val, {
-      get: (target, prop) => {
-        const value = target[prop];
-        if (Array.isArray(value)) {
-          target[prop] = this.createInternalArrayProxy(value);
-          return target[prop];
-        }
-        return value;
-      },
-      set: (target, prop, newValue) => {
-        if (!this.updateCalled) {
-          throw new Error(
-            "Cannot set a value on an object signal, use the update method for updating the object."
-          );
-        }
-        if (typeof newValue === "function") return false;
-        if (typeof newValue === "object" && newValue !== null) {
-          newValue = this.createProxy(newValue);
-        }
-        if (newValue === target[prop]) return true;
-        target[prop] = newValue;
-        this.notify();
-        return true;
-      },
-      deleteProperty: (target, prop) => {
-        const result = delete target[prop];
-        this.notify();
-        return result;
-      }
-    });
-  }
-  get value() {
-    if (currentEffect) {
-      this.deps.add(currentEffect);
-      addSignalToEffect(this);
-    }
-    if (currentReactiveFunction) {
-      this.deps.add(currentReactiveFunction);
-      addSignalToReactiveFunction(this);
-    }
-    return this._val;
-  }
-  update(val) {
-    this.updateCalled = true;
-    if (typeof val === "function") {
-      val(this._val);
-    } else {
-      if (!isPlainObject(val)) {
-        throw new Error(
-          "Invalid type for ObjectSignal; value must be a plain object"
-        );
-      }
-      if (val === this._val) return;
-      this._val = this.createProxy(val);
-      this.notify();
-    }
-    this.updateCalled = false;
+  } else if (M(e)) {
+    const t = new be(e);
+    return V(t), J(t);
   }
 }
-function createSignal(val) {
-  if (typeof val === "function") {
-    throw new Error("Functions cannot be used as signal value");
-  }
-  if (typeof val === "object" && val !== null) {
-    if (Array.isArray(val)) {
-      const signal = new ArraySignal(val);
-      addSignal(signal);
-      return {
-        get value() {
-          return signal.value;
-        },
-        update: signal.update.bind(signal)
-      };
-    } else if (isPlainObject(val)) {
-      const signal = new ObjectSignal(val);
-      addSignal(signal);
-      return {
-        get value() {
-          return signal.value;
-        },
-        update: signal.update.bind(signal)
-      };
-    } else {
-      throw new Error(
-        "Invalid type for signal initialization: " + typeof val
-      );
-    }
-  } else if (isPrimitive(val)) {
-    const signal = new PrimitiveSignal(val);
-    addSignal(signal);
-    return {
-      get value() {
-        return signal.value;
-      },
-      update: signal.update.bind(signal)
-    };
-  } else {
-    throw new Error(
-      "Invalid type for signal initialization: " + typeof val
-    );
-  }
+let f = null, a = /* @__PURE__ */ new WeakMap();
+function _e(e) {
+  f = e;
 }
-let currentFC = null;
-let fcMap = /* @__PURE__ */ new WeakMap();
-function setCurrentFC(fc) {
-  currentFC = fc;
+function Ee() {
+  f = null;
 }
-function clearCurrentFC() {
-  currentFC = null;
+function Fe() {
+  return f;
 }
-function getCurrentFC() {
-  return currentFC;
-}
-function runAllEffects(FC) {
-  if (fcMap.has(FC)) {
-    const fcData = fcMap.get(FC);
-    for (const effect of fcData.effects) {
-      runEffect(effect, FC);
-    }
-  }
-}
-function cleanUp(fn) {
-  if (currentFC) {
-    if (fcMap.has(currentFC)) {
-      const fcData = fcMap.get(currentFC);
-      fcData.cleanup.push(fn);
-    } else {
-      fcMap.set(currentFC, {
-        signals: /* @__PURE__ */ new Set(),
-        cleanup: [fn],
-        effects: /* @__PURE__ */ new Set()
-      });
-    }
-  }
-}
-function cleanUpWFiber(fn, fiber) {
-  if (fiber) {
-    if (fcMap.has(fiber)) {
-      const fcData = fcMap.get(fiber);
-      fcData.cleanup.push(fn);
-    } else {
-      fcMap.set(fiber, {
-        signals: /* @__PURE__ */ new Set(),
-        cleanup: [fn],
-        effects: /* @__PURE__ */ new Set()
-      });
-    }
-  }
-}
-function addEffect(fn) {
-  if (currentFC) {
-    if (fcMap.has(currentFC)) {
-      const fcData = fcMap.get(currentFC);
-      fcData.effects.add(fn);
-    } else {
-      const effects = /* @__PURE__ */ new Set();
-      effects.add(fn);
-      fcMap.set(currentFC, {
-        signals: /* @__PURE__ */ new Set(),
-        cleanup: [],
-        effects
-      });
-    }
-  }
-}
-function addSignal(signal) {
-  if (currentFC) {
-    if (fcMap.has(currentFC)) {
-      const fcData = fcMap.get(currentFC);
-      fcData.signals.add(signal);
-    } else {
-      const signals = /* @__PURE__ */ new Set();
-      signals.add(signal);
-      fcMap.set(currentFC, {
-        signals,
-        cleanup: [],
-        effects: /* @__PURE__ */ new Set()
-      });
-    }
-  }
-}
-function cleanUpFC(currentFC2, props) {
-  const fcData = fcMap.get(currentFC2);
-  if (fcData) {
-    if (fcData.cleanup) {
-      for (const fn of fcData.cleanup) {
-        fn();
-      }
-    }
-    fcData.cleanup = [];
-    for (const effect of fcData.effects) {
-      if (effect.__cleanup && typeof effect.__cleanup === "function") {
-        effect.__cleanup();
-      }
-      if (effect.__signals) {
-        for (const signal of effect.__signals) {
-          signal.removeDep(effect);
-        }
-      }
-      delete effect.__signals;
-      delete effect.__cleanup;
-    }
-    fcData.signals.forEach((signal) => signal.clearDeps());
-    fcData.signals.clear();
-  }
-  fcMap.delete(currentFC2);
-}
-function lazy(importFn) {
-  let Component = null;
-  const load = (loading, error) => {
-    if (!Component) {
-      importFn().then((mod) => {
-        if (mod.default) {
-          if (typeof mod.default !== "function") {
-            throw new Error(
-              "Lazy-loaded component must be a functional component"
-            );
-          }
-          Component = mod.default;
-          loading.update(false);
-          error.update(null);
-        } else {
-          error.update(
-            new Error(
-              "No default export found from lazy-loaded module"
-            )
-          );
-        }
-      }).catch((err) => {
-        error.update(err);
-        loading.update(false);
-      });
-    } else {
-      loading.update(false);
-      error.update(null);
-    }
+function X() {
+  return {
+    signals: /* @__PURE__ */ new Set(),
+    cleanup: [],
+    effects: /* @__PURE__ */ new Set()
   };
-  return (props) => {
-    const loading = createSignal(true);
-    const error = createSignal(null);
-    load(loading, error);
-    const isValidNode = (val) => typeof val === "string" || val && typeof val === "object" && "props" in val && "type" in val;
-    if (props.fallback !== void 0 && !isValidNode(props.fallback)) {
-      throw new Error(
-        "Invalid fallback: Expected a string or a valid JSX node."
-      );
+}
+function Ce(e) {
+  if (a.has(e)) {
+    const t = a.get(e);
+    for (const n of t.effects)
+      we(n, e);
+  }
+}
+function nt(e) {
+  if (f)
+    if (a.has(f))
+      a.get(f).cleanup.push(e);
+    else {
+      let t = X();
+      t.cleanup.push(e), a.set(f, t);
     }
-    if (props.errorFallback !== void 0 && !(typeof props.errorFallback === "function" || isValidNode(props.errorFallback))) {
-      throw new Error(
-        "Invalid errorFallback: Expected a string, a valid JSX node, or a function returning a JSX node."
-      );
+}
+function rt(e, t) {
+  if (t)
+    if (a.has(t))
+      a.get(t).cleanup.push(e);
+    else {
+      let n = X();
+      n.cleanup.push(e), a.set(t, n);
     }
-    return /* @__PURE__ */ createElement("FRAGMENT", null, () => loading.value ? props.fallback : error.value !== null ? props.errorFallback ? typeof props.errorFallback === "function" ? props.errorFallback(error.value) : props.errorFallback : "Unknown error occurred while lazy loading component, use errorFallback prop to override" : (
+}
+function Se(e) {
+  if (f)
+    if (a.has(f))
+      a.get(f).effects.add(e);
+    else {
+      let t = X();
+      t.effects.add(e), a.set(f, t);
+    }
+}
+function V(e) {
+  if (f)
+    if (a.has(f))
+      a.get(f).signals.add(e);
+    else {
+      let t = X();
+      t.signals.add(e), a.set(f, t);
+    }
+}
+function ot(e, t) {
+  const n = a.get(e);
+  if (n) {
+    if (n.cleanup)
+      for (const r of n.cleanup)
+        r();
+    n.cleanup = [];
+    for (const r of n.effects) {
+      if (r.__cleanup && r.__cleanup(), r.__signals)
+        for (const o of r.__signals)
+          o.removeDep(r);
+      delete r.__signals, delete r.__cleanup;
+    }
+    n.signals.forEach((r) => r.clearDeps()), n.signals.clear();
+  }
+  a.delete(e);
+}
+function at(e) {
+  let t = null;
+  const n = (r, o) => {
+    t ? (r.update(!1), o.update(null)) : e().then((i) => {
+      if (i.default) {
+        if (typeof i.default != "function")
+          throw new Error(
+            "Lazy-loaded component must be a functional component"
+          );
+        t = i.default, r.update(!1), o.update(null);
+      } else
+        o.update(
+          new Error(
+            "No default export found from lazy-loaded module"
+          )
+        );
+    }).catch((i) => {
+      o.update(i), r.update(!1);
+    });
+  };
+  return (r) => {
+    const o = H(!0), i = H(null);
+    return n(o, i), /* @__PURE__ */ ne("FRAGMENT", null, () => o.value ? r.fallback : i.value !== null ? r.errorFallback ? typeof r.errorFallback == "function" ? r.errorFallback(i.value) : r.errorFallback : "Unknown error occurred while lazy loading component, use errorFallback prop to override" : (
       // @ts-expect-error
-      Component && /* @__PURE__ */ createElement(Component, { ...props })
+      t && /* @__PURE__ */ ne(t, { ...r })
     ));
   };
 }
 export {
-  cleanUp,
-  computed,
-  createEffect,
-  createElement,
-  createPromise,
-  createRef,
-  createSignal,
-  lazy,
-  render
+  nt as cleanUp,
+  lt as computed,
+  st as createEffect,
+  ne as createElement,
+  ct as createPromise,
+  ut as createRef,
+  H as createSignal,
+  at as lazy,
+  it as render
 };
-//# sourceMappingURL=refract.es.js.map

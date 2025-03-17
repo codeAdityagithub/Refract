@@ -30,7 +30,7 @@ export declare function createRef<T extends EventTarget>(): Ref<T>;
 type DeepReadonly<T> = {
     readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K];
 };
-export declare abstract class BaseSignal<T> {
+export declare abstract class BaseSignal<T extends any> {
     protected _val: T;
     protected deps: Set<Function>;
     protected isNotified: boolean;
@@ -38,20 +38,18 @@ export declare abstract class BaseSignal<T> {
     protected notify(): void;
     removeDep(fn: Function): void;
     clearDeps(): void;
-    abstract get value(): T | DeepReadonly<T>;
+    get value(): DeepReadonly<T>;
     abstract update(val: T | ((prev: T) => T)): void;
 }
 type NormalSignal = boolean | string | number | undefined | null | Error;
 export declare class PrimitiveSignal<T extends NormalSignal> extends BaseSignal<T> {
     constructor(val: T);
-    get value(): T;
     update(val: T | ((prev: T) => T)): void;
 }
 export declare class ArraySignal<T extends any[]> extends BaseSignal<T> {
     private updateCalled;
     constructor(val: T);
     private createProxy;
-    get value(): DeepReadonly<T>;
     update(val: T | ((prev: T) => void)): void;
 }
 export declare class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
@@ -59,7 +57,6 @@ export declare class ObjectSignal<T extends Record<any, any>> extends BaseSignal
     constructor(val: T);
     private createInternalArrayProxy;
     private createProxy;
-    get value(): DeepReadonly<T>;
     update(val: T | ((prev: T) => void)): void;
 }
 export interface PublicSignal<T> {
