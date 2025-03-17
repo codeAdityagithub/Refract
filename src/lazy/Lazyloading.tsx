@@ -1,4 +1,4 @@
-import { createSignal, PublicSignal } from "../index";
+import { ComponentChild, createSignal, PublicSignal } from "../index";
 
 declare const FRAGMENT = "FRAGMENT";
 
@@ -11,8 +11,8 @@ export function lazy<T extends (props: any) => any>(
     importFn: () => Promise<{ default: T }>
 ): (
     props: PropsOf<T> & {
-        fallback?: string | Node;
-        errorFallback?: string | Node | ((error: Error) => Node);
+        fallback?: ComponentChild;
+        errorFallback?: ComponentChild | ((error: Error) => ComponentChild);
     }
 ) => ReturnType<T> {
     let Component: T | null = null;
@@ -62,27 +62,6 @@ export function lazy<T extends (props: any) => any>(
         const error = createSignal<Error | null>(null);
 
         load(loading, error);
-        // Validate fallback and errorFallback types
-        const isValidNode = (val: any) =>
-            typeof val === "string" ||
-            (val && typeof val === "object" && "props" in val && "type" in val);
-
-        if (props.fallback !== undefined && !isValidNode(props.fallback)) {
-            throw new Error(
-                "Invalid fallback: Expected a string or a valid JSX node."
-            );
-        }
-        if (
-            props.errorFallback !== undefined &&
-            !(
-                typeof props.errorFallback === "function" ||
-                isValidNode(props.errorFallback)
-            )
-        ) {
-            throw new Error(
-                "Invalid errorFallback: Expected a string, a valid JSX node, or a function returning a JSX node."
-            );
-        }
 
         return (
             <>
@@ -95,7 +74,8 @@ export function lazy<T extends (props: any) => any>(
                                 ? props.errorFallback(error.value)
                                 : props.errorFallback
                             : "Unknown error occurred while lazy loading component, use errorFallback prop to override"
-                        : Component && <Component {...props} />
+                        : // @ts-expect-error
+                          Component && <Component {...props} />
                 }
             </>
         ) as unknown as ReturnType<T>;

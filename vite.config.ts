@@ -7,19 +7,21 @@ const isProd = process.env.NODE_ENV === "production";
 export default defineConfig({
     build: {
         outDir: isProd ? "build" : "dist",
-        minify: true,
-        sourcemap: !isProd,
+        minify: "esbuild",
+        sourcemap: false,
         lib: {
             entry: "src/index.ts",
             name: "Refract",
             fileName: (format) => `refract.${format}.js`,
-            formats: ["es", "cjs", "umd"], // Supports multiple module formats
+            formats: ["es", "cjs"], // Supports multiple module formats
         },
         rollupOptions: {
             output: {
                 preserveModules: false,
             },
+            treeshake: true,
         },
+        target: "esnext",
     },
     esbuild: {
         jsxFactory: "createElement", // Your custom JSX factory function

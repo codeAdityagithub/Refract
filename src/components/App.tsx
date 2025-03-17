@@ -12,20 +12,20 @@ const App = (props: any) => {
     // return <ReactiveComponent />;
     // return <NonReactiveComponent />;
     // return <Test />;
-    return (
-        <>
-            <button
-                style={{ margin: 10 }}
-                onClick={() => visible.update((prev) => !prev)}
-            >
-                Show/Hide
-            </button>
-            {() => (visible.value ? <Test /> : "Hidden")}
-        </>
-    );
+    // return (
+    //     <>
+    //         <button
+    //             style={{ margin: 10 }}
+    //             onClick={() => visible.update((prev) => !prev)}
+    //         >
+    //             Show/Hide
+    //         </button>
+    //         {() => (visible.value ? <Test /> : "Hidden")}
+    //     </>
+    // );
     // return <StylesTest />;
     // return <ListsTest />;
-    // return <PerformanceTest />;
+    return <PerformanceTest />;
     // return <ArrayReturningFC />;
     // return <Computed />;
 };

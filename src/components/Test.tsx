@@ -23,7 +23,7 @@ const Test = () => {
     setTimeout(() => {
         showTextSignal.update((prev) => !prev);
     }, 2000);
-    const h1ref = createRef();
+    const h1ref = createRef<HTMLHeadingElement>();
     // console.log("hello");
     return (
         <div>

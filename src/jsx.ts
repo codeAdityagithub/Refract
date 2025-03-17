@@ -130,7 +130,7 @@ export namespace JSXInternal {
                   : never;
           }[keyof IntrinsicElements]
         | ComponentType<P>;
-    export type Element = Fiber;
+    export type Element = ComponentChild;
     export type ElementClass = ComponentType<any>;
 
     export interface ElementAttributesProperty {
@@ -158,15 +158,7 @@ export namespace JSXInternal {
         cssText?: string | null;
     }
 
-    export interface SignalLike<T> {
-        value: T;
-        peek(): T;
-        subscribe(fn: (value: T) => void): () => void;
-    }
-
-    export type Signalish<T> = T | SignalLike<T>;
-
-    export type UnpackSignal<T> = T extends SignalLike<infer V> ? V : T;
+    export type Signalish<T> = T | (() => T);
 
     export interface SVGAttributes<Target extends EventTarget = SVGElement>
         extends HTMLAttributes<Target> {

@@ -22,6 +22,14 @@ export function getCurrentFC() {
     return currentFC;
 }
 
+function getNewFC(): any {
+    return {
+        signals: new Set(),
+        cleanup: [],
+        effects: new Set(),
+    };
+}
+
 export function runAllEffects(FC: Fiber) {
     if (fcMap.has(FC)) {
         const fcData = fcMap.get(FC)!;
@@ -36,15 +44,11 @@ export function cleanUp(fn: Function) {
     if (currentFC) {
         // console.log(currentFC, fcMap.has(currentFC));
         if (fcMap.has(currentFC)) {
-            const fcData = fcMap.get(currentFC)!;
-
-            fcData.cleanup.push(fn);
+            fcMap.get(currentFC)!.cleanup.push(fn);
         } else {
-            fcMap.set(currentFC, {
-                signals: new Set(),
-                cleanup: [fn],
-                effects: new Set(),
-            });
+            let newFC = getNewFC();
+            newFC.cleanup.push(fn);
+            fcMap.set(currentFC, newFC);
         }
     }
 }
@@ -52,15 +56,11 @@ export function cleanUpWFiber(fn: Function, fiber: Fiber) {
     if (fiber) {
         // console.log(currentFC, fcMap.has(currentFC));
         if (fcMap.has(fiber)) {
-            const fcData = fcMap.get(fiber)!;
-
-            fcData.cleanup.push(fn);
+            fcMap.get(fiber)!.cleanup.push(fn);
         } else {
-            fcMap.set(fiber, {
-                signals: new Set(),
-                cleanup: [fn],
-                effects: new Set(),
-            });
+            let newFC = getNewFC();
+            newFC.cleanup.push(fn);
+            fcMap.set(fiber, newFC);
         }
     }
 }
@@ -68,32 +68,22 @@ export function cleanUpWFiber(fn: Function, fiber: Fiber) {
 export function addEffect(fn: Function) {
     if (currentFC) {
         if (fcMap.has(currentFC)) {
-            const fcData = fcMap.get(currentFC)!;
-            fcData.effects.add(fn);
+            fcMap.get(currentFC)!.effects.add(fn);
         } else {
-            const effects = new Set<Function>();
-            effects.add(fn);
-            fcMap.set(currentFC, {
-                signals: new Set(),
-                cleanup: [],
-                effects: effects,
-            });
+            let newFC = getNewFC();
+            newFC.effects.add(fn);
+            fcMap.set(currentFC, newFC);
         }
     }
 }
 export function addSignal(signal: BaseSignal<any>) {
     if (currentFC) {
         if (fcMap.has(currentFC)) {
-            const fcData = fcMap.get(currentFC)!;
-            fcData.signals.add(signal);
+            fcMap.get(currentFC)!.signals.add(signal);
         } else {
-            const signals = new Set<BaseSignal<any>>();
-            signals.add(signal);
-            fcMap.set(currentFC, {
-                signals: signals,
-                cleanup: [],
-                effects: new Set(),
-            });
+            let newFC = getNewFC();
+            newFC.signals.add(signal);
+            fcMap.set(currentFC, newFC);
         }
     }
 }
@@ -112,7 +102,7 @@ export function cleanUpFC(currentFC, props) {
 
         for (const effect of fcData.effects) {
             // @ts-expect-error
-            if (effect.__cleanup && typeof effect.__cleanup === "function") {
+            if (effect.__cleanup) {
                 // @ts-expect-error
                 effect.__cleanup();
             }

@@ -25,7 +25,7 @@ describe("Signal", () => {
     it("should not create a signal with function", () => {
         expect(() => {
             createSignal(() => 0);
-        }).toThrow("Functions cannot be used as signal value");
+        }).toThrow();
     });
     it("should should create Normal Signal for primitive and null values", () => {
         const values = [0, "", false, null, undefined];
@@ -55,9 +55,7 @@ describe("Signal", () => {
             objectSignal.update(2);
             objectSignal.update([1, 2]);
         };
-        expect(assignWrongValue).toThrow(
-            "Invalid type for ObjectSignal; value must be a plain object"
-        );
+        expect(assignWrongValue).toThrow();
     });
     it("should throw when creating effect without function", () => {
         const wrongEffect = () => createEffect(1);

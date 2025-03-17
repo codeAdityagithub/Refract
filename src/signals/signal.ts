@@ -8,9 +8,31 @@ import {
 import { Fiber } from "../types";
 import { isPlainObject, isPrimitive } from "../utils/general";
 import { batchUpdate } from "./batch";
+import {
+    createArrayProxy,
+    publicSignal,
+    throwInvalidSignalType,
+    throwNonPrimitiveError,
+    throwNotArray,
+    throwNotObject,
+    throwNotUpdateCalled,
+} from "./utils";
 
 let currentReactiveFunction: any = null;
 let currentEffect: any = null;
+
+function setCurrentEffect(effect: any) {
+    currentEffect = effect;
+}
+function clearCurrentEffect() {
+    currentEffect = null;
+}
+function setCurrentReactiveFunction(effect: any) {
+    currentReactiveFunction = effect;
+}
+function clearCurrentReactiveFunction() {
+    currentReactiveFunction = null;
+}
 
 function addSignalToReactiveFunction(signal: any) {
     if (!currentReactiveFunction.__signals) {
@@ -27,9 +49,9 @@ export function reactive(fn: Function) {
     if (typeof fn !== "function")
         throw new Error("reactive takes a render function as the argument");
 
-    currentReactiveFunction = fn;
+    setCurrentReactiveFunction(fn);
     const retVal = fn();
-    currentReactiveFunction = null;
+    clearCurrentReactiveFunction();
     if (
         !isPrimitive(retVal) &&
         isPlainObject(retVal) &&
@@ -47,9 +69,10 @@ export function reactiveAttribute(fn: Function) {
     if (typeof fn !== "function")
         throw new Error("reactive takes a render function as the argument");
 
-    currentReactiveFunction = fn;
+    setCurrentReactiveFunction(fn);
+
     const retVal = fn();
-    currentReactiveFunction = null;
+    clearCurrentReactiveFunction();
 
     return retVal;
 }
@@ -64,7 +87,7 @@ export function createEffect(fn: Function) {
 export function runEffect(effect: Function, fiber?: Fiber) {
     if (typeof effect !== "function") return;
 
-    currentEffect = effect;
+    setCurrentEffect(effect);
 
     const effectCleanup = effect();
 
@@ -85,7 +108,7 @@ export function runEffect(effect: Function, fiber?: Fiber) {
         }
     }
 
-    currentEffect = null;
+    clearCurrentEffect();
 }
 
 function computed<T extends NormalSignal | any[] | Record<any, any>>(
@@ -95,13 +118,13 @@ function computed<T extends NormalSignal | any[] | Record<any, any>>(
         throw new Error("computed takes a function as the argument");
 
     let firstRun = getCurrentFC() !== null;
-    currentEffect = () => {
+    setCurrentEffect(() => {
         if (firstRun) {
             firstRun = false;
             return;
         }
         signal.update(fn());
-    };
+    });
 
     addEffect(currentEffect);
 
@@ -110,7 +133,7 @@ function computed<T extends NormalSignal | any[] | Record<any, any>>(
     // @ts-expect-error - Type assertion for signal
     const signal = createSignal<T>(val);
 
-    currentEffect = null;
+    clearCurrentEffect();
     return {
         get value() {
             return signal.value;
@@ -172,39 +195,6 @@ export function createRef<T extends EventTarget>() {
     return ref;
 }
 
-// const NonMutatingArrayMethods = [
-//     "constructor",
-//     "concat",
-//     "every",
-//     "filter",
-//     "find",
-//     "findIndex",
-//     "flat",
-//     "flatMap",
-//     "forEach",
-//     "includes",
-//     "indexOf",
-//     "join",
-//     "map",
-//     "reduce",
-//     "reduceRight",
-//     "slice",
-//     "some",
-//     "toLocaleString",
-//     "toString",
-// ];
-const MutatingMethods = [
-    "push",
-    "pop",
-    "unshift",
-    "shift",
-    "splice",
-    "fill",
-    "copyWithin",
-    "sort",
-    "reverse",
-];
-
 type DeepReadonly<T> = {
     readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K];
 };
@@ -213,7 +203,7 @@ type DeepReadonly<T> = {
  *
  * Base class for signals.
  */
-export abstract class BaseSignal<T> {
+export abstract class BaseSignal<T extends any> {
     protected _val: T;
     protected deps: Set<Function>;
     protected isNotified: boolean = false;
@@ -245,7 +235,18 @@ export abstract class BaseSignal<T> {
         this.deps.clear();
     }
 
-    abstract get value(): T | DeepReadonly<T>;
+    get value(): DeepReadonly<T> {
+        if (currentEffect) {
+            this.deps.add(currentEffect);
+            addSignalToEffect(this);
+        }
+        if (currentReactiveFunction) {
+            this.deps.add(currentReactiveFunction);
+
+            addSignalToReactiveFunction(this);
+        }
+        return this._val;
+    }
 
     abstract update(val: T | ((prev: T) => T)): void;
 }
@@ -256,45 +257,21 @@ type NormalSignal = boolean | string | number | undefined | null | Error;
  */
 export class PrimitiveSignal<T extends NormalSignal> extends BaseSignal<T> {
     constructor(val: T) {
-        if (!isPrimitive(val)) {
-            throw new Error(
-                "Invalid type for PrimitiveSignal. Valid types: [boolean, string, number, undefined, null]"
-            );
-        }
         super(val);
-    }
-
-    get value(): T {
-        if (currentEffect) {
-            this.deps.add(currentEffect);
-            addSignalToEffect(this);
-        }
-        if (currentReactiveFunction) {
-            this.deps.add(currentReactiveFunction);
-
-            addSignalToReactiveFunction(this);
-        }
-        // (Optional) debug logging:
-        // console.log(this.deps);
-        return this._val;
     }
 
     public update(val: T | ((prev: T) => T)) {
         if (typeof val === "function") {
             const newVal = val(this._val);
             if (!isPrimitive(newVal)) {
-                throw new Error(
-                    "Invalid type for PrimitiveSignal. Valid types: [boolean, string, number, undefined, null]"
-                );
+                throwNonPrimitiveError();
             }
             if (newVal === this._val) return;
             this._val = newVal;
             this.notify();
         } else {
             if (!isPrimitive(val)) {
-                throw new Error(
-                    "Invalid type for PrimitiveSignal. Valid types: [boolean, string, number, undefined, null]"
-                );
+                throwNonPrimitiveError();
             }
             if (val === this._val) return;
 
@@ -313,9 +290,7 @@ export class ArraySignal<T extends any[]> extends BaseSignal<T> {
 
     constructor(val: T) {
         if (!Array.isArray(val)) {
-            throw new Error(
-                "Invalid type for ArraySignal; value must be an array"
-            );
+            throwNotArray();
         }
         // Call the base constructor with a proxy-wrapped array.
         super(val);
@@ -323,56 +298,7 @@ export class ArraySignal<T extends any[]> extends BaseSignal<T> {
     }
 
     private createProxy(val: T): T {
-        return new Proxy(val, {
-            get: (target, prop) => {
-                const value = target[prop as any];
-                // If a function is accessed, wrap it to trigger notifications on mutation.
-
-                if (typeof value === "function") {
-                    if (
-                        MutatingMethods.includes(String(prop)) &&
-                        !this.updateCalled
-                    ) {
-                        throw new Error(
-                            "Cannot set a value on an array signal, use the update method for updating the array."
-                        );
-                    }
-
-                    return (...args: any[]) => {
-                        const result = value.apply(target, args);
-                        // Notify if the method is mutating.
-                        if (MutatingMethods.includes(String(prop))) {
-                            this.notify();
-                        }
-                        return result;
-                    };
-                }
-                return value;
-            },
-            set: (target, prop, newValue) => {
-                if (!this.updateCalled) {
-                    throw new Error(
-                        "Cannot set a value on an array signal, use the update method for updating the array."
-                    );
-                }
-                target[prop as any] = newValue;
-                this.notify();
-                return true;
-            },
-        });
-    }
-
-    get value(): DeepReadonly<T> {
-        if (currentEffect) {
-            this.deps.add(currentEffect);
-            addSignalToEffect(this);
-        }
-        if (currentReactiveFunction) {
-            this.deps.add(currentReactiveFunction);
-            addSignalToReactiveFunction(this);
-        }
-
-        return this._val;
+        return createArrayProxy(val, this) as T;
     }
 
     public update(val: T | ((prev: T) => void)) {
@@ -381,9 +307,7 @@ export class ArraySignal<T extends any[]> extends BaseSignal<T> {
             val(this._val);
         } else {
             if (!Array.isArray(val)) {
-                throw new Error(
-                    "Invalid type for ArraySignal; value must be an array"
-                );
+                throwNotArray();
             }
             if (val === this._val) return;
 
@@ -402,50 +326,13 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
     private updateCalled: boolean = false;
     constructor(val: T) {
         if (!isPlainObject(val)) {
-            throw new Error(
-                "Invalid type for ObjectSignal; value must be a plain object"
-            );
+            throwNotArray();
         }
         super(val);
         this._val = this.createProxy(val);
     }
     private createInternalArrayProxy<A extends any[]>(val: A): A {
-        return new Proxy(val, {
-            get: (target, prop) => {
-                const value = target[prop as any];
-                // If a function is accessed, wrap it to trigger notifications on mutation.
-                if (typeof value === "function") {
-                    if (
-                        !this.updateCalled &&
-                        MutatingMethods.includes(String(prop))
-                    ) {
-                        throw new Error(
-                            "Cannot set a value on an object signal, use the update method for updating the object."
-                        );
-                    }
-
-                    return (...args: any[]) => {
-                        const result = value.apply(target, args);
-                        // Notify if the method is mutating.
-                        if (MutatingMethods.includes(String(prop))) {
-                            this.notify();
-                        }
-                        return result;
-                    };
-                }
-                return value;
-            },
-            set: (target, prop, newValue) => {
-                if (!this.updateCalled) {
-                    throw new Error(
-                        "Cannot set a value on an object signal, use the update method for updating the object."
-                    );
-                }
-                target[prop as any] = newValue;
-                this.notify();
-                return true;
-            },
-        });
+        return createArrayProxy(val, this) as A;
     }
     private createProxy(val: T): T {
         return new Proxy(val, {
@@ -463,9 +350,7 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
             },
             set: (target, prop, newValue) => {
                 if (!this.updateCalled) {
-                    throw new Error(
-                        "Cannot set a value on an object signal, use the update method for updating the object."
-                    );
+                    throwNotUpdateCalled();
                 }
                 // Do not allow functions to be set as values.
                 if (typeof newValue === "function") return false;
@@ -489,28 +374,13 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
             },
         });
     }
-
-    get value(): DeepReadonly<T> {
-        if (currentEffect) {
-            this.deps.add(currentEffect);
-            addSignalToEffect(this);
-        }
-        if (currentReactiveFunction) {
-            this.deps.add(currentReactiveFunction);
-            addSignalToReactiveFunction(this);
-        }
-        return this._val;
-    }
-
     public update(val: T | ((prev: T) => void)) {
         this.updateCalled = true;
         if (typeof val === "function") {
             val(this._val);
         } else {
             if (!isPlainObject(val)) {
-                throw new Error(
-                    "Invalid type for ObjectSignal; value must be a plain object"
-                );
+                throwNotObject();
             }
             if (val === this._val) return;
             this._val = this.createProxy(val);
@@ -545,47 +415,26 @@ function createSignal<T extends Record<any, any>>(
 function createSignal<T extends NormalSignal | any[] | Record<any, any>>(
     val: T
 ) {
-    if (typeof val === "function") {
-        throw new Error("Functions cannot be used as signal value");
-    }
-
     if (typeof val === "object" && val !== null) {
         if (Array.isArray(val)) {
             const signal = new ArraySignal(val);
             addSignal(signal);
-            return {
-                get value() {
-                    return signal.value;
-                },
-                update: signal.update.bind(signal) as typeof signal.update,
-            };
+            return publicSignal(signal);
         } else if (isPlainObject(val)) {
             const signal = new ObjectSignal(val);
             addSignal(signal);
-            return {
-                get value() {
-                    return signal.value;
-                },
-                update: signal.update.bind(signal) as typeof signal.update,
-            };
+            return publicSignal(signal);
         } else {
-            throw new Error(
-                "Invalid type for signal initialization: " + typeof val
-            );
+            throwInvalidSignalType(val);
         }
     } else if (isPrimitive(val)) {
         const signal = new PrimitiveSignal(val);
+        // @ts-expect-error
         addSignal(signal);
-        return {
-            get value() {
-                return signal.value;
-            },
-            update: signal.update.bind(signal) as typeof signal.update,
-        };
+        // @ts-expect-error
+        return publicSignal(signal);
     } else {
-        throw new Error(
-            "Invalid type for signal initialization: " + typeof val
-        );
+        throwInvalidSignalType(val);
     }
 }
 
