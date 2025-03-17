@@ -3,8 +3,8 @@ import {
     clearReactiveFunction,
     setReactiveFunction,
 } from "../signals/batch";
-import { BaseSignal, Ref } from "../signals/signal";
-import { Fiber, FiberChildren } from "../types";
+import { Ref } from "../signals/signal";
+import { Fiber } from "../types";
 import { isPrimitive } from "../utils/general";
 import { CAPTURE_REGEX } from "./constants";
 import {
@@ -19,6 +19,13 @@ import {
     runAllEffects,
     setCurrentFC,
 } from "./functionalComponents";
+import {
+    deepCompareFibers,
+    deepEqual,
+    findFirstDom,
+    findNearestParentWithDom,
+    findParentFiberWithDom,
+} from "./utils";
 
 export function render(element: Fiber, container: HTMLElement) {
     rootContainer = container;
@@ -102,7 +109,6 @@ function renderNode(fiber: Fiber) {
         if (noKey) {
             console.error("Array children must have a key attribute");
         }
-        // console.log(fiber.props.children);
     } else if (typeof fiber.type === "function") {
         setCurrentFC(fiber);
 
@@ -111,7 +117,6 @@ function renderNode(fiber: Fiber) {
 
         if (Array.isArray(children)) {
             // which means that the FC returned a fragment
-            // console.log(children);
             for (let i = children.length - 1; i >= 0; i--) {
                 children[i].parent = fiber;
                 elements.push(children[i]);
@@ -126,10 +131,7 @@ function renderNode(fiber: Fiber) {
         effectQueue.push(fiber);
     } else {
         if (!fiber.dom) fiber.dom = createNode(fiber);
-        let fiberParent: Fiber | undefined = fiber.parent;
-        while (fiberParent && !fiberParent.dom) {
-            fiberParent = fiberParent.parent;
-        }
+        let fiberParent = findParentFiberWithDom(fiber);
         if (fiberParent) {
             fiberParent.dom?.appendChild(fiber.dom);
         }
@@ -234,11 +236,7 @@ function commitFiber(
             if (customParent) {
                 parentDom = customParent;
             } else {
-                let fiberParent: Fiber | undefined = fiber.parent;
-
-                while (fiberParent && !fiberParent.dom) {
-                    fiberParent = fiberParent.parent;
-                }
+                let fiberParent = findParentFiberWithDom(fiber);
                 parentDom = fiberParent?.dom;
             }
             parentDom?.appendChild(fiber.dom);
@@ -338,8 +336,6 @@ export function updateFiber(prevFiber: Fiber, newValue) {
 function replaceRenderFunction(prev: Fiber, next: Fiber) {
     if (prev.renderFunction) {
         next.renderFunction = prev.renderFunction;
-        // console.log("Replace render function", prev, next);
-        // deleteReactiveFunction(prev.renderFunction);
         setRenderFunction(next);
     }
 }
@@ -349,11 +345,17 @@ function replaceChildFromParent(prev: Fiber, next: Fiber, index?: number) {
         prev.parent.props.children[index] = next;
         return;
     }
-    prev.parent?.props.children.forEach((child, i) => {
-        if (child === prev) {
+    for (let i = 0; i < prev.parent.props.children.length; i++) {
+        if (prev.parent.props.children[i] === prev) {
             prev.parent.props.children[i] = next;
         }
-    });
+    }
+}
+
+function replaceDeleteFiber(prev: Fiber, next: Fiber, index?: number) {
+    replaceRenderFunction(prev, next);
+    commitDeletion(prev);
+    replaceChildFromParent(prev, next, index);
 }
 
 export const isEvent = (key: string) =>
@@ -362,116 +364,6 @@ export const isProperty = (key: string) =>
     key !== "children" && !isEvent(key) && key !== "key" && key !== "ref";
 const isNew = (prev: any, next: any, key: string) => prev[key] !== next[key];
 const isGone = (prev: any, next: any, key: string) => !(key in next);
-
-function deepCompareFibers(fiberA: any, fiberB: any): boolean {
-    // Fast path: identical references
-    if (fiberA === fiberB) {
-        return true;
-    }
-
-    // Compare the fiber types (e.g., function for FCs, string for DOM nodes)
-    if (fiberA.type !== fiberB.type) {
-        return false;
-    }
-
-    // Compare keys if they exist
-    if (fiberA.props?.key !== fiberB.props?.key) {
-        return false;
-    }
-    return deepEqual(fiberA.props, fiberB.props);
-}
-
-function deepEqual(objA: any, objB: any): boolean {
-    if (objA === objB) {
-        // console.log("Signal prop");
-
-        if (objA instanceof BaseSignal && objB instanceof BaseSignal)
-            return deepEqual(objA.value, objB.value);
-        if (Array.isArray(objA) && Array.isArray(objB)) {
-            if (objA.length !== objB.length) return false;
-            for (let i = 0; i < objA.length; i++) {
-                if (!deepEqual(objA[i], objB[i])) return false;
-            }
-        }
-        return true;
-    } // Same reference or primitive value
-
-    if (isPrimitive(objA) && isPrimitive(objB)) {
-        return objA === objB; // One is not an object or is null
-    }
-
-    if (typeof objA !== typeof objB) return false;
-
-    const keysA = Object.keys(objA);
-    const keysB = Object.keys(objB);
-
-    if (keysA.length !== keysB.length) return false; // Different number of keys
-
-    for (let key of keysA) {
-        if (key === "children") continue;
-        if (!objB.hasOwnProperty(key)) return false; // Missing key in one of them
-        if (!deepEqual(objA[key], objB[key])) return false; // Recurse for nested objects/arrays
-    }
-
-    return true;
-}
-
-function findFirstDom(fiber: Fiber): HTMLElement | Text | undefined {
-    if (!fiber) return;
-
-    if (fiber.dom) return fiber.dom;
-
-    for (const child of fiber.props.children) {
-        const dom = findFirstDom(child);
-        if (dom) return dom;
-    }
-}
-// function findFirstChildDom(fiber: Fiber): HTMLElement | Text | undefined {
-//     if (!fiber) return;
-
-//     for (const child of fiber.props.children) {
-//         const dom = findFirstDom(child);
-//         if (dom) return dom;
-//     }
-// }
-function findLastDom(fiber: Fiber): HTMLElement | Text | undefined {
-    if (!fiber) return;
-
-    if (fiber.dom) return fiber.dom;
-
-    for (let i = fiber.props.children.length - 1; i >= 0; i--) {
-        const child = fiber.props.children[i];
-        const dom = findLastDom(child);
-        if (dom) return dom;
-    }
-}
-function findLastChildDom(fiber: Fiber): HTMLElement | Text | undefined {
-    if (!fiber) return;
-
-    for (let i = fiber.props.children.length - 1; i >= 0; i--) {
-        const child = fiber.props.children[i];
-        const dom = findLastDom(child);
-        if (dom) return dom;
-    }
-}
-function findParentFiberWithDom(fiber: Fiber): Fiber | undefined {
-    if (!fiber) return;
-    let fiberParent = fiber.parent;
-    while (fiberParent && !fiberParent.dom) {
-        fiberParent = fiberParent.parent;
-    }
-    return fiberParent;
-}
-function findNearestParentWithDom(fiber: Fiber): Fiber | undefined {
-    if (!fiber) return;
-    if (fiber.dom) return fiber;
-
-    let fiberParent = fiber.parent;
-    while (fiberParent && !fiberParent.dom) {
-        fiberParent = fiberParent.parent;
-    }
-    return fiberParent;
-}
 
 function updateNode(
     prev: Fiber | undefined,
@@ -482,7 +374,6 @@ function updateNode(
 
     if (prev && !next) {
         commitDeletion(prev, true);
-        // console.log("to remove", prev);
         prev.parent.props.children = prev.parent.props.children.filter(
             (child) => child !== prev
         );
@@ -492,7 +383,6 @@ function updateNode(
         if (prev.type === "FRAGMENT" || typeof prev.type === "function") {
             // PREV IS FRAGMENT
             if (next.type === "FRAGMENT" || typeof next.type === "function") {
-                // console.log("Fragment-Fragment", prev, next);
                 if (
                     typeof prev.type === typeof next.type &&
                     typeof prev.type === "function"
@@ -501,27 +391,16 @@ function updateNode(
                     if (!areSame) {
                         commitFiber(next, findFirstDom(prev), undefined, true);
 
-                        replaceRenderFunction(prev, next);
-                        commitDeletion(prev);
-                        replaceChildFromParent(prev, next, index);
+                        replaceDeleteFiber(prev, next, index);
                     }
                 } else {
-                    // console.log("fragment-fragment", { ...prev }, next);
-
                     updateChildren(prev, next);
                 }
-                // replaceChildFromParent(prev, next);
             } else {
                 next.parent = prev.parent;
-                let firstChild: Fiber | undefined = prev.props.children[0];
-                while (firstChild && !firstChild.dom)
-                    firstChild = firstChild.props.children[0];
-                commitFiber(next, firstChild?.dom);
-
-                replaceRenderFunction(prev, next);
-                // removing all nodes of previous fragment
-                commitDeletion(prev);
-                replaceChildFromParent(prev, next, index);
+                let firstDom = findFirstDom(prev.props.children[0]);
+                commitFiber(next, firstDom);
+                replaceDeleteFiber(prev, next, index);
             }
         } else {
             // PREV IS NODE
@@ -541,13 +420,10 @@ function updateNode(
             if (next.type === "FRAGMENT" || typeof next.type === "function") {
                 // console.log("Node-Fragment");
                 next.parent = prev.parent;
-                replaceRenderFunction(prev, next);
 
                 commitFiber(next, node);
-                commitDeletion(prev);
-                replaceChildFromParent(prev, next, index);
+                replaceDeleteFiber(prev, next, index);
             } else {
-                // console.log("Node-Node");
                 // remove old properties and event listeners from NODE
                 for (const prop in prevProps) {
                     if (
@@ -581,28 +457,15 @@ function updateNode(
                     // console.log("Different type", prev, next);
                     next.parent = prev.parent;
 
-                    replaceRenderFunction(prev, next);
-
                     commitFiber(next, node, true);
-                    commitDeletion(prev);
-                    replaceChildFromParent(prev, next, index);
-
-                    // console.log(prev.parent);
+                    replaceDeleteFiber(prev, next, index);
                 } else {
-                    // add new properties
-                    // console.log("same type", prev, next);
-
                     for (const prop in nextProps) {
                         if (
                             isProperty(prop) &&
                             isNew(prevProps, nextProps, prop)
                         ) {
                             node[prop] = nextProps[prop];
-                            // console.log(
-                            //     "property added",
-                            //     prop,
-                            //     nextProps[prop]
-                            // );
                             prevProps[prop] = nextProps[prop];
                         } else if (
                             isEvent(prop) &&
@@ -638,23 +501,15 @@ function reconcileList(prev: Fiber, next: Fiber) {
     const oldMap: Record<string, any> = {};
     for (let i = 0; i < oldFibers.length; i++) {
         const key = oldFibers[i].props.key;
-        if (
-            key === null ||
-            key === undefined ||
-            oldMap.hasOwnProperty(String(key))
-        ) {
+        if (key === null || key === undefined || String(key) in oldMap) {
             // If any fiber is missing a key, we cannot reconcile.
-            // oldFibers[i].props.key =
             return false;
         }
         oldMap[String(key)] = oldFibers[i];
     }
-    const referenceNode = findLastChildDom(prev)?.nextSibling as
-        | Node
-        | undefined;
+
     // Create newChildren array based on newFibers order.
     const fiberParent = findParentFiberWithDom(prev);
-    // const fragment = document.createDocumentFragment();
 
     if (newFibers.length === 0) {
         prev.props.children.length = 0;
@@ -662,6 +517,7 @@ function reconcileList(prev: Fiber, next: Fiber) {
             fiberParent.dom.innerHTML = "";
         return;
     }
+    const fragment = document.createDocumentFragment();
     const prevLen = prev.props.children.length;
 
     // const newChildren = new Array(newFibers.length);
@@ -670,7 +526,7 @@ function reconcileList(prev: Fiber, next: Fiber) {
         const key = newFiber.props.key;
         const keyStr = String(key);
         // If the fiber exists in the old list, reuse it.
-        if (oldMap.hasOwnProperty(keyStr)) {
+        if (keyStr in oldMap) {
             const oldFiber = oldMap[keyStr];
 
             if (prevLen > i) prev.props.children[i] = oldFiber;
@@ -683,11 +539,7 @@ function reconcileList(prev: Fiber, next: Fiber) {
             if (newFiber) newFiber.parent = prev;
 
             updateNode(oldFiber, newFiber, i);
-            applyFiber(
-                prev.props.children[i],
-                fiberParent?.dom!,
-                referenceNode
-            );
+            applyFiber(prev.props.children[i], fragment);
         } else {
             // Otherwise, use the new fiber.
             // console.log(first)
@@ -695,26 +547,18 @@ function reconcileList(prev: Fiber, next: Fiber) {
             else prev.props.children.push(newFiber);
 
             newFiber.parent = prev;
-            commitFiber(
-                newFiber,
-                referenceNode,
-                false,
-                false,
-                fiberParent?.dom
-            );
+            commitFiber(newFiber, undefined, false, false, fragment);
         }
     }
     for (const key in oldMap) {
-        if (oldMap.hasOwnProperty(key)) {
-            const fiber = oldMap[key];
-            commitDeletion(fiber, true);
-        }
+        const fiber = oldMap[key];
+        commitDeletion(fiber, true);
     }
     while (prev.props.children.length > next.props.children.length) {
         prev.props.children.pop();
     }
 
-    // fiberParent?.dom?.appendChild(fragment);
+    fiberParent?.dom?.appendChild(fragment);
 }
 
 function applyFiber(fiber: Fiber, parent: Node, referenceNode?: Node) {
@@ -765,11 +609,7 @@ function updateNonListChildren(prev: Fiber, next: Fiber) {
 
         if (nextChild) nextChild.parent = prev;
         if (!prevChild && nextChild) {
-            commitFiber(
-                nextChild,
-                // @ts-expect-error
-                findLastDom(prev.props.children.at(-1))?.nextSibling
-            );
+            commitFiber(nextChild);
             prev.props.children.push(nextChild);
         } else if (!nextChild && prevChild) {
             commitDeletion(prevChild, true);
@@ -800,7 +640,7 @@ function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
             continue;
         }
         count++;
-        if (oldMap.hasOwnProperty(String(key))) {
+        if (String(key) in oldMap) {
             console.warn("Found two children with the same key", key);
             console.warn(
                 "When two fibers are found having same key the whole children will default to manual updates, which can be slower than with key based reconciliation"
@@ -826,7 +666,7 @@ function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
         }
         const oldFiber = oldMap[String(key)];
         if (oldFiber) {
-            if (newMap.hasOwnProperty(String(key))) {
+            if (String(key) in newMap) {
                 console.warn("Found two children with the same key", key);
                 console.warn(
                     "When two fibers are found having same key the whole children will default to manual updates, which can be slower than with key based reconciliation"
@@ -850,7 +690,7 @@ function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
         // console.log(prevChild, nextChild);
 
         const nextKey = nextChild?.props.key ? String(nextChild.props.key) : "";
-        const isReused = newMap.hasOwnProperty(nextKey);
+        const isReused = nextKey in newMap;
 
         let prevKey = prevChild?.props.key ? String(prevChild.props.key) : "";
 
@@ -862,12 +702,9 @@ function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
             continue;
         }
 
-        const isUsedLater =
-            newMap.hasOwnProperty(prevKey) && newMap[prevKey].newIndex > i;
-        const isUsedPreviously =
-            newMap.hasOwnProperty(prevKey) && newMap[prevKey].newIndex < i;
+        const isUsedAgain = prevKey in newMap && newMap[prevKey].newIndex !== i;
 
-        if (isUsedLater || isUsedPreviously) {
+        if (isUsedAgain) {
             ToCommitDeletion = false;
         }
 
@@ -908,7 +745,7 @@ function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
                 if (parent?.dom) applyFiber(prev.props.children[i], parent.dom);
             } else {
                 // console.log(ToCommitDeletion);
-                if (isUsedLater || isUsedPreviously) {
+                if (isUsedAgain) {
                     if (parent?.dom)
                         commitFiber(
                             nextChild,
@@ -936,7 +773,6 @@ function updateNonListChildrenWithKeys(prev: Fiber, next: Fiber) {
         }
         ToCommitDeletion = true;
     }
-    // console.log(prev.props.children, next.props.children);
 }
 
 // @ts-expect-error
