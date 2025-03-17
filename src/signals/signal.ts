@@ -10,10 +10,12 @@ import { isPlainObject, isPrimitive } from "../utils/general";
 import { batchUpdate } from "./batch";
 import {
     createArrayProxy,
-    MutatingMethods,
     publicSignal,
     throwInvalidSignalType,
     throwNonPrimitiveError,
+    throwNotArray,
+    throwNotObject,
+    throwNotUpdateCalled,
 } from "./utils";
 
 let currentReactiveFunction: any = null;
@@ -288,9 +290,7 @@ export class ArraySignal<T extends any[]> extends BaseSignal<T> {
 
     constructor(val: T) {
         if (!Array.isArray(val)) {
-            throw new Error(
-                "Invalid type for ArraySignal; value must be an array"
-            );
+            throwNotArray();
         }
         // Call the base constructor with a proxy-wrapped array.
         super(val);
@@ -307,9 +307,7 @@ export class ArraySignal<T extends any[]> extends BaseSignal<T> {
             val(this._val);
         } else {
             if (!Array.isArray(val)) {
-                throw new Error(
-                    "Invalid type for ArraySignal; value must be an array"
-                );
+                throwNotArray();
             }
             if (val === this._val) return;
 
@@ -328,9 +326,7 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
     private updateCalled: boolean = false;
     constructor(val: T) {
         if (!isPlainObject(val)) {
-            throw new Error(
-                "Invalid type for ObjectSignal; value must be a plain object"
-            );
+            throwNotArray();
         }
         super(val);
         this._val = this.createProxy(val);
@@ -354,9 +350,7 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
             },
             set: (target, prop, newValue) => {
                 if (!this.updateCalled) {
-                    throw new Error(
-                        "Cannot set a value on an object signal, use the update method for updating the object."
-                    );
+                    throwNotUpdateCalled();
                 }
                 // Do not allow functions to be set as values.
                 if (typeof newValue === "function") return false;
@@ -386,9 +380,7 @@ export class ObjectSignal<T extends Record<any, any>> extends BaseSignal<T> {
             val(this._val);
         } else {
             if (!isPlainObject(val)) {
-                throw new Error(
-                    "Invalid type for ObjectSignal; value must be a plain object"
-                );
+                throwNotObject();
             }
             if (val === this._val) return;
             this._val = this.createProxy(val);
@@ -423,10 +415,6 @@ function createSignal<T extends Record<any, any>>(
 function createSignal<T extends NormalSignal | any[] | Record<any, any>>(
     val: T
 ) {
-    if (typeof val === "function") {
-        throw new Error("Functions cannot be used as signal value");
-    }
-
     if (typeof val === "object" && val !== null) {
         if (Array.isArray(val)) {
             const signal = new ArraySignal(val);

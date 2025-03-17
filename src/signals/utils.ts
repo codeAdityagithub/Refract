@@ -16,12 +16,34 @@ function isMutating(prop: any) {
     return MutatingMethods.includes(String(prop));
 }
 
+const isProd =
+    // @ts-expect-error
+    process.env.NODE_ENV === "production" ||
+    // @ts-expect-error
+    import.meta.env.MODE === "production";
+
 export function throwNonPrimitiveError() {
+    if (isProd) return;
     throw new Error(
         "Invalid type for PrimitiveSignal. Valid types: [boolean, string, number, undefined, null]"
     );
 }
+export function throwNotUpdateCalled() {
+    if (isProd) return;
+    throw new Error(
+        "Cannot set a value on a signal, use the update method instead."
+    );
+}
+export function throwNotArray() {
+    if (isProd) return;
+    throw new Error("Invalid type for ArraySignal; value must be an array");
+}
+export function throwNotObject() {
+    if (isProd) return;
+    throw new Error("Invalid type for ObjectSignal; value must be an object");
+}
 export function throwInvalidSignalType(val: any) {
+    if (isProd) return;
     throw new Error("Invalid type for signal initialization: " + typeof val);
 }
 
